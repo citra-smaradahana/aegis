@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-function ProfileMobile({ user, onClose, onBack }) {
+function ProfileMobile({ user, onClose, onBack, onLogout }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -42,8 +42,10 @@ function ProfileMobile({ user, onClose, onBack }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      // Redirect ke halaman login atau refresh halaman
-      window.location.href = "/";
+      // Gunakan callback onLogout untuk mengatur user menjadi null
+      if (onLogout) {
+        onLogout();
+      }
     } catch (error) {
       console.error("Error logging out:", error);
       alert("Gagal logout. Silakan coba lagi.");

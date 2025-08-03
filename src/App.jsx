@@ -1099,6 +1099,7 @@ function App() {
             user={user}
             onClose={() => setActiveMenu("Home")}
             onBack={() => setActiveMenu("Home")}
+            onLogout={handleLogout}
           />
         </div>
       )}
@@ -1789,6 +1790,7 @@ function App() {
             user={user}
             onClose={() => setActiveMenu("Home")}
             onBack={() => setActiveMenu("Home")}
+            onLogout={handleLogout}
           />
         )}
 

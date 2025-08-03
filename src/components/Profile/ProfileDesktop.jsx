@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-function ProfileDesktop({ user, onClose }) {
+function ProfileDesktop({ user, onClose, onLogout }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,6 +29,12 @@ function ProfileDesktop({ user, onClose }) {
   const handleChangePassword = () => {
     // Logic untuk ganti password akan dibuat selanjutnya
     console.log("Change password clicked");
+  };
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    }
   };
 
   if (loading) {
@@ -166,7 +172,7 @@ function ProfileDesktop({ user, onClose }) {
             fontSize: 14,
             color: "#374151",
             fontWeight: 500,
-            margin: "0 auto",
+            margin: "0 auto 12px auto",
           }}
         >
           <svg
@@ -184,6 +190,42 @@ function ProfileDesktop({ user, onClose }) {
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           Ganti Password
+        </button>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          style={{
+            background: "#ef4444",
+            border: "1px solid #dc2626",
+            borderRadius: "8px",
+            padding: "12px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            cursor: "pointer",
+            fontSize: 14,
+            color: "#ffffff",
+            fontWeight: 500,
+            margin: "0 auto",
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16,17 21,12 16,7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Logout
         </button>
       </div>
 
