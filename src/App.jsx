@@ -46,11 +46,9 @@ function getMenuByRole(role, user) {
     const canValidate =
       userJabatan &&
       [
-        "Leading Hand",
-        "Asst. Penanggung Jawab Operasional",
-        "Penanggung Jawab Operasional",
-        "SHE",
         "SHERQ Officer",
+        "Penanggung Jawab Operasional",
+        "Asst. Penanggung Jawab Operasional"
       ].includes(userJabatan);
 
     return allMenuItems.filter(
@@ -82,11 +80,9 @@ function getFitToWorkSubMenus(role, isMobile, user) {
     const canValidate =
       userJabatan &&
       [
-        "Leading Hand",
-        "Asst. Penanggung Jawab Operasional",
-        "Penanggung Jawab Operasional",
-        "SHE",
         "SHERQ Officer",
+        "Penanggung Jawab Operasional",
+        "Asst. Penanggung Jawab Operasional"
       ].includes(userJabatan);
 
     console.log(
@@ -95,11 +91,9 @@ function getFitToWorkSubMenus(role, isMobile, user) {
     );
     console.log("getFitToWorkSubMenus - User Jabatan in list:", userJabatan);
     console.log("getFitToWorkSubMenus - Validator list:", [
-      "Leading Hand",
-      "Asst. Penanggung Jawab Operasional",
-      "Penanggung Jawab Operasional",
-      "SHE",
       "SHERQ Officer",
+      "Penanggung Jawab Operasional",
+      "Asst. Penanggung Jawab Operasional"
     ]);
 
     if (canValidate) {
@@ -877,6 +871,41 @@ function App() {
           zIndex: 10,
         }}
       >
+        {/* Back Button for Mobile */}
+        <button
+          onClick={() => setActiveMenu("Home")}
+          style={{
+            position: "absolute",
+            top: "-40px",
+            left: "0px",
+            background: "none",
+            border: "none",
+            color: "#3b82f6",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px",
+            borderRadius: "8px",
+            zIndex: 20,
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Kembali
+        </button>
         {/* Menu Item: Fit To Work */}
         <button
           className="mobile-menu-list-item menu-item-blue"
@@ -903,28 +932,34 @@ function App() {
           </div>
         </button>
 
-        {/* Menu Item: Validasi */}
-        <button
-          className="mobile-menu-list-item menu-item-cyan"
-          onClick={() => setActiveMenu("Validasi Fit To Work")}
-        >
-          <div className="menu-item-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <span className="menu-item-text">Validasi Fit To Work</span>
-          <div className="menu-item-arrow">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </div>
-        </button>
+        {/* Menu Item: Validasi - Only show for specific roles */}
+        {user?.jabatan && [
+          "SHERQ Officer",
+          "Penanggung Jawab Operasional",
+          "Asst. Penanggung Jawab Operasional"
+        ].includes(user.jabatan) && (
+          <button
+            className="mobile-menu-list-item menu-item-cyan"
+            onClick={() => setActiveMenu("Validasi Fit To Work")}
+          >
+            <div className="menu-item-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <span className="menu-item-text">Validasi Fit To Work</span>
+            <div className="menu-item-arrow">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </div>
+          </button>
+        )}
 
         {/* Menu Item: Take 5 */}
         <button

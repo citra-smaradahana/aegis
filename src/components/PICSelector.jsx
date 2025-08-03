@@ -38,7 +38,9 @@ const PICSelector = ({
           setPicOptions([]);
         } else {
           // Filter out current user from PIC options
-          const filteredData = data ? data.filter(user => user.nama !== currentUser?.nama) : [];
+          const filteredData = data
+            ? data.filter((user) => user.nama !== currentUser?.nama)
+            : [];
           setPicOptions(filteredData);
         }
       } catch (error) {
@@ -67,8 +69,8 @@ const PICSelector = ({
   const filteredPICOptions = picOptions.filter(
     (pic) =>
       // Filter by search term
-      (pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase()))
+      pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const PICSelectionPage = () => (
