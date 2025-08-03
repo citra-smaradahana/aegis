@@ -1402,7 +1402,28 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   }
 
   // Download Hazard PDF
-  function handleDownloadHazardPDF() {
+  // Function to get image from Supabase storage
+  const getImageFromStorage = async (imagePath) => {
+    try {
+      if (!imagePath) return null;
+      
+      const { data, error } = await supabase.storage
+        .from("img-test")
+        .download(imagePath);
+      
+      if (error) {
+        console.error("Error downloading image:", error);
+        return null;
+      }
+      
+      return URL.createObjectURL(data);
+    } catch (error) {
+      console.error("Error getting image:", error);
+      return null;
+    }
+  };
+
+  async function handleDownloadHazardPDF(includeImages = false) {
     if (!hazardStats) return;
 
     const doc = new jsPDF();
@@ -1537,6 +1558,71 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         theme: "grid",
         headStyles: { fillColor: [59, 130, 246] },
       });
+    }
+
+    // Add section for attached images if available
+    if (includeImages && hazardStats.recentReports && hazardStats.recentReports.length > 0) {
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Laporan Terbaru dengan Bukti:", 20, yPos);
+      yPos += 10;
+
+      let imageCount = 0;
+      const maxImagesPerPage = 2; // Maximum images per page to avoid overcrowding
+      
+      for (const report of hazardStats.recentReports) {
+        if (imageCount >= maxImagesPerPage) break;
+        
+        if (report.bukti_url || report.evidence_url) {
+          try {
+            const imageUrl = await getImageFromStorage(report.bukti_url || report.evidence_url);
+            if (imageUrl) {
+              // Add report info
+              doc.setFontSize(10);
+              doc.setFont("helvetica", "normal");
+              doc.text(`Laporan: ${report.deskripsi_temuan || report.deskripsi || 'N/A'}`, 20, yPos);
+              yPos += 5;
+              doc.text(`Site: ${report.lokasi || 'N/A'}`, 20, yPos);
+              yPos += 5;
+              doc.text(`Status: ${report.status || 'N/A'}`, 20, yPos);
+              yPos += 8;
+              
+              // Add image (resize to fit)
+              const img = new Image();
+              img.src = imageUrl;
+              
+              await new Promise((resolve) => {
+                img.onload = () => {
+                  const imgWidth = 80;
+                  const imgHeight = (img.height * imgWidth) / img.width;
+                  
+                  // Check if we need a new page
+                  if (yPos + imgHeight > 250) {
+                    doc.addPage();
+                    yPos = 20;
+                  }
+                  
+                  doc.addImage(img, 'JPEG', 20, yPos, imgWidth, imgHeight);
+                  yPos += imgHeight + 10;
+                  imageCount++;
+                  resolve();
+                };
+                img.onerror = () => {
+                  doc.text("Gambar tidak dapat dimuat", 20, yPos);
+                  yPos += 10;
+                  resolve();
+                };
+              });
+            }
+          } catch (error) {
+            console.error("Error adding image to PDF:", error);
+            doc.text("Error loading image", 20, yPos);
+            yPos += 10;
+          }
+        }
+      }
     }
 
     doc.save("statistik-hazard.pdf");
@@ -3049,22 +3135,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 }}
               >
                 <option value="">Semua Site</option>
-                <option value="Head Office">Head Office</option>
-                <option value="Balikpapan">Balikpapan</option>
-                <option value="ADRO">ADRO</option>
-                <option value="AMMP">AMMP</option>
-                <option value="BSIB">BSIB</option>
-                <option value="GAMR">GAMR</option>
-                <option value="HRSB">HRSB</option>
-                <option value="HRSE">HRSE</option>
-                <option value="PABB">PABB</option>
-                <option value="PBRB">PBRB</option>
-                <option value="PKJA">PKJA</option>
-                <option value="PPAB">PPAB</option>
-                <option value="PSMM">PSMM</option>
-                <option value="REBH">REBH</option>
-                <option value="RMTU">RMTU</option>
-                <option value="PMTU">PMTU</option>
+                {CUSTOM_INPUT_SITES.map((siteOption) => (
+                  <option key={siteOption} value={siteOption}>
+                    {siteOption}
+                  </option>
+                ))}
               </select>
             </div>
             <div
@@ -3140,6 +3215,25 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               }}
             >
               📄 PDF
+            </button>
+            <button
+              onClick={() => handleDownloadHazardPDF(true)}
+              disabled={!hazardStats}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "none",
+                background: "#8b5cf6",
+                color: "#fff",
+                fontSize: "14px",
+                cursor: "pointer",
+                fontWeight: "500",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              📷 PDF + Gambar
             </button>
           </div>
         </div>
