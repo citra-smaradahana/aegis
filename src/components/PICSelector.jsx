@@ -51,8 +51,18 @@ const PICSelector = ({
 
           // Debug logging
           console.log("PICSelector - Current user:", currentUser?.nama);
+          console.log("PICSelector - Current user trimmed:", currentUser?.nama?.trim());
           console.log("PICSelector - All users from site:", data);
           console.log("PICSelector - Filtered users:", filteredData);
+          
+          // Additional check - log each user being filtered
+          if (data) {
+            data.forEach(user => {
+              const userName = user.nama?.trim();
+              const currentUserName = currentUser?.nama?.trim();
+              console.log(`PICSelector - Checking user: "${userName}" vs current: "${currentUserName}" - Match: ${userName === currentUserName}`);
+            });
+          }
 
           setPicOptions(filteredData);
         }
@@ -95,13 +105,16 @@ const PICSelector = ({
   // Focus search input when selection page opens - simplified
   useEffect(() => {
     if (showPICSelection && searchInputRef.current) {
-      // Single focus attempt with delay to ensure page is rendered
+      // Focus immediately and after a delay
+      searchInputRef.current.focus();
+      searchInputRef.current.setAttribute("data-focused", "true");
+      
       setTimeout(() => {
         if (searchInputRef.current) {
           searchInputRef.current.focus();
           searchInputRef.current.setAttribute("data-focused", "true");
         }
-      }, 100);
+      }, 300);
     }
   }, [showPICSelection]);
 
@@ -112,8 +125,6 @@ const PICSelector = ({
       pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-
 
   const PICSelectionPage = () => (
     <MobileBackGesture onBack={handleBack}>
@@ -203,39 +214,39 @@ const PICSelector = ({
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
-                         <input
-               ref={searchInputRef}
-               type="text"
-               placeholder="Cari nama atau jabatan PIC..."
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               onFocus={handleInputFocus}
-               autoComplete="off"
-               autoCorrect="off"
-               autoCapitalize="off"
-               spellCheck="false"
-               inputMode="text"
-               enterKeyHint="search"
-               className="mobile-search-input"
-               style={{
-                 width: "100%",
-                 padding: "12px 12px 12px 40px",
-                 borderRadius: "8px",
-                 border: "1px solid #d1d5db",
-                 fontSize: "16px",
-                 backgroundColor: "#ffffff",
-                 outline: "none",
-                 WebkitAppearance: "none",
-                 MozAppearance: "none",
-                 appearance: "none",
-                 touchAction: "manipulation",
-                 userSelect: "text",
-                 WebkitTapHighlightColor: "transparent",
-                 WebkitUserSelect: "text",
-                 WebkitTouchCallout: "none",
-                 WebkitOverflowScrolling: "touch",
-               }}
-             />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Cari nama atau jabatan PIC..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={handleInputFocus}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              inputMode="text"
+              enterKeyHint="search"
+              className="mobile-search-input"
+              style={{
+                width: "100%",
+                padding: "12px 12px 12px 40px",
+                borderRadius: "8px",
+                border: "1px solid #d1d5db",
+                fontSize: "16px",
+                backgroundColor: "#ffffff",
+                outline: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                appearance: "none",
+                touchAction: "manipulation",
+                userSelect: "text",
+                WebkitTapHighlightColor: "transparent",
+                WebkitUserSelect: "text",
+                WebkitTouchCallout: "none",
+                WebkitOverflowScrolling: "touch",
+              }}
+            />
           </div>
         </div>
 

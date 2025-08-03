@@ -1683,19 +1683,19 @@ function App() {
         }}
       >
         {activeMenu === "Tasklist" && <TasklistDemo user={user} />}
-        {activeMenu === "Hazard Report" && <HazardForm user={user} />}
+        {activeMenu === "Hazard Report" && <HazardForm user={user} onBack={() => setActiveMenu("")} />}
         {activeMenu === "Fit To Work" && (
           <>
             {activeSubMenu === "Form Fit To Work" && (
-              <FitToWorkForm user={user} />
+              <FitToWorkForm user={user} onBack={() => setActiveMenu("")} />
             )}
             {activeSubMenu === "Validasi Fit To Work" && (
-              <FitToWorkValidationNew user={user} />
+              <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("")} />
             )}
           </>
         )}
         {activeMenu === "Validasi Fit To Work" && (
-          <FitToWorkValidationNew user={user} />
+          <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("")} />
         )}
         {activeMenu === "Take 5" && (
           <div
@@ -1711,6 +1711,7 @@ function App() {
           >
             <Take5Form
               user={user}
+              onBack={() => setActiveMenu("")}
               onRedirectHazard={() => setActiveMenu("Hazard Report")}
             />
           </div>
