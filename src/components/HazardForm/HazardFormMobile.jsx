@@ -9,6 +9,7 @@ import {
 import PendingTake5List from "./PendingTake5List";
 import MobileSiteSelector from "../MobileSiteSelector";
 import LocationDetailSelector from "../LocationDetailSelector";
+import PICSelector from "../PICSelector";
 
 const lokasiOptions = [
   "Head Office",
@@ -859,26 +860,14 @@ function HazardFormMobile({ user }) {
                 >
                   PIC (Person In Charge)
                 </label>
-                <select
-                  name="pic"
+                <PICSelector
                   value={form.pic}
                   onChange={handleChange}
+                  placeholder="Pilih PIC"
+                  site={form.lokasi}
+                  style={getFieldBorderStyle("pic")}
                   required
-                  style={{
-                    width: "100%",
-                    borderRadius: 8,
-                    padding: 4,
-                    fontSize: 13,
-                    ...getFieldBorderStyle("pic"),
-                  }}
-                >
-                  <option value="">Pilih PIC</option>
-                  {picOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                />
                 {picOptions.length === 0 && form.lokasi && (
                   <div
                     style={{

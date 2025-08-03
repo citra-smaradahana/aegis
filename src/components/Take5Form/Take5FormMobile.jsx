@@ -7,6 +7,7 @@ import {
 } from "../../config/siteLocations";
 import MobileSiteSelector from "../MobileSiteSelector";
 import LocationDetailSelector from "../LocationDetailSelector";
+import PICSelector from "../PICSelector";
 
 const SITE_OPTIONS = [
   "Head Office",

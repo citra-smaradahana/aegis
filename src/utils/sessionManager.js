@@ -1,5 +1,5 @@
 // Session management utilities
-const SESSION_KEY = 'aegis_user_session';
+const SESSION_KEY = "aegis_user_session";
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 export const sessionManager = {
@@ -8,7 +8,7 @@ export const sessionManager = {
     const sessionData = {
       user: userData,
       timestamp: Date.now(),
-      expiresAt: Date.now() + SESSION_DURATION
+      expiresAt: Date.now() + SESSION_DURATION,
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
   },
@@ -20,7 +20,7 @@ export const sessionManager = {
       if (!sessionData) return null;
 
       const session = JSON.parse(sessionData);
-      
+
       // Check if session is expired
       if (Date.now() > session.expiresAt) {
         sessionManager.clearSession();
@@ -29,10 +29,10 @@ export const sessionManager = {
 
       // Extend session if it's still valid
       sessionManager.extendSession();
-      
+
       return session.user;
     } catch (error) {
-      console.error('Error getting session:', error);
+      console.error("Error getting session:", error);
       sessionManager.clearSession();
       return null;
     }
@@ -48,7 +48,7 @@ export const sessionManager = {
       session.expiresAt = Date.now() + SESSION_DURATION;
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     } catch (error) {
-      console.error('Error extending session:', error);
+      console.error("Error extending session:", error);
     }
   },
 
@@ -73,21 +73,30 @@ export const sessionManager = {
     } catch (error) {
       return null;
     }
-  }
+  },
 };
 
 // Auto-extend session on user activity
 export const setupSessionAutoExtend = () => {
-  const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-  
+  const events = [
+    "mousedown",
+    "mousemove",
+    "keypress",
+    "scroll",
+    "touchstart",
+    "click",
+  ];
+
   const extendSessionOnActivity = () => {
     if (sessionManager.isLoggedIn()) {
       sessionManager.extendSession();
     }
   };
 
-  events.forEach(event => {
-    document.addEventListener(event, extendSessionOnActivity, { passive: true });
+  events.forEach((event) => {
+    document.addEventListener(event, extendSessionOnActivity, {
+      passive: true,
+    });
   });
 
   // Also extend session every 30 minutes
@@ -96,4 +105,4 @@ export const setupSessionAutoExtend = () => {
       sessionManager.extendSession();
     }
   }, 30 * 60 * 1000); // 30 minutes
-}; 
+};

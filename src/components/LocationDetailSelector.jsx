@@ -38,159 +38,159 @@ const LocationDetailSelector = ({
           flexDirection: "column",
         }}
       >
-      {/* Header */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          padding: "16px",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <button
-          onClick={handleBack}
-          className="clickable"
-          style={{
-            background: "none",
-            border: "none",
-            fontSize: "16px",
-            color: "#3b82f6",
-            cursor: "pointer",
-            padding: "8px",
-            borderRadius: "4px",
-          }}
-        >
-          ← Kembali
-        </button>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "18px",
-            fontWeight: "600",
-            color: "#1f2937",
-          }}
-        >
-          Pilih Detail Lokasi
-        </h1>
-        <div style={{ width: "60px" }}></div>
-      </div>
-
-      {/* Location List */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px",
-        }}
-      >
+        {/* Header */}
         <div
           style={{
-            display: "grid",
-            gap: "12px",
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderBottom: "1px solid #e5e7eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          {locationOptions.map((location) => (
-            <div
-              key={location}
-              onClick={() => handleLocationSelect(location)}
-              className="clickable"
-              style={{
-                backgroundColor: "#ffffff",
-                padding: "16px",
-                borderRadius: "12px",
-                border:
-                  value === location
-                    ? "2px solid #3b82f6"
-                    : "1px solid #e5e7eb",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                boxShadow:
-                  value === location
-                    ? "0 4px 12px rgba(59, 130, 246, 0.15)"
-                    : "0 1px 3px rgba(0, 0, 0, 0.1)",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = "translateY(-1px)";
-                e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow =
-                  value === location
-                    ? "0 4px 12px rgba(59, 130, 246, 0.15)"
-                    : "0 1px 3px rgba(0, 0, 0, 0.1)";
-              }}
-            >
-              <span
+          <button
+            onClick={handleBack}
+            className="clickable"
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: "16px",
+              color: "#3b82f6",
+              cursor: "pointer",
+              padding: "8px",
+              borderRadius: "4px",
+            }}
+          >
+            ← Kembali
+          </button>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "18px",
+              fontWeight: "600",
+              color: "#1f2937",
+            }}
+          >
+            Pilih Detail Lokasi
+          </h1>
+          <div style={{ width: "60px" }}></div>
+        </div>
+
+        {/* Location List */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gap: "12px",
+            }}
+          >
+            {locationOptions.map((location) => (
+              <div
+                key={location}
+                onClick={() => handleLocationSelect(location)}
+                className="clickable"
                 style={{
-                  fontSize: "16px",
-                  fontWeight: "500",
-                  color: "#1f2937",
+                  backgroundColor: "#ffffff",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  border:
+                    value === location
+                      ? "2px solid #3b82f6"
+                      : "1px solid #e5e7eb",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  boxShadow:
+                    value === location
+                      ? "0 4px 12px rgba(59, 130, 246, 0.15)"
+                      : "0 1px 3px rgba(0, 0, 0, 0.1)",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow =
+                    value === location
+                      ? "0 4px 12px rgba(59, 130, 246, 0.15)"
+                      : "0 1px 3px rgba(0, 0, 0, 0.1)";
                 }}
               >
-                {location}
-              </span>
-              {value === location && (
-                <div
+                <span
                   style={{
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "50%",
-                    backgroundColor: "#3b82f6",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    fontSize: "16px",
+                    fontWeight: "500",
+                    color: "#1f2937",
                   }}
                 >
+                  {location}
+                </span>
+                {value === location && (
                   <div
                     style={{
-                      width: "8px",
-                      height: "8px",
+                      width: "20px",
+                      height: "20px",
                       borderRadius: "50%",
-                      backgroundColor: "#ffffff",
+                      backgroundColor: "#3b82f6",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+                  >
+                    <div
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: "#ffffff",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Footer */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          padding: "16px",
-          borderTop: "1px solid #e5e7eb",
-        }}
-      >
-        <button
-          onClick={() => value && handleLocationSelect(value)}
-          disabled={!value}
-          className="clickable"
+        {/* Footer */}
+        <div
           style={{
-            width: "100%",
-            padding: "12px",
-            backgroundColor: value ? "#3b82f6" : "#9ca3af",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: value ? "pointer" : "not-allowed",
-            transition: "background-color 0.2s ease",
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderTop: "1px solid #e5e7eb",
           }}
         >
-          Pilih Detail Lokasi
-        </button>
+          <button
+            onClick={() => value && handleLocationSelect(value)}
+            disabled={!value}
+            className="clickable"
+            style={{
+              width: "100%",
+              padding: "12px",
+              backgroundColor: value ? "#3b82f6" : "#9ca3af",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: value ? "pointer" : "not-allowed",
+              transition: "background-color 0.2s ease",
+            }}
+          >
+            Pilih Detail Lokasi
+          </button>
+        </div>
       </div>
-    </div>
     </MobileBackGesture>
   );
 

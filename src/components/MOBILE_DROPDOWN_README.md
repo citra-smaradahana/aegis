@@ -29,6 +29,15 @@ Komponen untuk memilih detail lokasi berdasarkan site yang dipilih:
 - Halaman pilihan terpisah untuk detail lokasi
 - Mendukung custom input untuk site tertentu
 
+### 4. PICSelector.jsx
+
+Komponen untuk memilih PIC (Person In Charge) dengan fitur search:
+
+- Fetch data PIC berdasarkan site yang dipilih
+- Fitur search untuk mencari berdasarkan nama atau jabatan
+- Halaman pilihan terpisah dengan interface yang konsisten
+- Menampilkan nama dan jabatan PIC
+
 ## Cara Penggunaan
 
 ### Untuk Site Selection:
@@ -62,9 +71,24 @@ import LocationDetailSelector from "../LocationDetailSelector";
 />;
 ```
 
+### Untuk PIC Selection:
+
+```jsx
+import PICSelector from "../PICSelector";
+
+<PICSelector
+  value={form.pic}
+  onChange={handleChange}
+  placeholder="Pilih PIC"
+  site={form.lokasi}
+  style={getFieldBorderStyle("pic")}
+  required
+/>;
+```
+
 ## Form yang Sudah Diupdate
 
-1. **HazardFormMobile.jsx** - Menggunakan MobileSiteSelector dan LocationDetailSelector
+1. **HazardFormMobile.jsx** - Menggunakan MobileSiteSelector, LocationDetailSelector, dan PICSelector
 2. **Take5FormMobile.jsx** - Menggunakan MobileSiteSelector dan LocationDetailSelector
 3. **MonitoringPage.jsx** - Menggunakan CUSTOM_INPUT_SITES untuk konsistensi
 
@@ -100,6 +124,7 @@ import LocationDetailSelector from "../LocationDetailSelector";
 - `.mobile-dropdown` - Untuk komponen dropdown mobile
 - `.site-selector` - Untuk selector site
 - `.location-selector` - Untuk selector detail lokasi
+- `.pic-selector` - Untuk selector PIC
 - `.clickable` - Untuk elemen yang dapat diklik
 
 ## Data Source
