@@ -10,6 +10,7 @@ const PICSelector = ({
   style = {},
   required = false,
   site = "",
+  currentUser = null,
 }) => {
   const [showPICSelection, setShowPICSelection] = useState(false);
   const [picOptions, setPicOptions] = useState([]);
@@ -36,7 +37,9 @@ const PICSelector = ({
           console.error("Error fetching PIC options:", error);
           setPicOptions([]);
         } else {
-          setPicOptions(data || []);
+          // Filter out current user from PIC options
+          const filteredData = data ? data.filter(user => user.nama !== currentUser?.nama) : [];
+          setPicOptions(filteredData);
         }
       } catch (error) {
         console.error("Error fetching PIC options:", error);
@@ -47,7 +50,7 @@ const PICSelector = ({
     };
 
     fetchPICOptions();
-  }, [site]);
+  }, [site, currentUser?.nama]);
 
   const handlePICSelect = (pic) => {
     onChange({ target: { name: "pic", value: pic } });
@@ -63,8 +66,9 @@ const PICSelector = ({
   // Filter PIC options based on search term
   const filteredPICOptions = picOptions.filter(
     (pic) =>
-      pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase())
+      // Filter by search term
+      (pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const PICSelectionPage = () => (

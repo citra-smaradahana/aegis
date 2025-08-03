@@ -867,6 +867,7 @@ function HazardFormMobile({ user }) {
                   site={form.lokasi}
                   style={getFieldBorderStyle("pic")}
                   required
+                  currentUser={user}
                 />
                 {picOptions.length === 0 && form.lokasi && (
                   <div
