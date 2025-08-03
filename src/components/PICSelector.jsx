@@ -61,9 +61,10 @@ const PICSelector = ({
   };
 
   // Filter PIC options based on search term
-  const filteredPICOptions = picOptions.filter((pic) =>
-    pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPICOptions = picOptions.filter(
+    (pic) =>
+      pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const PICSelectionPage = () => (
@@ -203,7 +204,9 @@ const PICSelector = ({
                 textAlign: "center",
               }}
             >
-              {searchTerm ? "Tidak ada PIC yang sesuai dengan pencarian" : "Tidak ada data PIC untuk site ini"}
+              {searchTerm
+                ? "Tidak ada PIC yang sesuai dengan pencarian"
+                : "Tidak ada data PIC untuk site ini"}
             </div>
           ) : (
             <div
@@ -374,4 +377,4 @@ const PICSelector = ({
   );
 };
 
-export default PICSelector; 
+export default PICSelector;
