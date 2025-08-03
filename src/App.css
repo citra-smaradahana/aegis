@@ -344,3 +344,28 @@ main.monitoring-page {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
 }
+
+/* Prevent hover effects on back buttons */
+.back-button-no-hover {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.back-button-no-hover:hover {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.back-button-no-hover:active {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.back-button-no-hover:focus {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}

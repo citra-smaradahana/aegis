@@ -654,6 +654,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
           {onBack && (
             <button
               onClick={onBack}
+              className="back-button-no-hover"
               style={{
                 position: "absolute",
                 left: "16px",

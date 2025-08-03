@@ -599,6 +599,7 @@ function HazardFormMobile({ user, onBack }) {
           {onBack && (
             <button
               onClick={onBack}
+              className="back-button-no-hover"
               style={{
                 position: "absolute",
                 left: "16px",

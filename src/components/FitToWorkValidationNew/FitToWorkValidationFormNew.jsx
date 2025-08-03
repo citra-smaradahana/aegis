@@ -510,6 +510,7 @@ function FitToWorkValidationFormNew({
           {onBack && (
             <button
               onClick={onBack}
+              className="back-button-no-hover"
               style={{
                 position: "absolute",
                 left: "0px",

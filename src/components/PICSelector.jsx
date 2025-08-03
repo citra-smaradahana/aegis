@@ -174,6 +174,12 @@ const PICSelector = ({
                 fontSize: "16px",
                 backgroundColor: "#ffffff",
                 outline: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                appearance: "none",
+                touchAction: "manipulation",
+                userSelect: "text",
+                WebkitTapHighlightColor: "transparent",
               }}
             />
           </div>
