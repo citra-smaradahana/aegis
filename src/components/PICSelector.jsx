@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import MobileBackGesture from "./MobileBackGesture";
 import { supabase } from "../supabaseClient";
 
@@ -16,6 +16,7 @@ const PICSelector = ({
   const [picOptions, setPicOptions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
+  const searchInputRef = useRef(null);
 
   // Fetch PIC options based on site
   useEffect(() => {
@@ -64,6 +65,16 @@ const PICSelector = ({
     setShowPICSelection(false);
     setSearchTerm("");
   };
+
+  // Focus search input when selection page opens
+  useEffect(() => {
+    if (showPICSelection && searchInputRef.current) {
+      // Small delay to ensure the page is fully rendered
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showPICSelection]);
 
   // Filter PIC options based on search term
   const filteredPICOptions = picOptions.filter(
@@ -162,10 +173,16 @@ const PICSelector = ({
               <path d="m21 21-4.35-4.35" />
             </svg>
             <input
+              ref={searchInputRef}
               type="text"
               placeholder="Cari nama atau jabatan PIC..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              className="mobile-search-input"
               style={{
                 width: "100%",
                 padding: "12px 12px 12px 40px",
@@ -180,6 +197,9 @@ const PICSelector = ({
                 touchAction: "manipulation",
                 userSelect: "text",
                 WebkitTapHighlightColor: "transparent",
+                WebkitUserSelect: "text",
+                WebkitTouchCallout: "none",
+                WebkitOverflowScrolling: "touch",
               }}
             />
           </div>

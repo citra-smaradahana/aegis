@@ -194,4 +194,16 @@ textarea {
     -webkit-tap-highlight-color: transparent !important;
     touch-action: manipulation !important;
   }
+
+  /* Mobile search input optimizations */
+  .mobile-search-input {
+    -webkit-user-select: text !important;
+    -webkit-touch-callout: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: manipulation !important;
+    font-size: 16px !important;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
 }
