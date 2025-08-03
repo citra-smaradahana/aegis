@@ -19,6 +19,7 @@ const PICSelector = ({
         const { data, error } = await supabase
           .from("users")
           .select("nama, jabatan")
+          .eq("site", site) // Filter by selected site
           .neq("nama", currentUser?.nama) // Filter out current user at database level
           .order("nama", { ascending: true }); // Sort alphabetically by name
 
@@ -37,16 +38,23 @@ const PICSelector = ({
 
           // Debug logging
           console.log("PICSelector - Current user:", currentUser?.nama);
-          console.log("PICSelector - Current user trimmed:", currentUser?.nama?.trim());
+          console.log(
+            "PICSelector - Current user trimmed:",
+            currentUser?.nama?.trim()
+          );
           console.log("PICSelector - All users from site:", data);
           console.log("PICSelector - Filtered users:", filteredData);
 
           // Additional check - log each user being filtered
           if (data) {
-            data.forEach(user => {
+            data.forEach((user) => {
               const userName = user.nama?.trim();
               const currentUserName = currentUser?.nama?.trim();
-              console.log(`PICSelector - Checking user: "${userName}" vs current: "${currentUserName}" - Match: ${userName === currentUserName}`);
+              console.log(
+                `PICSelector - Checking user: "${userName}" vs current: "${currentUserName}" - Match: ${
+                  userName === currentUserName
+                }`
+              );
             });
           }
 
@@ -66,12 +74,12 @@ const PICSelector = ({
     // Double-check to prevent self-selection
     const userName = pic?.trim();
     const currentUserName = currentUser?.nama?.trim();
-    
+
     if (userName === currentUserName) {
       console.warn("PICSelector - Attempted to select self:", userName);
       return; // Prevent self-selection
     }
-    
+
     onChange({ target: { name: "pic", value: pic } });
     setShowPICSelection(false);
   };
@@ -106,7 +114,13 @@ const PICSelector = ({
             zIndex: 1001,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
             <button
               onClick={handleBack}
               style={{
@@ -129,11 +143,15 @@ const PICSelector = ({
         {/* PIC List */}
         <div style={{ padding: "16px" }}>
           {picOptions.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+            <div
+              style={{ textAlign: "center", padding: "20px", color: "#666" }}
+            >
               Tidak ada PIC tersedia
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               {picOptions.map((pic, index) => (
                 <button
                   key={index}
@@ -157,7 +175,13 @@ const PICSelector = ({
                     e.target.style.borderColor = "#e5e7eb";
                   }}
                 >
-                  <div style={{ fontWeight: "600", color: "#1f2937", marginBottom: "4px" }}>
+                  <div
+                    style={{
+                      fontWeight: "600",
+                      color: "#1f2937",
+                      marginBottom: "4px",
+                    }}
+                  >
                     {pic.nama}
                   </div>
                   <div style={{ fontSize: "14px", color: "#6b7280" }}>
