@@ -95,7 +95,14 @@ function ProfileMobile({ user, onClose, onBack }) {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", position: "relative", flex: 1 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            position: "relative",
+            flex: 1,
+          }}
+        >
           {/* Back Button */}
           {onBack && (
             <button
@@ -103,17 +110,11 @@ function ProfileMobile({ user, onClose, onBack }) {
               style={{
                 position: "absolute",
                 left: "0px",
-                top: "50%",
-                transform: "translateY(-50%)",
+                top: "0px",
                 background: "none",
                 border: "none",
                 color: "#3b82f6",
-                fontSize: "16px",
-                fontWeight: "600",
                 cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
                 padding: "8px",
                 borderRadius: "8px",
                 zIndex: 20,
@@ -131,7 +132,6 @@ function ProfileMobile({ user, onClose, onBack }) {
               >
                 <path d="m15 18-6-6 6-6" />
               </svg>
-              Kembali
             </button>
           )}
           <div

@@ -657,17 +657,11 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               style={{
                 position: "absolute",
                 left: "16px",
-                top: "50%",
-                transform: "translateY(-50%)",
+                top: "16px",
                 background: "none",
                 border: "none",
                 color: "#3b82f6",
-                fontSize: "16px",
-                fontWeight: "600",
                 cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
                 padding: "8px",
                 borderRadius: "8px",
                 zIndex: 20,
@@ -685,7 +679,6 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               >
                 <path d="m15 18-6-6 6-6" />
               </svg>
-              Kembali
             </button>
           )}
           <h2

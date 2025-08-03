@@ -1023,20 +1023,29 @@ function App() {
           {activeMenu === "Fit To Work" && (
             <>
               {activeSubMenu === "Form Fit To Work" && (
-                <FitToWorkForm user={user} onBack={() => setActiveMenu("Home")} />
+                <FitToWorkForm
+                  user={user}
+                  onBack={() => setActiveMenu("Home")}
+                />
               )}
               {activeSubMenu === "Validasi Fit To Work" && (
-                <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("Home")} />
+                <FitToWorkValidationNew
+                  user={user}
+                  onBack={() => setActiveMenu("Home")}
+                />
               )}
             </>
           )}
           {activeMenu === "Validasi Fit To Work" && (
-            <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("Home")} />
+            <FitToWorkValidationNew
+              user={user}
+              onBack={() => setActiveMenu("Home")}
+            />
           )}
           {activeMenu === "Take 5" && (
-            <Take5Form 
-              user={user} 
-              onRedirectHazard={handleRedirectToHazard} 
+            <Take5Form
+              user={user}
+              onRedirectHazard={handleRedirectToHazard}
               onBack={() => setActiveMenu("Home")}
             />
           )}
@@ -1086,7 +1095,11 @@ function App() {
             boxShadow: "0 -2px 16px #0002",
           }}
         >
-          <Profile user={user} onClose={() => setActiveMenu("Home")} onBack={() => setActiveMenu("Home")} />
+          <Profile
+            user={user}
+            onClose={() => setActiveMenu("Home")}
+            onBack={() => setActiveMenu("Home")}
+          />
         </div>
       )}
       {/* Mobile Pop Up Monitoring - DISABLED */}
@@ -1772,7 +1785,11 @@ function App() {
         )}
         {activeMenu === "Manajemen User" && <UserManagement user={user} />}
         {activeMenu === "Profile" && (
-          <Profile user={user} onClose={() => setActiveMenu("Home")} onBack={() => setActiveMenu("Home")} />
+          <Profile
+            user={user}
+            onClose={() => setActiveMenu("Home")}
+            onBack={() => setActiveMenu("Home")}
+          />
         )}
 
         {/* Notification Popup */}
@@ -2384,17 +2401,11 @@ function TasklistDemo({ user, onBack }) {
                 style={{
                   position: "absolute",
                   left: "0px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
+                  top: "0px",
                   background: "none",
                   border: "none",
                   color: "#3b82f6",
-                  fontSize: "16px",
-                  fontWeight: "600",
                   cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
                   padding: "8px",
                   borderRadius: "8px",
                   zIndex: 20,
@@ -2412,7 +2423,6 @@ function TasklistDemo({ user, onBack }) {
                 >
                   <path d="m15 18-6-6 6-6" />
                 </svg>
-                Kembali
               </button>
             )}
             <h3

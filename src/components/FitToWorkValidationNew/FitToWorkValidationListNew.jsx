@@ -79,17 +79,11 @@ function FitToWorkValidationListNew({
             style={{
               position: "absolute",
               left: "0px",
-              top: "50%",
-              transform: "translateY(-50%)",
+              top: "0px",
               background: "none",
               border: "none",
               color: "#3b82f6",
-              fontSize: "16px",
-              fontWeight: "600",
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
               padding: "8px",
               borderRadius: "8px",
               zIndex: 20,
@@ -107,10 +101,11 @@ function FitToWorkValidationListNew({
             >
               <path d="m15 18-6-6 6-6" />
             </svg>
-            Kembali
           </button>
         )}
-        <h2 style={{ marginBottom: "20px", color: "#333", textAlign: "center" }}>
+        <h2
+          style={{ marginBottom: "20px", color: "#333", textAlign: "center" }}
+        >
           Validasi Fit To Work
         </h2>
       </div>

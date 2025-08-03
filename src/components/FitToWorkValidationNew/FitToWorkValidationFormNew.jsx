@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-function FitToWorkValidationFormNew({ validation, user, onUpdate, onClose, onBack }) {
+function FitToWorkValidationFormNew({
+  validation,
+  user,
+  onUpdate,
+  onClose,
+  onBack,
+}) {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -507,17 +513,11 @@ function FitToWorkValidationFormNew({ validation, user, onUpdate, onClose, onBac
             style={{
               position: "absolute",
               left: "0px",
-              top: "50%",
-              transform: "translateY(-50%)",
+              top: "0px",
               background: "none",
               border: "none",
               color: "#3b82f6",
-              fontSize: "16px",
-              fontWeight: "600",
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
               padding: "8px",
               borderRadius: "8px",
               zIndex: 20,
@@ -535,10 +535,11 @@ function FitToWorkValidationFormNew({ validation, user, onUpdate, onClose, onBac
             >
               <path d="m15 18-6-6 6-6" />
             </svg>
-            Kembali
           </button>
         )}
-        <h2 style={{ margin: 0, color: "#333", textAlign: "center", flex: 1 }}>Validasi Fit To Work</h2>
+        <h2 style={{ margin: 0, color: "#333", textAlign: "center", flex: 1 }}>
+          Validasi Fit To Work
+        </h2>
         <button
           onClick={onClose}
           style={{

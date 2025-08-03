@@ -15,7 +15,11 @@ function Take5Form({ user, onRedirectHazard, onBack }) {
   }, []);
 
   return isMobile ? (
-    <Take5FormMobile user={user} onRedirectHazard={onRedirectHazard} onBack={onBack} />
+    <Take5FormMobile
+      user={user}
+      onRedirectHazard={onRedirectHazard}
+      onBack={onBack}
+    />
   ) : (
     <Take5FormDesktop user={user} onRedirectHazard={onRedirectHazard} />
   );
