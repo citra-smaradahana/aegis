@@ -23,42 +23,42 @@ const SiteSelectionPage = ({ onSelectSite, onBack, selectedSite }) => {
         }}
       >
         {/* Header */}
-                 <div
-           style={{
-             backgroundColor: "#1e40af",
-             color: "white",
-             padding: "16px",
-             textAlign: "center",
-             position: "sticky",
-             top: 0,
-             zIndex: 1001,
-           }}
-         >
-           <div
-             style={{
-               display: "flex",
-               alignItems: "center",
-               justifyContent: "space-between",
-             }}
-           >
-             <button
-               onClick={onBack}
-               style={{
-                 background: "none",
-                 border: "none",
-                 color: "white",
-                 fontSize: "20px",
-                 cursor: "pointer",
-                 padding: "4px",
-               }}
-               className="back-button-no-hover"
-             >
-               ←
-             </button>
-             <h2 style={{ margin: 0, flex: 1 }}>Pilih Lokasi</h2>
-             <div style={{ width: "20px" }}></div>
-           </div>
-         </div>
+        <div
+          style={{
+            backgroundColor: "#1e40af",
+            color: "white",
+            padding: "16px",
+            textAlign: "center",
+            position: "sticky",
+            top: 0,
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <button
+              onClick={onBack}
+              style={{
+                background: "none",
+                border: "none",
+                color: "white",
+                fontSize: "20px",
+                cursor: "pointer",
+                padding: "4px",
+              }}
+              className="back-button-no-hover"
+            >
+              ←
+            </button>
+            <h2 style={{ margin: 0, flex: 1 }}>Pilih Lokasi</h2>
+            <div style={{ width: "20px" }}></div>
+          </div>
+        </div>
 
         {/* Site List */}
         <div

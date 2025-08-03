@@ -214,18 +214,20 @@ const PICSelector = ({
   return (
     <div
       onClick={() => setShowPICSelection(true)}
-      style={{
-        border: "1px solid #d1d5db",
-        borderRadius: "8px",
-        padding: "12px 16px",
-        backgroundColor: "white",
-        cursor: "pointer",
-        minHeight: "48px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        transition: "border-color 0.2s",
-      }}
+             style={{
+         border: "1px solid #d1d5db",
+         borderRadius: "8px",
+         padding: "4px 12px",
+         backgroundColor: "white",
+         cursor: "pointer",
+         minHeight: "32px",
+         display: "flex",
+         alignItems: "center",
+         justifyContent: "space-between",
+         transition: "border-color 0.2s",
+         fontSize: "14px",
+         boxSizing: "border-box",
+       }}
       onMouseEnter={(e) => {
         e.target.style.borderColor = "#9ca3af";
       }}
@@ -233,10 +235,22 @@ const PICSelector = ({
         e.target.style.borderColor = "#d1d5db";
       }}
     >
-      <span style={{ color: value ? "#1f2937" : "#9ca3af" }}>
-        {value || placeholder}
-      </span>
-      <span style={{ color: "#9ca3af", fontSize: "12px" }}>▼</span>
+             <span style={{ color: value ? "#000000" : "#6b7280" }}>
+         {value || placeholder}
+       </span>
+       <svg
+         width="16"
+         height="16"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         strokeWidth="2"
+         strokeLinecap="round"
+         strokeLinejoin="round"
+         style={{ color: "#6b7280" }}
+       >
+         <path d="m6 9 6 6 6-6" />
+       </svg>
     </div>
   );
 };
