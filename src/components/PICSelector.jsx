@@ -66,13 +66,42 @@ const PICSelector = ({
     setSearchTerm("");
   };
 
+  // Prevent input blur and maintain focus
+  const handleInputBlur = (e) => {
+    // Prevent blur if the input should stay focused
+    if (showPICSelection && e.target.getAttribute('data-focused') === 'true') {
+      e.preventDefault();
+      e.target.focus();
+    }
+  };
+
+  const handleInputFocus = (e) => {
+    e.target.setAttribute('data-focused', 'true');
+  };
+
   // Focus search input when selection page opens
   useEffect(() => {
     if (showPICSelection && searchInputRef.current) {
-      // Small delay to ensure the page is fully rendered
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+      // Multiple attempts to focus with different delays
+      const focusInput = () => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          // Force focus and prevent blur
+          searchInputRef.current.setAttribute('data-focused', 'true');
+        }
+      };
+      
+      // Try focusing immediately
+      focusInput();
+      
+      // Try again after a short delay
+      setTimeout(focusInput, 50);
+      
+      // Try again after a longer delay
+      setTimeout(focusInput, 200);
+      
+      // Try again after the page is fully rendered
+      setTimeout(focusInput, 500);
     }
   }, [showPICSelection]);
 
@@ -83,6 +112,18 @@ const PICSelector = ({
       pic.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Maintain focus when search term changes
+  useEffect(() => {
+    if (showPICSelection && searchInputRef.current && searchInputRef.current.getAttribute('data-focused') === 'true') {
+      // Re-focus after state changes to prevent keyboard dismissal
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 10);
+    }
+  }, [searchTerm, showPICSelection]);
 
   const PICSelectionPage = () => (
     <MobileBackGesture onBack={handleBack}>
@@ -178,10 +219,14 @@ const PICSelector = ({
               placeholder="Cari nama atau jabatan PIC..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck="false"
+              inputMode="text"
+              enterKeyHint="search"
               className="mobile-search-input"
               style={{
                 width: "100%",
@@ -200,6 +245,10 @@ const PICSelector = ({
                 WebkitUserSelect: "text",
                 WebkitTouchCallout: "none",
                 WebkitOverflowScrolling: "touch",
+                WebkitTransform: "translateZ(0)",
+                transform: "translateZ(0)",
+                backfaceVisibility: "hidden",
+                perspective: "1000px",
               }}
             />
           </div>

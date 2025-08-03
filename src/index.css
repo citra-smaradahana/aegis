@@ -205,5 +205,27 @@ textarea {
     transform: translateZ(0);
     backface-visibility: hidden;
     perspective: 1000px;
+    -webkit-transform: translateZ(0) !important;
+    -webkit-backface-visibility: hidden !important;
+    -webkit-perspective: 1000px !important;
+    position: relative !important;
+    z-index: 1001 !important;
+  }
+
+  /* Prevent keyboard dismissal */
+  .mobile-search-input:focus {
+    -webkit-user-select: text !important;
+    -webkit-touch-callout: none !important;
+    touch-action: manipulation !important;
+    outline: none !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+  }
+
+  /* Ensure input stays focused */
+  .mobile-search-input[data-focused="true"] {
+    -webkit-user-select: text !important;
+    -webkit-touch-callout: none !important;
+    touch-action: manipulation !important;
   }
 }

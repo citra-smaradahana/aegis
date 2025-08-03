@@ -7,6 +7,13 @@ const MobileBackGesture = ({ onBack, children }) => {
 
   useEffect(() => {
     const handleTouchStart = (e) => {
+      // Don't interfere with input fields
+      const target = e.target;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        isBackGesture.current = false;
+        return;
+      }
+
       // Only handle touch on the left edge of the screen (first 50px)
       if (e.touches[0].clientX <= 50) {
         touchStartX.current = e.touches[0].clientX;
@@ -19,6 +26,13 @@ const MobileBackGesture = ({ onBack, children }) => {
 
     const handleTouchMove = (e) => {
       if (!isBackGesture.current) return;
+
+      // Don't interfere with input fields
+      const target = e.target;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        isBackGesture.current = false;
+        return;
+      }
 
       const touchX = e.touches[0].clientX;
       const touchY = e.touches[0].clientY;
