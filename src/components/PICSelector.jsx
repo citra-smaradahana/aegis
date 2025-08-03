@@ -140,69 +140,69 @@ const PICSelector = ({
           </div>
         </div>
 
-                 {/* PIC List */}
-         <div style={{ padding: "16px" }}>
-           {picOptions.length === 0 ? (
-             <div
-               style={{ textAlign: "center", padding: "20px", color: "#666" }}
-             >
-               Tidak ada PIC tersedia
-             </div>
-           ) : (
-             <div
-               style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-             >
-               {picOptions.map((pic, index) => (
-                 <div
-                   key={index}
-                   onClick={() => handlePICSelect(pic.nama)}
-                   className="clickable"
-                   style={{
-                     backgroundColor: "#ffffff",
-                     padding: "16px",
-                     borderRadius: "12px",
-                     border: "1px solid #e5e7eb",
-                     cursor: "pointer",
-                     transition: "all 0.2s ease",
-                     display: "flex",
-                     alignItems: "center",
-                     justifyContent: "space-between",
-                     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                   }}
-                   onMouseEnter={(e) => {
-                     e.target.style.transform = "translateY(-1px)";
-                     e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
-                   }}
-                   onMouseLeave={(e) => {
-                     e.target.style.transform = "translateY(0)";
-                     e.target.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
-                   }}
-                 >
-                   <div>
-                     <div
-                       style={{
-                         fontSize: "16px",
-                         fontWeight: "500",
-                         color: "#1f2937",
-                         marginBottom: "4px",
-                       }}
-                     >
-                       {pic.nama}
-                     </div>
-                     <div
-                       style={{
-                         fontSize: "14px",
-                         color: "#6b7280",
-                       }}
-                     >
-                       {pic.jabatan}
-                     </div>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           )}
-         </div>
+        {/* PIC List */}
+        <div style={{ padding: "16px" }}>
+          {picOptions.length === 0 ? (
+            <div
+              style={{ textAlign: "center", padding: "20px", color: "#666" }}
+            >
+              Tidak ada PIC tersedia
+            </div>
+          ) : (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            >
+              {picOptions.map((pic, index) => (
+                <div
+                  key={index}
+                  onClick={() => handlePICSelect(pic.nama)}
+                  className="clickable"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    padding: "16px",
+                    borderRadius: "12px",
+                    border: "1px solid #e5e7eb",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "500",
+                        color: "#1f2937",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {pic.nama}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#6b7280",
+                      }}
+                    >
+                      {pic.jabatan}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </MobileBackGesture>
   );
