@@ -1683,19 +1683,27 @@ function App() {
         }}
       >
         {activeMenu === "Tasklist" && <TasklistDemo user={user} />}
-        {activeMenu === "Hazard Report" && <HazardForm user={user} onBack={() => setActiveMenu("")} />}
+        {activeMenu === "Hazard Report" && (
+          <HazardForm user={user} onBack={() => setActiveMenu("")} />
+        )}
         {activeMenu === "Fit To Work" && (
           <>
             {activeSubMenu === "Form Fit To Work" && (
               <FitToWorkForm user={user} onBack={() => setActiveMenu("")} />
             )}
             {activeSubMenu === "Validasi Fit To Work" && (
-              <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("")} />
+              <FitToWorkValidationNew
+                user={user}
+                onBack={() => setActiveMenu("")}
+              />
             )}
           </>
         )}
         {activeMenu === "Validasi Fit To Work" && (
-          <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("")} />
+          <FitToWorkValidationNew
+            user={user}
+            onBack={() => setActiveMenu("")}
+          />
         )}
         {activeMenu === "Take 5" && (
           <div

@@ -51,16 +51,23 @@ const PICSelector = ({
 
           // Debug logging
           console.log("PICSelector - Current user:", currentUser?.nama);
-          console.log("PICSelector - Current user trimmed:", currentUser?.nama?.trim());
+          console.log(
+            "PICSelector - Current user trimmed:",
+            currentUser?.nama?.trim()
+          );
           console.log("PICSelector - All users from site:", data);
           console.log("PICSelector - Filtered users:", filteredData);
-          
+
           // Additional check - log each user being filtered
           if (data) {
-            data.forEach(user => {
+            data.forEach((user) => {
               const userName = user.nama?.trim();
               const currentUserName = currentUser?.nama?.trim();
-              console.log(`PICSelector - Checking user: "${userName}" vs current: "${currentUserName}" - Match: ${userName === currentUserName}`);
+              console.log(
+                `PICSelector - Checking user: "${userName}" vs current: "${currentUserName}" - Match: ${
+                  userName === currentUserName
+                }`
+              );
             });
           }
 
@@ -108,7 +115,7 @@ const PICSelector = ({
       // Focus immediately and after a delay
       searchInputRef.current.focus();
       searchInputRef.current.setAttribute("data-focused", "true");
-      
+
       setTimeout(() => {
         if (searchInputRef.current) {
           searchInputRef.current.focus();
