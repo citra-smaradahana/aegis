@@ -9,7 +9,11 @@ const MobileBackGesture = ({ onBack, children }) => {
     const handleTouchStart = (e) => {
       // Don't interfere with input fields
       const target = e.target;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.contentEditable === "true"
+      ) {
         isBackGesture.current = false;
         return;
       }
@@ -29,7 +33,11 @@ const MobileBackGesture = ({ onBack, children }) => {
 
       // Don't interfere with input fields
       const target = e.target;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.contentEditable === "true"
+      ) {
         isBackGesture.current = false;
         return;
       }

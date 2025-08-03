@@ -32,6 +32,7 @@ const PICSelector = ({
           .from("users")
           .select("nama, jabatan")
           .eq("site", site)
+          .neq("nama", currentUser?.nama) // Exclude current user at database level
           .order("nama");
 
         if (error) {
@@ -40,8 +41,19 @@ const PICSelector = ({
         } else {
           // Filter out current user from PIC options
           const filteredData = data
-            ? data.filter((user) => user.nama !== currentUser?.nama)
+            ? data.filter((user) => {
+                // More robust filtering - check for exact match and trim whitespace
+                const userName = user.nama?.trim();
+                const currentUserName = currentUser?.nama?.trim();
+                return userName !== currentUserName;
+              })
             : [];
+          
+          // Debug logging
+          console.log("PICSelector - Current user:", currentUser?.nama);
+          console.log("PICSelector - All users from site:", data);
+          console.log("PICSelector - Filtered users:", filteredData);
+          
           setPicOptions(filteredData);
         }
       } catch (error) {
@@ -56,6 +68,15 @@ const PICSelector = ({
   }, [site, currentUser?.nama]);
 
   const handlePICSelect = (pic) => {
+    // Double-check to prevent self-selection
+    const userName = pic?.trim();
+    const currentUserName = currentUser?.nama?.trim();
+    
+    if (userName === currentUserName) {
+      console.warn("PICSelector - Attempted to select self:", userName);
+      return; // Prevent self-selection
+    }
+    
     onChange({ target: { name: "pic", value: pic } });
     setShowPICSelection(false);
     setSearchTerm("");
@@ -69,14 +90,14 @@ const PICSelector = ({
   // Prevent input blur and maintain focus
   const handleInputBlur = (e) => {
     // Prevent blur if the input should stay focused
-    if (showPICSelection && e.target.getAttribute('data-focused') === 'true') {
+    if (showPICSelection && e.target.getAttribute("data-focused") === "true") {
       e.preventDefault();
       e.target.focus();
     }
   };
 
   const handleInputFocus = (e) => {
-    e.target.setAttribute('data-focused', 'true');
+    e.target.setAttribute("data-focused", "true");
   };
 
   // Focus search input when selection page opens
@@ -87,19 +108,19 @@ const PICSelector = ({
         if (searchInputRef.current) {
           searchInputRef.current.focus();
           // Force focus and prevent blur
-          searchInputRef.current.setAttribute('data-focused', 'true');
+          searchInputRef.current.setAttribute("data-focused", "true");
         }
       };
-      
+
       // Try focusing immediately
       focusInput();
-      
+
       // Try again after a short delay
       setTimeout(focusInput, 50);
-      
+
       // Try again after a longer delay
       setTimeout(focusInput, 200);
-      
+
       // Try again after the page is fully rendered
       setTimeout(focusInput, 500);
     }
@@ -115,7 +136,11 @@ const PICSelector = ({
 
   // Maintain focus when search term changes
   useEffect(() => {
-    if (showPICSelection && searchInputRef.current && searchInputRef.current.getAttribute('data-focused') === 'true') {
+    if (
+      showPICSelection &&
+      searchInputRef.current &&
+      searchInputRef.current.getAttribute("data-focused") === "true"
+    ) {
       // Re-focus after state changes to prevent keyboard dismissal
       setTimeout(() => {
         if (searchInputRef.current) {
