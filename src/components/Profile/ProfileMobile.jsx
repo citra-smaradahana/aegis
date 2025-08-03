@@ -120,6 +120,17 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
                 padding: "8px",
                 borderRadius: "8px",
                 zIndex: 20,
+                transition: "none",
+                transform: "none",
+                boxShadow: "none",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "none";
+                e.target.style.boxShadow = "none";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "none";
+                e.target.style.boxShadow = "none";
               }}
             >
               <svg

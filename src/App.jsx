@@ -2396,23 +2396,34 @@ function TasklistDemo({ user, onBack }) {
       return (
         <div style={{ padding: "16px" }}>
           <div style={{ position: "relative", marginBottom: 8 }}>
-            {/* Back Button */}
-            {onBack && (
-              <button
-                onClick={onBack}
-                style={{
-                  position: "absolute",
-                  left: "0px",
-                  top: "8px",
-                  background: "none",
-                  border: "none",
-                  color: "#3b82f6",
-                  cursor: "pointer",
-                  padding: "8px",
-                  borderRadius: "8px",
-                  zIndex: 20,
-                }}
-              >
+                      {/* Back Button */}
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                position: "absolute",
+                left: "0px",
+                top: "8px",
+                background: "none",
+                border: "none",
+                color: "#3b82f6",
+                cursor: "pointer",
+                padding: "8px",
+                borderRadius: "8px",
+                zIndex: 20,
+                transition: "none",
+                transform: "none",
+                boxShadow: "none",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "none";
+                e.target.style.boxShadow = "none";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "none";
+                e.target.style.boxShadow = "none";
+              }}
+            >
                 <svg
                   width="20"
                   height="20"
