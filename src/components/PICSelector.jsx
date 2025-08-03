@@ -48,12 +48,12 @@ const PICSelector = ({
                 return userName !== currentUserName;
               })
             : [];
-          
+
           // Debug logging
           console.log("PICSelector - Current user:", currentUser?.nama);
           console.log("PICSelector - All users from site:", data);
           console.log("PICSelector - Filtered users:", filteredData);
-          
+
           setPicOptions(filteredData);
         }
       } catch (error) {
@@ -71,12 +71,12 @@ const PICSelector = ({
     // Double-check to prevent self-selection
     const userName = pic?.trim();
     const currentUserName = currentUser?.nama?.trim();
-    
+
     if (userName === currentUserName) {
       console.warn("PICSelector - Attempted to select self:", userName);
       return; // Prevent self-selection
     }
-    
+
     onChange({ target: { name: "pic", value: pic } });
     setShowPICSelection(false);
     setSearchTerm("");
@@ -87,42 +87,21 @@ const PICSelector = ({
     setSearchTerm("");
   };
 
-  // Prevent input blur and maintain focus
-  const handleInputBlur = (e) => {
-    // Prevent blur if the input should stay focused
-    if (showPICSelection && e.target.getAttribute("data-focused") === "true") {
-      e.preventDefault();
-      e.target.focus();
-    }
-  };
-
+  // Simplified focus handling
   const handleInputFocus = (e) => {
     e.target.setAttribute("data-focused", "true");
   };
 
-  // Focus search input when selection page opens
+  // Focus search input when selection page opens - simplified
   useEffect(() => {
     if (showPICSelection && searchInputRef.current) {
-      // Multiple attempts to focus with different delays
-      const focusInput = () => {
+      // Single focus attempt with delay to ensure page is rendered
+      setTimeout(() => {
         if (searchInputRef.current) {
           searchInputRef.current.focus();
-          // Force focus and prevent blur
           searchInputRef.current.setAttribute("data-focused", "true");
         }
-      };
-
-      // Try focusing immediately
-      focusInput();
-
-      // Try again after a short delay
-      setTimeout(focusInput, 50);
-
-      // Try again after a longer delay
-      setTimeout(focusInput, 200);
-
-      // Try again after the page is fully rendered
-      setTimeout(focusInput, 500);
+      }, 100);
     }
   }, [showPICSelection]);
 
@@ -134,21 +113,7 @@ const PICSelector = ({
       pic.jabatan.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Maintain focus when search term changes
-  useEffect(() => {
-    if (
-      showPICSelection &&
-      searchInputRef.current &&
-      searchInputRef.current.getAttribute("data-focused") === "true"
-    ) {
-      // Re-focus after state changes to prevent keyboard dismissal
-      setTimeout(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
-      }, 10);
-    }
-  }, [searchTerm, showPICSelection]);
+
 
   const PICSelectionPage = () => (
     <MobileBackGesture onBack={handleBack}>
@@ -238,44 +203,39 @@ const PICSelector = ({
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Cari nama atau jabatan PIC..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              inputMode="text"
-              enterKeyHint="search"
-              className="mobile-search-input"
-              style={{
-                width: "100%",
-                padding: "12px 12px 12px 40px",
-                borderRadius: "8px",
-                border: "1px solid #d1d5db",
-                fontSize: "16px",
-                backgroundColor: "#ffffff",
-                outline: "none",
-                WebkitAppearance: "none",
-                MozAppearance: "none",
-                appearance: "none",
-                touchAction: "manipulation",
-                userSelect: "text",
-                WebkitTapHighlightColor: "transparent",
-                WebkitUserSelect: "text",
-                WebkitTouchCallout: "none",
-                WebkitOverflowScrolling: "touch",
-                WebkitTransform: "translateZ(0)",
-                transform: "translateZ(0)",
-                backfaceVisibility: "hidden",
-                perspective: "1000px",
-              }}
-            />
+                         <input
+               ref={searchInputRef}
+               type="text"
+               placeholder="Cari nama atau jabatan PIC..."
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               onFocus={handleInputFocus}
+               autoComplete="off"
+               autoCorrect="off"
+               autoCapitalize="off"
+               spellCheck="false"
+               inputMode="text"
+               enterKeyHint="search"
+               className="mobile-search-input"
+               style={{
+                 width: "100%",
+                 padding: "12px 12px 12px 40px",
+                 borderRadius: "8px",
+                 border: "1px solid #d1d5db",
+                 fontSize: "16px",
+                 backgroundColor: "#ffffff",
+                 outline: "none",
+                 WebkitAppearance: "none",
+                 MozAppearance: "none",
+                 appearance: "none",
+                 touchAction: "manipulation",
+                 userSelect: "text",
+                 WebkitTapHighlightColor: "transparent",
+                 WebkitUserSelect: "text",
+                 WebkitTouchCallout: "none",
+                 WebkitOverflowScrolling: "touch",
+               }}
+             />
           </div>
         </div>
 
