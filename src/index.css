@@ -55,6 +55,11 @@ textarea {
   outline: none;
   transition: border 0.2s, background 0.2s;
   box-sizing: border-box;
+  /* Prevent zoom on mobile */
+  font-size: 16px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 input:focus,
 select:focus {
@@ -74,6 +79,14 @@ button {
   cursor: pointer;
   box-shadow: 0 2px 8px #6366f133;
   transition: background 0.2s, box-shadow 0.2s;
+  /* Prevent zoom on mobile */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 button:hover {
   background: linear-gradient(90deg, #a78bfa 60%, #06b6d4 100%);
@@ -129,4 +142,55 @@ textarea {
 }
 ::placeholder {
   color: #cbd5e1;
+}
+
+/* Mobile-specific styles to prevent zoom */
+@media screen and (max-width: 768px) {
+  /* Prevent zoom on input focus */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+  }
+
+  /* Prevent zoom on button tap */
+  button,
+  [role="button"],
+  .clickable {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+  }
+
+  /* Prevent zoom on mobile dropdown components */
+  .mobile-dropdown,
+  .site-selector,
+  .location-selector {
+    font-size: 16px !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+  }
 }

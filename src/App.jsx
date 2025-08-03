@@ -871,7 +871,12 @@ function App() {
           </div>
           <span className="menu-item-text">Fit To Work</span>
           <div className="menu-item-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
@@ -889,7 +894,12 @@ function App() {
           </div>
           <span className="menu-item-text">Validasi Fit To Work</span>
           <div className="menu-item-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
@@ -907,7 +917,12 @@ function App() {
           </div>
           <span className="menu-item-text">Take 5</span>
           <div className="menu-item-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
@@ -925,7 +940,12 @@ function App() {
           </div>
           <span className="menu-item-text">Hazard Report</span>
           <div className="menu-item-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
@@ -943,7 +963,12 @@ function App() {
           </div>
           <span className="menu-item-text">PTO</span>
           <div className="menu-item-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
@@ -2305,7 +2330,7 @@ function TasklistDemo({ user }) {
         return hazards.filter((hz) => hz.status === "Closed" && isRelated(hz));
       }
 
-            default: {
+      default: {
         return [];
       }
     }

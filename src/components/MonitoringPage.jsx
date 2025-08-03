@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { CUSTOM_INPUT_SITES } from "../config/siteLocations";
 
 const TABLE_OPTIONS = [
   { value: "fit_to_work", label: "Fit To Work" },
@@ -1752,22 +1753,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 }}
               >
                 <option value="">Semua Site</option>
-                <option value="Head Office">Head Office</option>
-                <option value="Balikpapan">Balikpapan</option>
-                <option value="ADRO">ADRO</option>
-                <option value="AMMP">AMMP</option>
-                <option value="BSIB">BSIB</option>
-                <option value="GAMR">GAMR</option>
-                <option value="HRSB">HRSB</option>
-                <option value="HRSE">HRSE</option>
-                <option value="PABB">PABB</option>
-                <option value="PBRB">PBRB</option>
-                <option value="PKJA">PKJA</option>
-                <option value="PPAB">PPAB</option>
-                <option value="PSMM">PSMM</option>
-                <option value="REBH">REBH</option>
-                <option value="RMTU">RMTU</option>
-                <option value="PMTU">PMTU</option>
+                {CUSTOM_INPUT_SITES.map((siteOption) => (
+                  <option key={siteOption} value={siteOption}>
+                    {siteOption}
+                  </option>
+                ))}
               </select>
             </div>
             <div

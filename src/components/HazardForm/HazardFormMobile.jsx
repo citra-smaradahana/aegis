@@ -7,6 +7,8 @@ import {
   allowsCustomInput,
 } from "../../config/siteLocations";
 import PendingTake5List from "./PendingTake5List";
+import MobileSiteSelector from "../MobileSiteSelector";
+import LocationDetailSelector from "../LocationDetailSelector";
 
 const lokasiOptions = [
   "Head Office",
@@ -678,27 +680,14 @@ function HazardFormMobile({ user }) {
                 >
                   Lokasi (Site)
                 </label>
-                <select
-                  name="lokasi"
+                <MobileSiteSelector
                   value={form.lokasi}
                   onChange={handleChange}
-                  required
+                  placeholder="Pilih Lokasi"
                   disabled={!!selectedTake5}
-                  style={{
-                    width: "100%",
-                    borderRadius: 8,
-                    padding: 4,
-                    fontSize: 13,
-                    ...getFieldBorderStyle("lokasi"),
-                  }}
-                >
-                  <option value="">Pilih Lokasi</option>
-                  {lokasiOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                  style={getFieldBorderStyle("lokasi")}
+                  required
+                />
                 {getFieldError("lokasi") && (
                   <div
                     style={{
@@ -753,37 +742,21 @@ function HazardFormMobile({ user }) {
                   />
                 ) : (
                   <>
-                    <select
-                      name="detailLokasi"
+                    <LocationDetailSelector
+                      site={form.lokasi}
                       value={form.detailLokasi}
                       onChange={handleDetailLokasiChange}
-                      required
-                      disabled={!!selectedTake5 || !form.lokasi}
-                      style={{
-                        width: "100%",
-                        borderRadius: 8,
-                        padding: 4,
-                        fontSize: 13,
-                        backgroundColor:
-                          !form.lokasi || !!selectedTake5 ? "#f3f4f6" : "#fff",
-                        color:
-                          !form.lokasi || !!selectedTake5 ? "#9ca3af" : "#000",
-                        ...getFieldBorderStyle("detailLokasi"),
-                      }}
-                    >
-                      <option value="">
-                        {!form.lokasi
+                      placeholder={
+                        !form.lokasi
                           ? "Pilih lokasi terlebih dahulu"
                           : !!selectedTake5
                           ? "Diisi otomatis dari Take 5"
-                          : "Pilih Detail Lokasi"}
-                      </option>
-                      {locationOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                          : "Pilih Detail Lokasi"
+                      }
+                      disabled={!!selectedTake5 || !form.lokasi}
+                      style={getFieldBorderStyle("detailLokasi")}
+                      required
+                    />
                     {showCustomInput && (
                       <input
                         type="text"

@@ -5,6 +5,8 @@ import {
   getLocationOptions,
   allowsCustomInput,
 } from "../../config/siteLocations";
+import MobileSiteSelector from "../MobileSiteSelector";
+import LocationDetailSelector from "../LocationDetailSelector";
 
 const SITE_OPTIONS = [
   "Head Office",
@@ -676,19 +678,13 @@ const Take5FormMobile = ({ user, onRedirectHazard }) => {
           {/* Lokasi Kerja */}
           <div style={fieldMargin}>
             <label style={labelStyle}>Lokasi Kerja</label>
-            <select
+            <MobileSiteSelector
               value={site}
               onChange={(e) => setSite(e.target.value)}
-              required
+              placeholder="Pilih Lokasi"
               style={inputStyle}
-            >
-              <option value="">Pilih Lokasi</option>
-              {SITE_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              required
+            />
           </div>
 
           {/* Detail Lokasi */}
@@ -705,19 +701,14 @@ const Take5FormMobile = ({ user, onRedirectHazard }) => {
               />
             ) : (
               <>
-                <select
+                <LocationDetailSelector
+                  site={site}
                   value={detailLokasi}
                   onChange={handleDetailLokasiChange}
-                  required
+                  placeholder="Pilih Detail Lokasi"
                   style={inputStyle}
-                >
-                  <option value="">Pilih Detail Lokasi</option>
-                  {locationOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  required
+                />
                 {showCustomInput && (
                   <input
                     type="text"
