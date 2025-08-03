@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import ProfileMobile from "./ProfileMobile";
 import ProfileDesktop from "./ProfileDesktop";
 
-function Profile({ user, onClose }) {
+function Profile({ user, onClose, onBack }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ function Profile({ user, onClose }) {
   }, []);
 
   if (isMobile) {
-    return <ProfileMobile user={user} onClose={onClose} />;
+    return <ProfileMobile user={user} onClose={onClose} onBack={onBack} />;
   }
 
   return <ProfileDesktop user={user} onClose={onClose} />;

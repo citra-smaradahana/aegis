@@ -5,6 +5,7 @@ function FitToWorkValidationListNew({
   onValidationSelect,
   filterStatus,
   onFilterChange,
+  onBack,
 }) {
   const getStatusColor = (status) => {
     switch (status) {
@@ -70,9 +71,49 @@ function FitToWorkValidationListNew({
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2 style={{ marginBottom: "20px", color: "#333" }}>
-        Validasi Fit To Work
-      </h2>
+      <div style={{ position: "relative", marginBottom: "20px" }}>
+        {/* Back Button */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{
+              position: "absolute",
+              left: "0px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              color: "#3b82f6",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px",
+              borderRadius: "8px",
+              zIndex: 20,
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            Kembali
+          </button>
+        )}
+        <h2 style={{ marginBottom: "20px", color: "#333", textAlign: "center" }}>
+          Validasi Fit To Work
+        </h2>
+      </div>
 
       {/* Filter and Counter */}
       <div

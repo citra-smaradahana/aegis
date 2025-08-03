@@ -30,7 +30,7 @@ const lokasiOptions = [
   "PMTU",
 ];
 
-function HazardFormMobile({ user }) {
+function HazardFormMobile({ user, onBack }) {
   // Multi-page state
   const [page, setPage] = useState(1);
   // Form state
@@ -592,8 +592,47 @@ function HazardFormMobile({ user }) {
             padding: "8px 0 4px 0",
             marginBottom: 0,
             textAlign: "center",
+            position: "relative",
           }}
         >
+          {/* Back Button */}
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                position: "absolute",
+                left: "16px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                color: "#3b82f6",
+                fontSize: "16px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px",
+                borderRadius: "8px",
+                zIndex: 20,
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              Kembali
+            </button>
+          )}
           <h2
             style={{
               margin: 0,

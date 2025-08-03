@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import FitToWorkFormDesktop from "./FitToWorkFormDesktop";
 import FitToWorkFormMobile from "./FitToWorkFormMobile";
 
-function FitToWorkForm({ user }) {
+function FitToWorkForm({ user, onBack }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ function FitToWorkForm({ user }) {
   }, []);
 
   return isMobile ? (
-    <FitToWorkFormMobile user={user} />
+    <FitToWorkFormMobile user={user} onBack={onBack} />
   ) : (
     <FitToWorkFormDesktop user={user} />
   );

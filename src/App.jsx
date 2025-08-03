@@ -48,7 +48,7 @@ function getMenuByRole(role, user) {
       [
         "SHERQ Officer",
         "Penanggung Jawab Operasional",
-        "Asst. Penanggung Jawab Operasional"
+        "Asst. Penanggung Jawab Operasional",
       ].includes(userJabatan);
 
     return allMenuItems.filter(
@@ -82,7 +82,7 @@ function getFitToWorkSubMenus(role, isMobile, user) {
       [
         "SHERQ Officer",
         "Penanggung Jawab Operasional",
-        "Asst. Penanggung Jawab Operasional"
+        "Asst. Penanggung Jawab Operasional",
       ].includes(userJabatan);
 
     console.log(
@@ -93,7 +93,7 @@ function getFitToWorkSubMenus(role, isMobile, user) {
     console.log("getFitToWorkSubMenus - Validator list:", [
       "SHERQ Officer",
       "Penanggung Jawab Operasional",
-      "Asst. Penanggung Jawab Operasional"
+      "Asst. Penanggung Jawab Operasional",
     ]);
 
     if (canValidate) {
@@ -871,41 +871,6 @@ function App() {
           zIndex: 10,
         }}
       >
-        {/* Back Button for Mobile */}
-        <button
-          onClick={() => setActiveMenu("Home")}
-          style={{
-            position: "absolute",
-            top: "-40px",
-            left: "0px",
-            background: "none",
-            border: "none",
-            color: "#3b82f6",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "8px",
-            borderRadius: "8px",
-            zIndex: 20,
-          }}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-          Kembali
-        </button>
         {/* Menu Item: Fit To Work */}
         <button
           className="mobile-menu-list-item menu-item-blue"
@@ -933,33 +898,34 @@ function App() {
         </button>
 
         {/* Menu Item: Validasi - Only show for specific roles */}
-        {user?.jabatan && [
-          "SHERQ Officer",
-          "Penanggung Jawab Operasional",
-          "Asst. Penanggung Jawab Operasional"
-        ].includes(user.jabatan) && (
-          <button
-            className="mobile-menu-list-item menu-item-cyan"
-            onClick={() => setActiveMenu("Validasi Fit To Work")}
-          >
-            <div className="menu-item-icon">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <span className="menu-item-text">Validasi Fit To Work</span>
-            <div className="menu-item-arrow">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </div>
-          </button>
-        )}
+        {user?.jabatan &&
+          [
+            "SHERQ Officer",
+            "Penanggung Jawab Operasional",
+            "Asst. Penanggung Jawab Operasional",
+          ].includes(user.jabatan) && (
+            <button
+              className="mobile-menu-list-item menu-item-cyan"
+              onClick={() => setActiveMenu("Validasi Fit To Work")}
+            >
+              <div className="menu-item-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <span className="menu-item-text">Validasi Fit To Work</span>
+              <div className="menu-item-arrow">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </div>
+            </button>
+          )}
 
         {/* Menu Item: Take 5 */}
         <button
@@ -1057,20 +1023,26 @@ function App() {
           {activeMenu === "Fit To Work" && (
             <>
               {activeSubMenu === "Form Fit To Work" && (
-                <FitToWorkForm user={user} />
+                <FitToWorkForm user={user} onBack={() => setActiveMenu("Home")} />
               )}
               {activeSubMenu === "Validasi Fit To Work" && (
-                <FitToWorkValidationNew user={user} />
+                <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("Home")} />
               )}
             </>
           )}
           {activeMenu === "Validasi Fit To Work" && (
-            <FitToWorkValidationNew user={user} />
+            <FitToWorkValidationNew user={user} onBack={() => setActiveMenu("Home")} />
           )}
           {activeMenu === "Take 5" && (
-            <Take5Form user={user} onRedirectHazard={handleRedirectToHazard} />
+            <Take5Form 
+              user={user} 
+              onRedirectHazard={handleRedirectToHazard} 
+              onBack={() => setActiveMenu("Home")}
+            />
           )}
-          {activeMenu === "Hazard Report" && <HazardForm user={user} />}
+          {activeMenu === "Hazard Report" && (
+            <HazardForm user={user} onBack={() => setActiveMenu("Home")} />
+          )}
           {activeMenu === "PTO" && (
             <div style={{ padding: 24 }}>PTO Content</div>
           )}
@@ -1094,7 +1066,7 @@ function App() {
             padding: "16px 0 0 0",
           }}
         >
-          <TasklistDemo user={user} />
+          <TasklistDemo user={user} onBack={() => setActiveMenu("Home")} />
         </div>
       )}
       {/* Mobile Pop Up Profile */}
@@ -1114,7 +1086,7 @@ function App() {
             boxShadow: "0 -2px 16px #0002",
           }}
         >
-          <Profile user={user} onClose={() => setActiveMenu("Home")} />
+          <Profile user={user} onClose={() => setActiveMenu("Home")} onBack={() => setActiveMenu("Home")} />
         </div>
       )}
       {/* Mobile Pop Up Monitoring - DISABLED */}
@@ -1800,7 +1772,7 @@ function App() {
         )}
         {activeMenu === "Manajemen User" && <UserManagement user={user} />}
         {activeMenu === "Profile" && (
-          <Profile user={user} onClose={() => setActiveMenu("Home")} />
+          <Profile user={user} onClose={() => setActiveMenu("Home")} onBack={() => setActiveMenu("Home")} />
         )}
 
         {/* Notification Popup */}
@@ -2204,7 +2176,7 @@ function App() {
 export default App;
 
 // Tambahkan komponen demo untuk menampilkan alur form tasklist
-function TasklistDemo({ user }) {
+function TasklistDemo({ user, onBack }) {
   const [hazards, setHazards] = React.useState([]);
   const [selectedHazard, setSelectedHazard] = React.useState(null);
   const [status, setStatus] = React.useState(null);
@@ -2404,17 +2376,57 @@ function TasklistDemo({ user }) {
     if (isMobile) {
       return (
         <div style={{ padding: "16px" }}>
-          <h3
-            style={{
-              color: "#232946",
-              fontWeight: 700,
-              fontSize: 20,
-              marginBottom: 8,
-              textAlign: "center",
-            }}
-          >
-            Tasklist
-          </h3>
+          <div style={{ position: "relative", marginBottom: 8 }}>
+            {/* Back Button */}
+            {onBack && (
+              <button
+                onClick={onBack}
+                style={{
+                  position: "absolute",
+                  left: "0px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "#3b82f6",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px",
+                  borderRadius: "8px",
+                  zIndex: 20,
+                }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+                Kembali
+              </button>
+            )}
+            <h3
+              style={{
+                color: "#232946",
+                fontWeight: 700,
+                fontSize: 20,
+                marginBottom: 8,
+                textAlign: "center",
+              }}
+            >
+              Tasklist
+            </h3>
+          </div>
           <div
             style={{
               textAlign: "center",

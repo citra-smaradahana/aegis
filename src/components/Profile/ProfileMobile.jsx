@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-function ProfileMobile({ user, onClose }) {
+function ProfileMobile({ user, onClose, onBack }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -95,7 +95,45 @@ function ProfileMobile({ user, onClose }) {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", position: "relative", flex: 1 }}>
+          {/* Back Button */}
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                position: "absolute",
+                left: "0px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                color: "#3b82f6",
+                fontSize: "16px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px",
+                borderRadius: "8px",
+                zIndex: 20,
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              Kembali
+            </button>
+          )}
           <div
             style={{
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -115,6 +153,8 @@ function ProfileMobile({ user, onClose }) {
               fontSize: 18,
               fontWeight: 600,
               color: "#1f2937",
+              textAlign: "center",
+              flex: 1,
             }}
           >
             Profile

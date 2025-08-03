@@ -3,7 +3,7 @@ import { supabase } from "../../supabaseClient";
 import FitToWorkValidationListNew from "./FitToWorkValidationListNew";
 import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
 
-function FitToWorkValidationNew({ user }) {
+function FitToWorkValidationNew({ user, onBack }) {
   const [validations, setValidations] = useState([]);
   const [selectedValidation, setSelectedValidation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -216,6 +216,7 @@ function FitToWorkValidationNew({ user }) {
           user={user}
           onUpdate={handleValidationUpdate}
           onClose={handleCloseForm}
+          onBack={onBack}
         />
       ) : (
         <FitToWorkValidationListNew
@@ -223,6 +224,7 @@ function FitToWorkValidationNew({ user }) {
           onValidationSelect={handleValidationSelect}
           filterStatus={filterStatus}
           onFilterChange={setFilterStatus}
+          onBack={onBack}
         />
       )}
     </div>
