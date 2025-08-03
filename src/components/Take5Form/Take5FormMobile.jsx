@@ -657,7 +657,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               style={{
                 position: "absolute",
                 left: "16px",
-                top: "16px",
+                top: "8px",
                 background: "none",
                 border: "none",
                 color: "#3b82f6",

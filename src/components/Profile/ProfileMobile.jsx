@@ -112,7 +112,7 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               style={{
                 position: "absolute",
                 left: "0px",
-                top: "0px",
+                top: "8px",
                 background: "none",
                 border: "none",
                 color: "#3b82f6",

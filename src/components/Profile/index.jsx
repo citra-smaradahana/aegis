@@ -15,7 +15,14 @@ function Profile({ user, onClose, onBack, onLogout }) {
   }, []);
 
   if (isMobile) {
-    return <ProfileMobile user={user} onClose={onClose} onBack={onBack} onLogout={onLogout} />;
+    return (
+      <ProfileMobile
+        user={user}
+        onClose={onClose}
+        onBack={onBack}
+        onLogout={onLogout}
+      />
+    );
   }
 
   return <ProfileDesktop user={user} onClose={onClose} onLogout={onLogout} />;
