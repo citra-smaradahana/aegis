@@ -12,6 +12,7 @@ import { supabase } from "./supabaseClient";
 import TasklistForm from "./components/tasklistForms/index.jsx";
 import Profile from "./components/Profile/index.jsx";
 import UserManagement from "./components/UserManagement/index.jsx";
+import { sessionManager, setupSessionAutoExtend } from "./utils/sessionManager";
 
 const allMenuItems = [
   "Home",
@@ -159,6 +160,25 @@ function App() {
   console.log("App - User site:", user?.site);
   console.log("App - User nama:", userNama);
   console.log("App - Fit To Work Sub Menus:", fitToWorkSubMenus);
+
+  // Session management
+  useEffect(() => {
+    // Check for existing session on app load
+    const savedUser = sessionManager.getSession();
+    if (savedUser && !user) {
+      setUser(savedUser);
+    }
+
+    // Setup session auto-extend
+    setupSessionAutoExtend();
+  }, []);
+
+  // Save session when user changes
+  useEffect(() => {
+    if (user) {
+      sessionManager.saveSession(user);
+    }
+  }, [user]);
 
   // Fungsi untuk redirect ke Hazard Report setelah Take 5 STOP
   const handleRedirectToHazard = () => {
@@ -454,6 +474,7 @@ function App() {
 
   const handleLogout = () => {
     closeLogoutModal();
+    sessionManager.clearSession();
     setUser(null);
   };
 

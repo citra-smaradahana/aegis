@@ -28,7 +28,7 @@ const MobileSiteSelector = ({
         style={{
           width: "100%",
           borderRadius: 8,
-          padding: 12,
+          padding: "4px 12px",
           fontSize: 14,
           backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
           color: disabled ? "#9ca3af" : "#000000",
@@ -37,6 +37,8 @@ const MobileSiteSelector = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          minHeight: "32px",
+          boxSizing: "border-box",
           ...style,
         }}
       >

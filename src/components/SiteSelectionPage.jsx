@@ -1,5 +1,6 @@
 import React from "react";
 import { CUSTOM_INPUT_SITES } from "../config/siteLocations";
+import MobileBackGesture from "./MobileBackGesture";
 
 const SiteSelectionPage = ({ onSelectSite, onBack, selectedSite }) => {
   const handleSiteSelect = (site) => {
@@ -7,19 +8,20 @@ const SiteSelectionPage = ({ onSelectSite, onBack, selectedSite }) => {
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "#f8f9fa",
-        zIndex: 1000,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <MobileBackGesture onBack={onBack}>
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "#f8f9fa",
+          zIndex: 1000,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
       {/* Header */}
       <div
         style={{
@@ -173,6 +175,7 @@ const SiteSelectionPage = ({ onSelectSite, onBack, selectedSite }) => {
         </button>
       </div>
     </div>
+    </MobileBackGesture>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { getLocationOptions } from "../config/siteLocations";
+import MobileBackGesture from "./MobileBackGesture";
 
 const LocationDetailSelector = ({
   site,
@@ -23,19 +24,20 @@ const LocationDetailSelector = ({
   };
 
   const LocationSelectionPage = () => (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "#f8f9fa",
-        zIndex: 1000,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <MobileBackGesture onBack={handleBack}>
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "#f8f9fa",
+          zIndex: 1000,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
       {/* Header */}
       <div
         style={{
@@ -189,6 +191,7 @@ const LocationDetailSelector = ({
         </button>
       </div>
     </div>
+    </MobileBackGesture>
   );
 
   return (
@@ -199,7 +202,7 @@ const LocationDetailSelector = ({
         style={{
           width: "100%",
           borderRadius: 8,
-          padding: 12,
+          padding: "4px 12px",
           fontSize: 14,
           backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
           color: disabled ? "#9ca3af" : "#000000",
@@ -208,6 +211,8 @@ const LocationDetailSelector = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          minHeight: "32px",
+          boxSizing: "border-box",
           ...style,
         }}
       >
