@@ -18,7 +18,6 @@ export const CUSTOM_INPUT_SITES = [
   "Balikpapan",
   "ADRO",
   "AMMP",
-  "BSIB",
   "GAMR",
   "HRSB",
   "HRSE",
