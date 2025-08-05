@@ -1,0 +1,2 @@
+[33m6cd4dd2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m fix: update GitHub Actions workflow to use modern deployment method
+[33m8dec4ff[m[33m ([m[1;31morigin/main[m[33m)[m feat: implement shouldUseLocationSelector for BSIB while keeping it in CUSTOM_INPUT_SITES
