@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+*.sql
+*.md
+*.bat
+*.ps1
+*.sh
+package-lock.json 

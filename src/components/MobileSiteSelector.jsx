@@ -1,18 +1,17 @@
-import React, { useState } from "react";
-import SiteSelectionPage from "./SiteSelectionPage";
+import React, { useState } from 'react';
+import SiteSelectionPage from './SiteSelectionPage';
 
 const MobileSiteSelector = ({
   value,
   onChange,
-  placeholder = "Pilih Lokasi",
+  placeholder = 'Pilih Lokasi',
   disabled = false,
   style = {},
-
 }) => {
   const [showSiteSelection, setShowSiteSelection] = useState(false);
 
-  const handleSiteSelect = (site) => {
-    onChange({ target: { name: "lokasi", value: site } });
+  const handleSiteSelect = site => {
+    onChange({ target: { name: 'lokasi', value: site } });
     setShowSiteSelection(false);
   };
 
@@ -26,23 +25,23 @@ const MobileSiteSelector = ({
         onClick={() => !disabled && setShowSiteSelection(true)}
         className="mobile-dropdown site-selector"
         style={{
-          width: "100%",
+          width: '100%',
           borderRadius: 8,
-          padding: "4px 12px",
+          padding: '4px 12px',
           fontSize: 14,
-          backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
-          color: disabled ? "#9ca3af" : "#000000",
-          border: "1px solid #d1d5db",
-          cursor: disabled ? "not-allowed" : "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          minHeight: "32px",
-          boxSizing: "border-box",
+          backgroundColor: disabled ? '#f3f4f6' : '#ffffff',
+          color: disabled ? '#9ca3af' : '#000000',
+          border: '1px solid #d1d5db',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: '32px',
+          boxSizing: 'border-box',
           ...style,
         }}
       >
-        <span style={{ color: value ? "#000000" : "#6b7280" }}>
+        <span style={{ color: value ? '#000000' : '#6b7280' }}>
           {value || placeholder}
         </span>
         {!disabled && (
@@ -55,7 +54,7 @@ const MobileSiteSelector = ({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ color: "#6b7280" }}
+            style={{ color: '#6b7280' }}
           >
             <path d="m6 9 6 6 6-6" />
           </svg>

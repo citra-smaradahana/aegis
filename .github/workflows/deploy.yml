@@ -15,8 +15,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
-          cache: "npm"
+          node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -37,20 +37,20 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # Create gh-pages branch
           git checkout --orphan gh-pages
-          
+
           # Remove all files except dist
           git rm -rf .
           cp -r dist/* .
-          
+
           # Add all files
           git add .
-          
+
           # Commit
           git commit -m "Deploy to GitHub Pages"
-          
+
           # Push to gh-pages branch
           git push origin gh-pages --force
         env:

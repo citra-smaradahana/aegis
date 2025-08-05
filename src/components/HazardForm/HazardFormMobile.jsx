@@ -1,34 +1,34 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "../../supabaseClient";
-import Cropper from "react-easy-crop";
-import getCroppedImg from "../Dropzone/cropImageUtil";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '../../supabaseClient';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../Dropzone/cropImageUtil';
 import {
   getLocationOptions,
   allowsCustomInput,
   shouldUseLocationSelector,
-} from "../../config/siteLocations";
-import PendingTake5List from "./PendingTake5List";
-import MobileSiteSelector from "../MobileSiteSelector";
-import LocationDetailSelector from "../LocationDetailSelector";
-import PICSelector from "../PICSelector";
+} from '../../config/siteLocations';
+import PendingTake5List from './PendingTake5List';
+import MobileSiteSelector from '../MobileSiteSelector';
+import LocationDetailSelector from '../LocationDetailSelector';
+import PICSelector from '../PICSelector';
 
 const _lokasiOptions = [
-  "Head Office",
-  "Balikpapan",
-  "ADRO",
-  "AMMP",
-  "BSIB",
-  "GAMR",
-  "HRSB",
-  "HRSE",
-  "PABB",
-  "PBRB",
-  "PKJA",
-  "PPAB",
-  "PSMM",
-  "REBH",
-  "RMTU",
-  "PMTU",
+  'Head Office',
+  'Balikpapan',
+  'ADRO',
+  'AMMP',
+  'BSIB',
+  'GAMR',
+  'HRSB',
+  'HRSE',
+  'PABB',
+  'PBRB',
+  'PKJA',
+  'PPAB',
+  'PSMM',
+  'REBH',
+  'RMTU',
+  'PMTU',
 ];
 
 function HazardFormMobile({ user, onBack }) {
@@ -36,14 +36,14 @@ function HazardFormMobile({ user, onBack }) {
   const [page, setPage] = useState(1);
   // Form state
   const [form, setForm] = useState({
-    lokasi: "",
-    detailLokasi: "",
-    keteranganLokasi: "",
-    pic: "",
-    ketidaksesuaian: "",
-    subKetidaksesuaian: "",
-    quickAction: "",
-    deskripsiTemuan: "",
+    lokasi: '',
+    detailLokasi: '',
+    keteranganLokasi: '',
+    pic: '',
+    ketidaksesuaian: '',
+    subKetidaksesuaian: '',
+    quickAction: '',
+    deskripsiTemuan: '',
   });
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
@@ -67,31 +67,31 @@ function HazardFormMobile({ user, onBack }) {
 
   // Evaluator state
   const [evaluatorOptions, setEvaluatorOptions] = useState([]);
-  const [evaluatorNama, setEvaluatorNama] = useState("");
+  const [evaluatorNama, setEvaluatorNama] = useState('');
   const [submittedToMultipleEvaluators, setSubmittedToMultipleEvaluators] =
     useState(false);
 
   // Fetch Take 5 pending (Stop pekerjaan)
   useEffect(() => {
     supabase
-      .from("take_5")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("status", "pending")
+      .from('take_5')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
       .then(({ data }) => setTake5Pending(data || []));
   }, [user.id]);
 
   // Prefill lokasi/dll jika Take 5 dipilih
   useEffect(() => {
     if (selectedTake5) {
-      setForm((prev) => ({
+      setForm(prev => ({
         ...prev,
         lokasi: selectedTake5.site,
         detailLokasi: selectedTake5.detail_lokasi,
-        keteranganLokasi: "", // blank, isi manual
-        ketidaksesuaian: "", // blank, isi manual
-        subKetidaksesuaian: "", // blank, isi manual
-        quickAction: "STOP pekerjaan sesuai Take 5",
+        keteranganLokasi: '', // blank, isi manual
+        ketidaksesuaian: '', // blank, isi manual
+        subKetidaksesuaian: '', // blank, isi manual
+        quickAction: 'STOP pekerjaan sesuai Take 5',
         deskripsiTemuan:
           selectedTake5.deskripsi_kondisi ||
           `Kondisi kerja tidak aman berdasarkan Take 5 tanggal ${selectedTake5.tanggal}. ${selectedTake5.aman}`,
@@ -107,15 +107,15 @@ function HazardFormMobile({ user, onBack }) {
         return;
       }
       const { data, error } = await supabase
-        .from("users")
-        .select("nama")
-        .eq("site", form.lokasi);
+        .from('users')
+        .select('nama')
+        .eq('site', form.lokasi);
       if (!error && data) {
         // Filter out current user dari PIC options
         const filteredPIC = data
-          .map((u) => u.nama)
+          .map(u => u.nama)
           .filter(Boolean)
-          .filter((nama) => nama !== user.nama); // Exclude current user
+          .filter(nama => nama !== user.nama); // Exclude current user
         setPicOptions(filteredPIC);
       } else {
         setPicOptions([]);
@@ -130,27 +130,27 @@ function HazardFormMobile({ user, onBack }) {
       const options = getLocationOptions(form.lokasi);
       setLocationOptions(options);
       // Reset detail lokasi when lokasi changes
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
+      setForm(prev => ({ ...prev, detailLokasi: '' }));
       setShowCustomInput(false);
     } else {
       setLocationOptions([]);
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
+      setForm(prev => ({ ...prev, detailLokasi: '' }));
       setShowCustomInput(false);
     }
   }, [form.lokasi]);
 
   // Handle detail lokasi change
-  const handleDetailLokasiChange = (e) => {
+  const handleDetailLokasiChange = e => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
 
     // Show custom input if "Lainnya" is selected or if site allows custom input
     if (
-      value === "Lainnya" ||
-      (allowsCustomInput(form.lokasi) && value === "")
+      value === 'Lainnya' ||
+      (allowsCustomInput(form.lokasi) && value === '')
     ) {
       setShowCustomInput(true);
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
+      setForm(prev => ({ ...prev, detailLokasi: '' }));
     } else {
       setShowCustomInput(false);
     }
@@ -161,20 +161,20 @@ function HazardFormMobile({ user, onBack }) {
     async function fetchEvaluator() {
       if (!form.lokasi) {
         setEvaluatorOptions([]);
-        setEvaluatorNama("");
+        setEvaluatorNama('');
         return;
       }
       const { data, error } = await supabase
-        .from("users")
-        .select("nama")
-        .eq("site", form.lokasi)
-        .eq("role", "evaluator");
+        .from('users')
+        .select('nama')
+        .eq('site', form.lokasi)
+        .eq('role', 'evaluator');
       if (!error && data && data.length > 0) {
-        setEvaluatorOptions(data.map((u) => u.nama).filter(Boolean));
+        setEvaluatorOptions(data.map(u => u.nama).filter(Boolean));
         setEvaluatorNama(data[0].nama);
       } else {
         setEvaluatorOptions([]);
-        setEvaluatorNama("");
+        setEvaluatorNama('');
       }
     }
     fetchEvaluator();
@@ -192,16 +192,16 @@ function HazardFormMobile({ user, onBack }) {
   }, [evidence, selectedTake5]);
 
   // Handler
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "lokasi") {
-      setForm((prev) => ({ ...prev, pic: "" }));
-      setEvaluatorNama("");
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (name === 'lokasi') {
+      setForm(prev => ({ ...prev, pic: '' }));
+      setEvaluatorNama('');
     }
   };
 
-  const handleEvidence = (e) => {
+  const handleEvidence = e => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setRawImage(URL.createObjectURL(file));
@@ -217,8 +217,8 @@ function HazardFormMobile({ user, onBack }) {
     fileInputRef.current?.click();
   };
 
-  const handleNext = () => setPage((p) => p + 1);
-  const handleBack = () => setPage((p) => p - 1);
+  const handleNext = () => setPage(p => p + 1);
+  const handleBack = () => setPage(p => p - 1);
 
   // Fungsi validasi untuk setiap halaman
   const isPage1Valid = () => {
@@ -240,19 +240,19 @@ function HazardFormMobile({ user, onBack }) {
   };
 
   // Fungsi untuk menampilkan pesan error field
-  const getFieldError = (fieldName) => {
-    if (!form[fieldName] || form[fieldName].trim() === "") {
-      return "Field ini wajib diisi";
+  const getFieldError = fieldName => {
+    if (!form[fieldName] || form[fieldName].trim() === '') {
+      return 'Field ini wajib diisi';
     }
     return null;
   };
 
   // Fungsi untuk menampilkan border merah pada field yang kosong
-  const getFieldBorderStyle = (fieldName) => {
+  const getFieldBorderStyle = fieldName => {
     const hasError = getFieldError(fieldName);
     return {
-      border: hasError ? "1px solid #ef4444" : "1px solid #d1d5db",
-      backgroundColor: hasError ? "#fef2f2" : "#fff",
+      border: hasError ? '1px solid #ef4444' : '1px solid #d1d5db',
+      backgroundColor: hasError ? '#fef2f2' : '#fff',
     };
   };
 
@@ -263,8 +263,8 @@ function HazardFormMobile({ user, onBack }) {
   const handleCropSave = async () => {
     try {
       const croppedImage = await getCroppedImg(rawImage, croppedAreaPixels);
-      const file = new File([croppedImage], "evidence.jpg", {
-        type: "image/jpeg",
+      const file = new File([croppedImage], 'evidence.jpg', {
+        type: 'image/jpeg',
       });
       setEvidence(file);
       setShowCrop(false);
@@ -278,11 +278,11 @@ function HazardFormMobile({ user, onBack }) {
     setShowCrop(false);
     setRawImage(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   };
 
-  const handleSelectTake5 = (take5) => {
+  const handleSelectTake5 = take5 => {
     setSelectedTake5(take5);
     setSelectedTake5Id(take5?.id || null);
 
@@ -291,10 +291,10 @@ function HazardFormMobile({ user, onBack }) {
       ...form,
       lokasi: take5.site,
       detailLokasi: take5.detail_lokasi,
-      keteranganLokasi: "", // blank, isi manual
-      ketidaksesuaian: "", // blank, isi manual
-      subKetidaksesuaian: "", // blank, isi manual
-      quickAction: "STOP pekerjaan sesuai Take 5",
+      keteranganLokasi: '', // blank, isi manual
+      ketidaksesuaian: '', // blank, isi manual
+      subKetidaksesuaian: '', // blank, isi manual
+      quickAction: 'STOP pekerjaan sesuai Take 5',
       deskripsiTemuan:
         take5.deskripsi_kondisi ||
         `Kondisi kerja tidak aman berdasarkan Take 5 tanggal ${take5.tanggal}. ${take5.aman}`,
@@ -308,19 +308,19 @@ function HazardFormMobile({ user, onBack }) {
 
   async function uploadEvidence() {
     if (!evidence) return null;
-    const fileExt = evidence.name.split(".").pop();
+    const fileExt = evidence.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `hazard-evidence/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("img-test")
+      .from('img-test')
       .upload(filePath, evidence);
 
     if (uploadError) {
-      throw new Error("Error uploading evidence");
+      throw new Error('Error uploading evidence');
     }
 
-    const { data } = supabase.storage.from("img-test").getPublicUrl(filePath);
+    const { data } = supabase.storage.from('img-test').getPublicUrl(filePath);
     return data.publicUrl;
   }
 
@@ -330,7 +330,7 @@ function HazardFormMobile({ user, onBack }) {
     setSubmitError(null);
 
     try {
-      let evidenceUrl = "";
+      let evidenceUrl = '';
       if (evidence) {
         evidenceUrl = await uploadEvidence();
       } else if (selectedTake5?.bukti_url) {
@@ -339,8 +339,8 @@ function HazardFormMobile({ user, onBack }) {
 
       // Jika ada multiple evaluator, buat hazard report untuk setiap evaluator
       if (evaluatorOptions.length > 1) {
-        const hazardPromises = evaluatorOptions.map((evaluatorNama) =>
-          supabase.from("hazard_report").insert({
+        const hazardPromises = evaluatorOptions.map(evaluatorNama =>
+          supabase.from('hazard_report').insert({
             user_id: user.id,
             user_perusahaan: user.perusahaan,
             pelapor_nama: user.nama,
@@ -355,7 +355,7 @@ function HazardFormMobile({ user, onBack }) {
             deskripsi_temuan: form.deskripsiTemuan,
             evidence: evidenceUrl,
             created_at: new Date().toISOString(),
-            status: "Submit",
+            status: 'Submit',
             action_plan: null,
             due_date: null,
             evaluator_nama: evaluatorNama,
@@ -364,7 +364,7 @@ function HazardFormMobile({ user, onBack }) {
         );
 
         const results = await Promise.all(hazardPromises);
-        const errors = results.filter((result) => result.error);
+        const errors = results.filter(result => result.error);
 
         if (errors.length > 0) {
           throw new Error(`Gagal membuat ${errors.length} hazard report`);
@@ -392,26 +392,26 @@ function HazardFormMobile({ user, onBack }) {
           deskripsi_temuan: form.deskripsiTemuan,
           evidence: evidenceUrl,
           created_at: new Date().toISOString(),
-          status: "Submit",
+          status: 'Submit',
           action_plan: null,
           due_date: null,
           evaluator_nama: evaluatorNama,
           take_5_id: selectedTake5Id || null,
         };
 
-        console.log("Hazard data to insert:", hazardData);
+        console.log('Hazard data to insert:', hazardData);
 
         const { data: hazardDataResult, error } = await supabase
-          .from("hazard_report")
+          .from('hazard_report')
           .insert(hazardData);
 
-        console.log("Hazard Report insert result:", {
+        console.log('Hazard Report insert result:', {
           hazardDataResult,
           error,
         });
 
         if (error) {
-          console.error("Supabase error:", error);
+          console.error('Supabase error:', error);
           throw error;
         }
         setSubmittedToMultipleEvaluators(false);
@@ -420,25 +420,25 @@ function HazardFormMobile({ user, onBack }) {
       // Jika ada Take 5 yang dipilih, update status menjadi "done"
       if (selectedTake5?.id) {
         const { error: updateError } = await supabase
-          .from("take_5")
-          .update({ status: "done" })
-          .eq("id", selectedTake5.id);
+          .from('take_5')
+          .update({ status: 'done' })
+          .eq('id', selectedTake5.id);
 
         if (updateError) {
-          console.error("Error updating Take 5 status:", updateError);
+          console.error('Error updating Take 5 status:', updateError);
         }
       }
 
       setSubmitSuccess(true);
       setForm({
-        lokasi: "",
-        detailLokasi: "",
-        keteranganLokasi: "",
-        pic: "",
-        ketidaksesuaian: "",
-        subKetidaksesuaian: "",
-        quickAction: "",
-        deskripsiTemuan: "",
+        lokasi: '',
+        detailLokasi: '',
+        keteranganLokasi: '',
+        pic: '',
+        ketidaksesuaian: '',
+        subKetidaksesuaian: '',
+        quickAction: '',
+        deskripsiTemuan: '',
       });
       setEvidence(null);
       setEvidencePreview(null);
@@ -452,8 +452,8 @@ function HazardFormMobile({ user, onBack }) {
         setSubmitSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error("Error submitting hazard report:", error);
-      setSubmitError("Gagal menyimpan hazard report. Silakan coba lagi.");
+      console.error('Error submitting hazard report:', error);
+      setSubmitError('Gagal menyimpan hazard report. Silakan coba lagi.');
     } finally {
       setSubmitting(false);
     }
@@ -464,27 +464,27 @@ function HazardFormMobile({ user, onBack }) {
     return (
       <div
         style={{
-          position: "fixed",
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0,0,0,0.8)",
+          background: 'rgba(0,0,0,0.8)',
           zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           padding: 20,
         }}
       >
         <div
           style={{
-            position: "relative",
+            position: 'relative',
             width: 280,
             height: 280,
-            background: "#fff",
+            background: '#fff',
             borderRadius: 12,
-            overflow: "hidden",
+            overflow: 'hidden',
           }}
         >
           <Cropper
@@ -495,34 +495,34 @@ function HazardFormMobile({ user, onBack }) {
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
-            style={{ containerStyle: { width: "100%", height: "100%" } }}
+            style={{ containerStyle: { width: '100%', height: '100%' } }}
           />
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               bottom: 20,
               left: 0,
               right: 0,
-              display: "flex",
-              justifyContent: "center",
+              display: 'flex',
+              justifyContent: 'center',
               gap: 20,
             }}
           >
             <button
               onClick={handleCropCancel}
               style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
+                background: '#ef4444',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50%',
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
               }}
             >
               ✕
@@ -530,18 +530,18 @@ function HazardFormMobile({ user, onBack }) {
             <button
               onClick={handleCropSave}
               style={{
-                background: "#22c55e",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
+                background: '#22c55e',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50%',
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
               }}
             >
               ✓
@@ -555,45 +555,45 @@ function HazardFormMobile({ user, onBack }) {
   return (
     <div
       style={{
-        width: "100vw",
-        height: "700px", // pastikan tidak bisa scroll
-        background: "#f3f4f6",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        padding: "0px",
-        overflow: "hidden", // cegah scroll
+        width: '100vw',
+        height: '700px', // pastikan tidak bisa scroll
+        background: '#f3f4f6',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        padding: '0px',
+        overflow: 'hidden', // cegah scroll
       }}
     >
       <div
         style={{
-          background: "#fff",
+          background: '#fff',
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
-          boxShadow: "0 2px 16px #0001",
+          boxShadow: '0 2px 16px #0001',
           paddingTop: 6,
           paddingRight: 6,
           paddingBottom: 0,
           paddingLeft: 6,
-          width: "100%",
+          width: '100%',
           maxWidth: 425, // fit untuk mobile 425px
           marginBottom: 0,
-          height: "100%", // card selalu setinggi viewport
+          height: '100%', // card selalu setinggi viewport
         }}
       >
         {/* Card Header */}
         <div
           style={{
-            background: "#fff",
+            background: '#fff',
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
-            padding: "8px 0 4px 0",
+            padding: '8px 0 4px 0',
             marginBottom: 0,
-            textAlign: "center",
-            position: "relative",
+            textAlign: 'center',
+            position: 'relative',
           }}
         >
           {/* Back Button */}
@@ -602,27 +602,27 @@ function HazardFormMobile({ user, onBack }) {
               onClick={onBack}
               className="back-button-no-hover"
               style={{
-                position: "absolute",
-                left: "16px",
-                top: "8px",
-                background: "none",
-                border: "none",
-                color: "#3b82f6",
-                cursor: "pointer",
-                padding: "8px",
-                borderRadius: "8px",
+                position: 'absolute',
+                left: '16px',
+                top: '8px',
+                background: 'none',
+                border: 'none',
+                color: '#3b82f6',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '8px',
                 zIndex: 20,
-                transition: "none",
-                transform: "none",
-                boxShadow: "none",
+                transition: 'none',
+                transform: 'none',
+                boxShadow: 'none',
               }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = "none";
-                e.target.style.boxShadow = "none";
+              onMouseEnter={e => {
+                e.target.style.transform = 'none';
+                e.target.style.boxShadow = 'none';
               }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = "none";
-                e.target.style.boxShadow = "none";
+              onMouseLeave={e => {
+                e.target.style.transform = 'none';
+                e.target.style.boxShadow = 'none';
               }}
             >
               <svg
@@ -644,9 +644,9 @@ function HazardFormMobile({ user, onBack }) {
               margin: 0,
               fontWeight: 800,
               fontSize: 18,
-              color: "#2563eb",
+              color: '#2563eb',
               letterSpacing: 1,
-              textAlign: "center",
+              textAlign: 'center',
               lineHeight: 1.1,
             }}
           >
@@ -657,20 +657,20 @@ function HazardFormMobile({ user, onBack }) {
         {/* Progress indicator */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "center",
+            display: 'flex',
+            justifyContent: 'center',
             marginBottom: 8,
             gap: 6,
           }}
         >
-          {[1, 2, 3].map((p) => (
+          {[1, 2, 3].map(p => (
             <div
               key={p}
               style={{
                 width: 8,
                 height: 8,
-                borderRadius: "50%",
-                background: page >= p ? "#2563eb" : "#e5e7eb",
+                borderRadius: '50%',
+                background: page >= p ? '#2563eb' : '#e5e7eb',
               }}
             />
           ))}
@@ -679,20 +679,20 @@ function HazardFormMobile({ user, onBack }) {
         <form
           onSubmit={handleSubmit}
           style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
             gap: 2, // lebih rapat
             flex: 1,
-            overflow: "hidden",
+            overflow: 'hidden',
           }}
         >
           {/* Pending Take 5 List - dipindah ke dalam form */}
           <div
             style={{
-              width: "90%",
-              marginLeft: "auto",
-              marginRight: "auto",
+              width: '90%',
+              marginLeft: 'auto',
+              marginRight: 'auto',
               marginTop: 8,
             }}
           >
@@ -709,18 +709,18 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                   marginTop: 8,
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -731,19 +731,19 @@ function HazardFormMobile({ user, onBack }) {
                   onChange={handleChange}
                   placeholder="Pilih Lokasi"
                   disabled={!!selectedTake5}
-                  style={getFieldBorderStyle("lokasi")}
+                  style={getFieldBorderStyle('lokasi')}
                   required
                 />
-                {getFieldError("lokasi") && (
+                {getFieldError('lokasi') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("lokasi")}
+                    {getFieldError('lokasi')}
                   </div>
                 )}
               </div>
@@ -751,17 +751,17 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -775,13 +775,13 @@ function HazardFormMobile({ user, onBack }) {
                       onChange={handleDetailLokasiChange}
                       placeholder={
                         !form.lokasi
-                          ? "Pilih lokasi terlebih dahulu"
+                          ? 'Pilih lokasi terlebih dahulu'
                           : !!selectedTake5
-                          ? "Diisi otomatis dari Take 5"
-                          : "Pilih Detail Lokasi"
+                            ? 'Diisi otomatis dari Take 5'
+                            : 'Pilih Detail Lokasi'
                       }
                       disabled={!!selectedTake5 || !form.lokasi}
-                      style={getFieldBorderStyle("detailLokasi")}
+                      style={getFieldBorderStyle('detailLokasi')}
                       required
                     />
                     {showCustomInput && (
@@ -793,12 +793,12 @@ function HazardFormMobile({ user, onBack }) {
                         required
                         placeholder="Ketik detail lokasi lainnya..."
                         style={{
-                          width: "100%",
+                          width: '100%',
                           borderRadius: 8,
                           padding: 4,
                           fontSize: 13,
                           marginTop: 8,
-                          ...getFieldBorderStyle("detailLokasi"),
+                          ...getFieldBorderStyle('detailLokasi'),
                         }}
                       />
                     )}
@@ -813,26 +813,26 @@ function HazardFormMobile({ user, onBack }) {
                     disabled={!!selectedTake5}
                     placeholder="Ketik detail lokasi..."
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 4,
                       fontSize: 13,
-                      backgroundColor: !!selectedTake5 ? "#f3f4f6" : "#fff",
-                      color: !!selectedTake5 ? "#9ca3af" : "#000",
-                      ...getFieldBorderStyle("detailLokasi"),
+                      backgroundColor: !!selectedTake5 ? '#f3f4f6' : '#fff',
+                      color: !!selectedTake5 ? '#9ca3af' : '#000',
+                      ...getFieldBorderStyle('detailLokasi'),
                     }}
                   />
                 )}
-                {getFieldError("detailLokasi") && (
+                {getFieldError('detailLokasi') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("detailLokasi")}
+                    {getFieldError('detailLokasi')}
                   </div>
                 )}
               </div>
@@ -840,17 +840,17 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -863,25 +863,25 @@ function HazardFormMobile({ user, onBack }) {
                   required
                   placeholder="Jelaskan detail lokasi temuan hazard"
                   style={{
-                    width: "100%",
+                    width: '100%',
                     borderRadius: 8,
                     padding: 4,
                     fontSize: 13,
-                    resize: "vertical",
+                    resize: 'vertical',
                     minHeight: 60,
-                    ...getFieldBorderStyle("keteranganLokasi"),
+                    ...getFieldBorderStyle('keteranganLokasi'),
                   }}
                 />
-                {getFieldError("keteranganLokasi") && (
+                {getFieldError('keteranganLokasi') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("keteranganLokasi")}
+                    {getFieldError('keteranganLokasi')}
                   </div>
                 )}
               </div>
@@ -889,17 +889,17 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -910,7 +910,7 @@ function HazardFormMobile({ user, onBack }) {
                   onChange={handleChange}
                   placeholder="Pilih PIC"
                   site={form.lokasi}
-                  style={getFieldBorderStyle("pic")}
+                  style={getFieldBorderStyle('pic')}
                   required
                   currentUser={user}
                 />
@@ -918,24 +918,24 @@ function HazardFormMobile({ user, onBack }) {
                   <div
                     style={{
                       fontSize: 11,
-                      color: "#ef4444",
+                      color: '#ef4444',
                       marginTop: 2,
-                      textAlign: "center",
+                      textAlign: 'center',
                     }}
                   >
                     Tidak ada PIC lain di lokasi ini
                   </div>
                 )}
-                {getFieldError("pic") && (
+                {getFieldError('pic') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("pic")}
+                    {getFieldError('pic')}
                   </div>
                 )}
               </div>
@@ -945,17 +945,17 @@ function HazardFormMobile({ user, onBack }) {
                 onClick={handleNext}
                 disabled={!isPage1Valid()}
                 style={{
-                  background: isPage1Valid() ? "#2563eb" : "#9ca3af",
-                  color: "#fff",
-                  border: "none",
+                  background: isPage1Valid() ? '#2563eb' : '#9ca3af',
+                  color: '#fff',
+                  border: 'none',
                   borderRadius: 8,
-                  padding: "8px 0",
+                  padding: '8px 0',
                   fontSize: 13,
                   fontWeight: 600,
-                  cursor: isPage1Valid() ? "pointer" : "not-allowed",
+                  cursor: isPage1Valid() ? 'pointer' : 'not-allowed',
                   marginTop: 8,
-                  width: "60%",
-                  alignSelf: "center",
+                  width: '60%',
+                  alignSelf: 'center',
                   opacity: isPage1Valid() ? 1 : 0.6,
                 }}
               >
@@ -970,18 +970,18 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                   marginTop: 8,
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -993,11 +993,11 @@ function HazardFormMobile({ user, onBack }) {
                   onChange={handleChange}
                   required
                   style={{
-                    width: "100%",
+                    width: '100%',
                     borderRadius: 8,
                     padding: 4,
                     fontSize: 13,
-                    ...getFieldBorderStyle("ketidaksesuaian"),
+                    ...getFieldBorderStyle('ketidaksesuaian'),
                   }}
                 >
                   <option value="">Pilih Ketidaksesuaian</option>
@@ -1006,16 +1006,16 @@ function HazardFormMobile({ user, onBack }) {
                   <option value="Environment">Environment</option>
                   <option value="Health">Health</option>
                 </select>
-                {getFieldError("ketidaksesuaian") && (
+                {getFieldError('ketidaksesuaian') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("ketidaksesuaian")}
+                    {getFieldError('ketidaksesuaian')}
                   </div>
                 )}
               </div>
@@ -1023,17 +1023,17 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -1047,23 +1047,23 @@ function HazardFormMobile({ user, onBack }) {
                   required
                   placeholder="Contoh: PPE, Housekeeping, dll"
                   style={{
-                    width: "100%",
+                    width: '100%',
                     borderRadius: 8,
                     padding: 4,
                     fontSize: 13,
-                    ...getFieldBorderStyle("subKetidaksesuaian"),
+                    ...getFieldBorderStyle('subKetidaksesuaian'),
                   }}
                 />
-                {getFieldError("subKetidaksesuaian") && (
+                {getFieldError('subKetidaksesuaian') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("subKetidaksesuaian")}
+                    {getFieldError('subKetidaksesuaian')}
                   </div>
                 )}
               </div>
@@ -1071,17 +1071,17 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -1094,49 +1094,49 @@ function HazardFormMobile({ user, onBack }) {
                   required
                   placeholder="Tindakan cepat yang sudah dilakukan"
                   style={{
-                    width: "100%",
+                    width: '100%',
                     borderRadius: 8,
                     padding: 4,
                     fontSize: 13,
-                    resize: "vertical",
+                    resize: 'vertical',
                     minHeight: 60,
-                    ...getFieldBorderStyle("quickAction"),
+                    ...getFieldBorderStyle('quickAction'),
                   }}
                 />
-                {getFieldError("quickAction") && (
+                {getFieldError('quickAction') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("quickAction")}
+                    {getFieldError('quickAction')}
                   </div>
                 )}
               </div>
 
               <div
                 style={{
-                  display: "flex",
+                  display: 'flex',
                   gap: 8,
-                  width: "90%",
-                  margin: "0 auto",
+                  width: '90%',
+                  margin: '0 auto',
                 }}
               >
                 <button
                   type="button"
                   onClick={handleBack}
                   style={{
-                    background: "#6b7280",
-                    color: "#fff",
-                    border: "none",
+                    background: '#6b7280',
+                    color: '#fff',
+                    border: 'none',
                     borderRadius: 8,
-                    padding: "8px 0",
+                    padding: '8px 0',
                     fontSize: 13,
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: 'pointer',
                     flex: 1,
                   }}
                 >
@@ -1147,14 +1147,14 @@ function HazardFormMobile({ user, onBack }) {
                   onClick={handleNext}
                   disabled={!isPage2Valid()}
                   style={{
-                    background: isPage2Valid() ? "#2563eb" : "#9ca3af",
-                    color: "#fff",
-                    border: "none",
+                    background: isPage2Valid() ? '#2563eb' : '#9ca3af',
+                    color: '#fff',
+                    border: 'none',
                     borderRadius: 8,
-                    padding: "8px 0",
+                    padding: '8px 0',
                     fontSize: 13,
                     fontWeight: 600,
-                    cursor: isPage2Valid() ? "pointer" : "not-allowed",
+                    cursor: isPage2Valid() ? 'pointer' : 'not-allowed',
                     flex: 1,
                     opacity: isPage2Valid() ? 1 : 0.6,
                   }}
@@ -1171,18 +1171,18 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                   marginTop: 8,
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -1195,25 +1195,25 @@ function HazardFormMobile({ user, onBack }) {
                   required
                   placeholder="Jelaskan detail temuan hazard"
                   style={{
-                    width: "100%",
+                    width: '100%',
                     borderRadius: 8,
                     padding: 4,
                     fontSize: 13,
-                    resize: "vertical",
+                    resize: 'vertical',
                     minHeight: 60,
-                    ...getFieldBorderStyle("deskripsiTemuan"),
+                    ...getFieldBorderStyle('deskripsiTemuan'),
                   }}
                 />
-                {getFieldError("deskripsiTemuan") && (
+                {getFieldError('deskripsiTemuan') && (
                   <div
                     style={{
-                      color: "#ef4444",
+                      color: '#ef4444',
                       fontSize: 11,
                       marginTop: 2,
                       marginLeft: 4,
                     }}
                   >
-                    {getFieldError("deskripsiTemuan")}
+                    {getFieldError('deskripsiTemuan')}
                   </div>
                 )}
               </div>
@@ -1221,17 +1221,17 @@ function HazardFormMobile({ user, onBack }) {
               <div
                 style={{
                   marginBottom: 4,
-                  width: "90%",
-                  marginLeft: "auto",
-                  marginRight: "auto",
+                  width: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                 }}
               >
                 <label
                   style={{
                     fontWeight: 600,
-                    color: "#222",
+                    color: '#222',
                     marginBottom: 2,
-                    display: "block",
+                    display: 'block',
                     fontSize: 14,
                   }}
                 >
@@ -1244,20 +1244,20 @@ function HazardFormMobile({ user, onBack }) {
                   capture="environment"
                   onChange={handleEvidence}
                   name="evidence"
-                  style={{ display: "none" }}
+                  style={{ display: 'none' }}
                 />
                 {evidencePreview ? (
-                  <div style={{ textAlign: "center" }}>
+                  <div style={{ textAlign: 'center' }}>
                     {selectedTake5?.bukti_url && !evidence && (
                       <div
                         style={{
-                          background: "#f0f9ff",
-                          border: "1px solid #0ea5e9",
-                          borderRadius: "8px",
-                          padding: "6px",
-                          marginBottom: "6px",
-                          fontSize: "11px",
-                          color: "#0369a1",
+                          background: '#f0f9ff',
+                          border: '1px solid #0ea5e9',
+                          borderRadius: '8px',
+                          padding: '6px',
+                          marginBottom: '6px',
+                          fontSize: '11px',
+                          color: '#0369a1',
                         }}
                       >
                         📸 Foto dari Take 5 tersedia. Silakan upload foto baru
@@ -1269,11 +1269,11 @@ function HazardFormMobile({ user, onBack }) {
                       alt="Preview"
                       onClick={handleClickPreview}
                       style={{
-                        maxWidth: "100%",
+                        maxWidth: '100%',
                         maxHeight: 150,
                         borderRadius: 8,
-                        border: "2px solid #e5e7eb",
-                        cursor: "pointer",
+                        border: '2px solid #e5e7eb',
+                        cursor: 'pointer',
                       }}
                       title="Klik untuk ganti foto"
                     />
@@ -1283,18 +1283,18 @@ function HazardFormMobile({ user, onBack }) {
                     type="button"
                     onClick={handleClickCamera}
                     style={{
-                      width: "100%",
-                      background: "#f3f4f6",
-                      border: "2px dashed #d1d5db",
+                      width: '100%',
+                      background: '#f3f4f6',
+                      border: '2px dashed #d1d5db',
                       borderRadius: 8,
-                      padding: "12px",
+                      padding: '12px',
                       fontSize: 13,
-                      color: "#6b7280",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
+                      color: '#6b7280',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
                     }}
                   >
                     <svg
@@ -1318,12 +1318,12 @@ function HazardFormMobile({ user, onBack }) {
               {submitError && (
                 <div
                   style={{
-                    color: "#ef4444",
+                    color: '#ef4444',
                     fontWeight: 500,
                     fontSize: 13,
-                    textAlign: "center",
-                    width: "90%",
-                    margin: "0 auto",
+                    textAlign: 'center',
+                    width: '90%',
+                    margin: '0 auto',
                   }}
                 >
                   {submitError}
@@ -1332,53 +1332,53 @@ function HazardFormMobile({ user, onBack }) {
               {submitSuccess && (
                 <div
                   style={{
-                    background: "#10b981",
-                    color: "#fff",
-                    padding: "8px",
-                    borderRadius: "8px",
-                    marginBottom: "8px",
-                    textAlign: "center",
+                    background: '#10b981',
+                    color: '#fff',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    marginBottom: '8px',
+                    textAlign: 'center',
                     fontSize: 13,
-                    width: "90%",
-                    margin: "0 auto",
+                    width: '90%',
+                    margin: '0 auto',
                   }}
                 >
                   {submittedToMultipleEvaluators ? (
                     <div>
-                      <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
                         Hazard Report berhasil dikirim!
                       </div>
-                      <div style={{ fontSize: "12px" }}>
-                        Laporan telah dikirim ke {evaluatorOptions.length}{" "}
+                      <div style={{ fontSize: '12px' }}>
+                        Laporan telah dikirim ke {evaluatorOptions.length}{' '}
                         evaluator untuk mempercepat proses evaluasi.
                       </div>
                     </div>
                   ) : (
-                    "Hazard Report berhasil dikirim!"
+                    'Hazard Report berhasil dikirim!'
                   )}
                 </div>
               )}
 
               <div
                 style={{
-                  display: "flex",
+                  display: 'flex',
                   gap: 8,
-                  width: "90%",
-                  margin: "0 auto",
+                  width: '90%',
+                  margin: '0 auto',
                 }}
               >
                 <button
                   type="button"
                   onClick={handleBack}
                   style={{
-                    background: "#6b7280",
-                    color: "#fff",
-                    border: "none",
+                    background: '#6b7280',
+                    color: '#fff',
+                    border: 'none',
                     borderRadius: 8,
-                    padding: "8px 0",
+                    padding: '8px 0',
                     fontSize: 13,
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: 'pointer',
                     flex: 1,
                   }}
                 >
@@ -1389,20 +1389,20 @@ function HazardFormMobile({ user, onBack }) {
                   disabled={submitting || !isPage3Valid()}
                   style={{
                     background:
-                      submitting || !isPage3Valid() ? "#9ca3af" : "#2563eb",
-                    color: "#fff",
-                    border: "none",
+                      submitting || !isPage3Valid() ? '#9ca3af' : '#2563eb',
+                    color: '#fff',
+                    border: 'none',
                     borderRadius: 8,
-                    padding: "8px 0",
+                    padding: '8px 0',
                     fontSize: 13,
                     fontWeight: 600,
                     cursor:
-                      submitting || !isPage3Valid() ? "not-allowed" : "pointer",
+                      submitting || !isPage3Valid() ? 'not-allowed' : 'pointer',
                     flex: 1,
                     opacity: submitting || !isPage3Valid() ? 0.6 : 1,
                   }}
                 >
-                  {submitting ? "Menyimpan..." : "Simpan"}
+                  {submitting ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
             </>

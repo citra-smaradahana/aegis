@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
@@ -25,15 +25,15 @@
     <script type="module" src="/src/main.jsx"></script>
     <script>
       // Register Service Worker
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
           navigator.serviceWorker
-            .register("/sw.js")
-            .then((registration) => {
-              console.log("SW registered: ", registration);
+            .register('/sw.js')
+            .then(registration => {
+              console.log('SW registered: ', registration);
             })
-            .catch((registrationError) => {
-              console.log("SW registration failed: ", registrationError);
+            .catch(registrationError => {
+              console.log('SW registration failed: ', registrationError);
             });
         });
       }

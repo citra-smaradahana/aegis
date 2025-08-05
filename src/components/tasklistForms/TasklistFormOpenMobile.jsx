@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
 
 function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [approveSelected, setApproveSelected] = useState(null); // null, 'ya', 'tidak'
-  const [alasanPenolakan, setAlasanPenolakan] = useState("");
+  const [alasanPenolakan, setAlasanPenolakan] = useState('');
   const [showImagePopup, setShowImagePopup] = useState(false);
 
   // Prefill form jika ada data hazard
@@ -15,15 +15,15 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
     }
   }, [hazard]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (readOnly) return;
     if (!approveSelected) {
-      setError("Pilih Ya atau Tidak untuk melanjutkan.");
+      setError('Pilih Ya atau Tidak untuk melanjutkan.');
       return;
     }
-    if (approveSelected === "tidak" && !alasanPenolakan) {
-      setError("Alasan penolakan wajib diisi.");
+    if (approveSelected === 'tidak' && !alasanPenolakan) {
+      setError('Alasan penolakan wajib diisi.');
       return;
     }
     // Tidak perlu validasi deskripsi_penyelesaian karena field sudah dihilangkan
@@ -34,64 +34,64 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
     try {
       let updateData = {};
 
-      if (approveSelected === "ya") {
+      if (approveSelected === 'ya') {
         updateData = {
-          status: "Progress",
+          status: 'Progress',
         };
       } else {
         updateData = {
           alasan_penolakan_open: alasanPenolakan,
-          status: "Reject at Open",
+          status: 'Reject at Open',
         };
       }
 
       const { error: updateError } = await supabase
-        .from("hazard_report")
+        .from('hazard_report')
         .update(updateData)
-        .eq("id", hazard.id);
+        .eq('id', hazard.id);
 
       if (updateError) throw updateError;
 
       onSuccess && onSuccess();
       onClose && onClose();
     } catch (err) {
-      console.error("Error updating hazard report:", err);
-      setError("Gagal menyimpan. Silakan coba lagi.");
+      console.error('Error updating hazard report:', err);
+      setError('Gagal menyimpan. Silakan coba lagi.');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Helper untuk ambil field hazard
-  const lokasi = hazard?.lokasi || "-";
-  const detailLokasi = hazard?.detail_lokasi || "-";
-  const keteranganLokasi = hazard?.keterangan_lokasi || "-";
-  const ketidaksesuaian = hazard?.ketidaksesuaian || "-";
-  const subKetidaksesuaian = hazard?.sub_ketidaksesuaian || "-";
-  const quickAction = hazard?.quick_action || "-";
-  const temuan = hazard?.deskripsi_temuan || hazard?.temuan || "-";
-  const evidence = hazard?.evidence || "-";
+  const lokasi = hazard?.lokasi || '-';
+  const detailLokasi = hazard?.detail_lokasi || '-';
+  const keteranganLokasi = hazard?.keterangan_lokasi || '-';
+  const ketidaksesuaian = hazard?.ketidaksesuaian || '-';
+  const subKetidaksesuaian = hazard?.sub_ketidaksesuaian || '-';
+  const quickAction = hazard?.quick_action || '-';
+  const temuan = hazard?.deskripsi_temuan || hazard?.temuan || '-';
+  const evidence = hazard?.evidence || '-';
 
   return (
     <div
       style={{
-        width: "100vw",
-        height: "100vh",
-        background: "#f3f4f6",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
+        width: '100vw',
+        height: '100vh',
+        background: '#f3f4f6',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
       <div
         style={{
-          background: "#fff",
-          padding: "16px",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          background: '#fff',
+          padding: '16px',
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
         <div>
@@ -100,16 +100,16 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
               margin: 0,
               fontSize: 18,
               fontWeight: 600,
-              color: "#1f2937",
+              color: '#1f2937',
             }}
           >
             Submit Penyelesaian
           </h2>
           <p
             style={{
-              margin: "4px 0 0 0",
+              margin: '4px 0 0 0',
               fontSize: 14,
-              color: "#6b7280",
+              color: '#6b7280',
             }}
           >
             Hazard #{hazard?.id}
@@ -118,12 +118,12 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         <button
           onClick={onClose}
           style={{
-            background: "none",
-            border: "none",
+            background: 'none',
+            border: 'none',
             fontSize: 24,
-            color: "#6b7280",
-            cursor: "pointer",
-            padding: "4px",
+            color: '#6b7280',
+            cursor: 'pointer',
+            padding: '4px',
           }}
         >
           ×
@@ -134,25 +134,25 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
       <div
         style={{
           flex: 1,
-          padding: "16px",
-          overflowY: "auto",
-          paddingBottom: "120px", // Tambah padding bottom agar bisa di-scroll
+          padding: '16px',
+          overflowY: 'auto',
+          paddingBottom: '120px', // Tambah padding bottom agar bisa di-scroll
         }}
       >
         {/* Lokasi */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            boxShadow: "0 1px 4px #0001",
-            padding: "16px",
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15, color: "#2563eb" }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#2563eb' }}>
             📍 Lokasi
           </h3>
-          <div style={{ fontSize: 15, color: "#374151", marginTop: 8 }}>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
             <div>
               <strong>Lokasi:</strong> {lokasi}
             </div>
@@ -168,17 +168,17 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         {/* Ketidaksesuaian */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            boxShadow: "0 1px 4px #0001",
-            padding: "16px",
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15, color: "#f59e42" }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#f59e42' }}>
             ⚠️ Ketidaksesuaian
           </h3>
-          <div style={{ fontSize: 15, color: "#374151", marginTop: 8 }}>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
             <div>
               <strong>Ketidaksesuaian:</strong> {ketidaksesuaian}
             </div>
@@ -198,17 +198,17 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         {/* Temuan */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            boxShadow: "0 1px 4px #0001",
-            padding: "16px",
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15, color: "#ef4444" }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#ef4444' }}>
             🔍 Temuan
           </h3>
-          <div style={{ fontSize: 15, color: "#374151", marginTop: 8 }}>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
             <div>
               <strong>Deskripsi Temuan:</strong>
             </div>
@@ -217,17 +217,17 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         </div>
 
         {/* Evidence */}
-        {evidence && evidence !== "-" && (
+        {evidence && evidence !== '-' && (
           <div
             style={{
-              background: "#fff",
-              borderRadius: "8px",
-              marginBottom: "16px",
-              boxShadow: "0 1px 4px #0001",
-              padding: "16px",
+              background: '#fff',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              boxShadow: '0 1px 4px #0001',
+              padding: '16px',
             }}
           >
-            <h3 style={{ margin: 0, fontSize: 15, color: "#10b981" }}>
+            <h3 style={{ margin: 0, fontSize: 15, color: '#10b981' }}>
               📷 Evidence
             </h3>
             <div style={{ marginTop: 8 }}>
@@ -235,21 +235,21 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
                 src={evidence}
                 alt="Evidence"
                 style={{
-                  width: "100%",
-                  maxHeight: "150px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  cursor: "pointer",
+                  width: '100%',
+                  maxHeight: '150px',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  cursor: 'pointer',
                 }}
                 onClick={() => setShowImagePopup(true)}
               />
               <div
                 style={{
                   fontSize: 12,
-                  color: "#6b7280",
+                  color: '#6b7280',
                   marginTop: 4,
-                  textAlign: "center",
+                  textAlign: 'center',
                 }}
               >
                 Tap untuk melihat detail
@@ -261,41 +261,41 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         {/* Action Plan & Due Date (Read Only) */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            boxShadow: "0 1px 4px #0001",
-            padding: "16px",
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15, color: "#8b5cf6" }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#8b5cf6' }}>
             📋 Action Plan
           </h3>
-          <div style={{ fontSize: 15, color: "#374151", marginTop: 8 }}>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
             <div>
               <strong>Action Plan:</strong>
             </div>
             <div style={{ marginTop: 4, lineHeight: 1.5 }}>
-              {hazard?.action_plan || "-"}
+              {hazard?.action_plan || '-'}
             </div>
             <div style={{ marginTop: 12 }}>
-              <strong>Due Date:</strong>{" "}
+              <strong>Due Date:</strong>{' '}
               {hazard?.due_date
-                ? new Date(hazard.due_date).toLocaleDateString("id-ID")
-                : "-"}
+                ? new Date(hazard.due_date).toLocaleDateString('id-ID')
+                : '-'}
             </div>
           </div>
         </div>
 
         {/* Approve/Reject Buttons */}
         {!readOnly && (
-          <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: '20px' }}>
             <label
               style={{
-                display: "block",
+                display: 'block',
                 fontWeight: 600,
-                color: "#374151",
-                marginBottom: "12px",
+                color: '#374151',
+                marginBottom: '12px',
                 fontSize: 16,
               }}
             >
@@ -305,26 +305,26 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
             {/* Button Container - 2 columns */}
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px',
               }}
             >
               {/* Approve Button */}
               <button
                 type="button"
-                onClick={() => setApproveSelected("ya")}
+                onClick={() => setApproveSelected('ya')}
                 style={{
-                  width: "100%",
-                  padding: "16px",
-                  background: approveSelected === "ya" ? "#10b981" : "#f3f4f6",
-                  color: approveSelected === "ya" ? "#fff" : "#374151",
-                  border: "2px solid",
-                  borderColor: approveSelected === "ya" ? "#10b981" : "#d1d5db",
-                  borderRadius: "8px",
+                  width: '100%',
+                  padding: '16px',
+                  background: approveSelected === 'ya' ? '#10b981' : '#f3f4f6',
+                  color: approveSelected === 'ya' ? '#fff' : '#374151',
+                  border: '2px solid',
+                  borderColor: approveSelected === 'ya' ? '#10b981' : '#d1d5db',
+                  borderRadius: '8px',
                   fontSize: 16,
                   fontWeight: 600,
-                  cursor: "pointer",
+                  cursor: 'pointer',
                 }}
               >
                 Ya
@@ -333,20 +333,20 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
               {/* Reject Button */}
               <button
                 type="button"
-                onClick={() => setApproveSelected("tidak")}
+                onClick={() => setApproveSelected('tidak')}
                 style={{
-                  width: "100%",
-                  padding: "16px",
+                  width: '100%',
+                  padding: '16px',
                   background:
-                    approveSelected === "tidak" ? "#ef4444" : "#f3f4f6",
-                  color: approveSelected === "tidak" ? "#fff" : "#374151",
-                  border: "2px solid",
+                    approveSelected === 'tidak' ? '#ef4444' : '#f3f4f6',
+                  color: approveSelected === 'tidak' ? '#fff' : '#374151',
+                  border: '2px solid',
                   borderColor:
-                    approveSelected === "tidak" ? "#ef4444" : "#d1d5db",
-                  borderRadius: "8px",
+                    approveSelected === 'tidak' ? '#ef4444' : '#d1d5db',
+                  borderRadius: '8px',
                   fontSize: 16,
                   fontWeight: 600,
-                  cursor: "pointer",
+                  cursor: 'pointer',
                 }}
               >
                 Tidak
@@ -362,14 +362,14 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         {/* Dihilangkan sesuai permintaan, tidak perlu upload foto pada status Open */}
 
         {/* Alasan Penolakan (jika pilih Tidak) */}
-        {!readOnly && approveSelected === "tidak" && (
-          <div style={{ marginBottom: "20px" }}>
+        {!readOnly && approveSelected === 'tidak' && (
+          <div style={{ marginBottom: '20px' }}>
             <label
               style={{
-                display: "block",
+                display: 'block',
                 fontWeight: 600,
-                color: "#374151",
-                marginBottom: "8px",
+                color: '#374151',
+                marginBottom: '8px',
                 fontSize: 16,
               }}
             >
@@ -377,18 +377,18 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
             </label>
             <textarea
               value={alasanPenolakan}
-              onChange={(e) => setAlasanPenolakan(e.target.value)}
+              onChange={e => setAlasanPenolakan(e.target.value)}
               required
               placeholder="Jelaskan alasan mengapa Action Plan tidak dapat dilaksanakan..."
               style={{
-                width: "100%",
-                minHeight: "120px",
-                padding: "12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
+                width: '100%',
+                minHeight: '120px',
+                padding: '12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
                 fontSize: 16,
-                resize: "vertical",
-                fontFamily: "inherit",
+                resize: 'vertical',
+                fontFamily: 'inherit',
               }}
             />
           </div>
@@ -398,12 +398,12 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         {error && (
           <div
             style={{
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              color: "#dc2626",
-              padding: "12px",
-              borderRadius: "8px",
-              marginBottom: "20px",
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '20px',
               fontSize: 14,
             }}
           >
@@ -416,39 +416,39 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
       {showImagePopup && (
         <div
           style={{
-            position: "fixed",
+            position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.9)",
+            background: 'rgba(0, 0, 0, 0.9)',
             zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
           }}
           onClick={() => setShowImagePopup(false)}
         >
           <div
             style={{
-              position: "relative",
-              maxWidth: "90vw",
-              maxHeight: "90vh",
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
             }}
           >
             <button
               onClick={() => setShowImagePopup(false)}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 top: -40,
                 right: 0,
-                background: "none",
-                border: "none",
-                color: "#fff",
+                background: 'none',
+                border: 'none',
+                color: '#fff',
                 fontSize: 24,
-                cursor: "pointer",
-                padding: "8px",
+                cursor: 'pointer',
+                padding: '8px',
               }}
             >
               ×
@@ -457,13 +457,13 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
               src={evidence}
               alt="Evidence Detail"
               style={{
-                width: "100%",
-                height: "auto",
-                maxHeight: "90vh",
-                objectFit: "contain",
-                borderRadius: "8px",
+                width: '100%',
+                height: 'auto',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
             />
           </div>
         </div>
@@ -472,10 +472,10 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
       {/* Fixed Submit Button */}
       <div
         style={{
-          background: "#fff",
-          padding: "16px",
-          borderTop: "1px solid #e5e7eb",
-          position: "fixed",
+          background: '#fff',
+          padding: '16px',
+          borderTop: '1px solid #e5e7eb',
+          position: 'fixed',
           left: 0,
           right: 0,
           bottom: 56, // asumsi navbar tinggi 56px
@@ -489,40 +489,40 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
             readOnly ||
             submitting ||
             !approveSelected ||
-            (approveSelected === "tidak" && !alasanPenolakan)
+            (approveSelected === 'tidak' && !alasanPenolakan)
           }
           style={{
-            width: "100%",
-            padding: "16px",
+            width: '100%',
+            padding: '16px',
             background:
               readOnly ||
               submitting ||
               !approveSelected ||
-              (approveSelected === "tidak" && !alasanPenolakan)
-                ? "#9ca3af"
-                : "#10b981",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
+              (approveSelected === 'tidak' && !alasanPenolakan)
+                ? '#9ca3af'
+                : '#10b981',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
             fontSize: 16,
             fontWeight: 600,
             cursor:
               readOnly ||
               submitting ||
               !approveSelected ||
-              (approveSelected === "tidak" && !alasanPenolakan)
-                ? "not-allowed"
-                : "pointer",
+              (approveSelected === 'tidak' && !alasanPenolakan)
+                ? 'not-allowed'
+                : 'pointer',
             opacity:
               readOnly ||
               submitting ||
               !approveSelected ||
-              (approveSelected === "tidak" && !alasanPenolakan)
+              (approveSelected === 'tidak' && !alasanPenolakan)
                 ? 0.6
                 : 1,
           }}
         >
-          {readOnly ? "Read Only" : submitting ? "Menyimpan..." : "Submit"}
+          {readOnly ? 'Read Only' : submitting ? 'Menyimpan...' : 'Submit'}
         </button>
       </div>
     </div>

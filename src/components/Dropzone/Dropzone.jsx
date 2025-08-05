@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { useDropzone } from "react-dropzone";
-import "./Dropzone.css";
+import React, { useState, useEffect } from 'react';
+import { useDropzone } from 'react-dropzone';
+import './Dropzone.css';
 
 function Dropzone({ onFilesChange }) {
   const [previews, setPreviews] = useState([]);
 
-  const onDrop = (acceptedFiles) => {
+  const onDrop = acceptedFiles => {
     setPreviews(
-      acceptedFiles.map((file) => ({
+      acceptedFiles.map(file => ({
         name: file.name,
         url: URL.createObjectURL(file),
       }))
@@ -18,7 +18,7 @@ function Dropzone({ onFilesChange }) {
   useEffect(() => {
     // Clean up previews on unmount
     return () => {
-      previews.forEach((p) => URL.revokeObjectURL(p.url));
+      previews.forEach(p => URL.revokeObjectURL(p.url));
     };
   }, [previews]);
 
@@ -27,7 +27,7 @@ function Dropzone({ onFilesChange }) {
   return (
     <div
       className="dropzone-container"
-      style={{ width: "100%", maxWidth: "100%" }}
+      style={{ width: '100%', maxWidth: '100%' }}
       {...getRootProps()}
     >
       <input {...getInputProps()} />
@@ -37,18 +37,18 @@ function Dropzone({ onFilesChange }) {
         <p>Drag 'n' drop some files here, or click to select files</p>
       )}
       {previews.length > 0 && (
-        <div style={{ margin: "16px 0", display: "flex", gap: 12 }}>
+        <div style={{ margin: '16px 0', display: 'flex', gap: 12 }}>
           {previews.map((file, idx) => (
-            <div key={idx} style={{ textAlign: "center" }}>
+            <div key={idx} style={{ textAlign: 'center' }}>
               <img
                 src={file.url}
                 alt={file.name}
                 style={{
                   width: 80,
                   height: 80,
-                  objectFit: "cover",
+                  objectFit: 'cover',
                   borderRadius: 8,
-                  border: "1px solid #ccc",
+                  border: '1px solid #ccc',
                 }}
               />
               <div style={{ fontSize: 12 }}>{file.name}</div>

@@ -1,7 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
 :root {
-  font-family: "Poppins", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Poppins', system-ui, Avenir, Helvetica, Arial, sans-serif;
   color-scheme: dark;
   color: #e5e7eb;
   background: linear-gradient(135deg, #181c2f 0%, #232946 100%);
@@ -33,7 +33,9 @@ body {
   width: 100%;
   margin: 0 auto;
   color: #fff;
-  transition: box-shadow 0.2s, border 0.2s;
+  transition:
+    box-shadow 0.2s,
+    border 0.2s;
 }
 
 .login-glass-card {
@@ -53,7 +55,9 @@ textarea {
   margin-bottom: 8px;
   width: 100%;
   outline: none;
-  transition: border 0.2s, background 0.2s;
+  transition:
+    border 0.2s,
+    background 0.2s;
   box-sizing: border-box;
   /* Prevent zoom on mobile */
   font-size: 16px;
@@ -78,7 +82,9 @@ button {
   color: #fff;
   cursor: pointer;
   box-shadow: 0 2px 8px #6366f133;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
   /* Prevent zoom on mobile */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -103,7 +109,9 @@ button:hover {
   color: #fff;
   cursor: pointer;
   box-shadow: 0 2px 8px #6366f133;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
   margin-left: 8px;
   margin-right: 8px;
 }
@@ -147,16 +155,16 @@ textarea {
 /* Mobile-specific styles to prevent zoom */
 @media screen and (max-width: 768px) {
   /* Prevent zoom on input focus */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="number"],
-  input[type="tel"],
-  input[type="url"],
-  input[type="search"],
-  input[type="date"],
-  input[type="time"],
-  input[type="datetime-local"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='number'],
+  input[type='tel'],
+  input[type='url'],
+  input[type='search'],
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
   select,
   textarea {
     font-size: 16px !important;
@@ -167,7 +175,7 @@ textarea {
 
   /* Prevent zoom on button tap */
   button,
-  [role="button"],
+  [role='button'],
   .clickable {
     -webkit-touch-callout: none !important;
     -webkit-user-select: none !important;
@@ -217,7 +225,7 @@ textarea {
   }
 
   /* Ensure input stays focused */
-  .mobile-search-input[data-focused="true"] {
+  .mobile-search-input[data-focused='true'] {
     -webkit-user-select: text !important;
     -webkit-touch-callout: none !important;
     touch-action: manipulation !important;

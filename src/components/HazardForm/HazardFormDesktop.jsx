@@ -1,32 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "../../supabaseClient";
-import Cropper from "react-easy-crop";
-import getCroppedImg from "../Dropzone/cropImageUtil";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '../../supabaseClient';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../Dropzone/cropImageUtil';
 import {
   getLocationOptions,
   allowsCustomInput,
   shouldUseLocationSelector,
-} from "../../config/siteLocations";
-import PendingTake5List from "./PendingTake5List";
-import LocationDetailSelector from "../LocationDetailSelector";
+} from '../../config/siteLocations';
+import PendingTake5List from './PendingTake5List';
+import LocationDetailSelector from '../LocationDetailSelector';
 
 const lokasiOptions = [
-  "Head Office",
-  "Balikpapan",
-  "ADRO",
-  "AMMP",
-  "BSIB",
-  "GAMR",
-  "HRSB",
-  "HRSE",
-  "PABB",
-  "PBRB",
-  "PKJA",
-  "PPAB",
-  "PSMM",
-  "REBH",
-  "RMTU",
-  "PMTU",
+  'Head Office',
+  'Balikpapan',
+  'ADRO',
+  'AMMP',
+  'BSIB',
+  'GAMR',
+  'HRSB',
+  'HRSE',
+  'PABB',
+  'PBRB',
+  'PKJA',
+  'PPAB',
+  'PSMM',
+  'REBH',
+  'RMTU',
+  'PMTU',
 ];
 
 function HazardFormDesktop({ user }) {
@@ -34,14 +34,14 @@ function HazardFormDesktop({ user }) {
   const [page, setPage] = useState(1);
   // Form state
   const [form, setForm] = useState({
-    lokasi: "",
-    detailLokasi: "",
-    keteranganLokasi: "",
-    pic: "",
-    ketidaksesuaian: "",
-    subKetidaksesuaian: "",
-    quickAction: "",
-    deskripsiTemuan: "",
+    lokasi: '',
+    detailLokasi: '',
+    keteranganLokasi: '',
+    pic: '',
+    ketidaksesuaian: '',
+    subKetidaksesuaian: '',
+    quickAction: '',
+    deskripsiTemuan: '',
   });
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
@@ -66,17 +66,17 @@ function HazardFormDesktop({ user }) {
   // Fetch Take 5 pending (Stop pekerjaan)
   useEffect(() => {
     supabase
-      .from("take_5")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("status", "pending")
+      .from('take_5')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
       .then(({ data }) => setTake5Pending(data || []));
   }, [user.id]);
 
   // Prefill lokasi/dll jika Take 5 dipilih
   useEffect(() => {
     if (selectedTake5) {
-      setForm((prev) => ({
+      setForm(prev => ({
         ...prev,
         lokasi: selectedTake5.site,
         detailLokasi: selectedTake5.detail_lokasi,
@@ -92,15 +92,15 @@ function HazardFormDesktop({ user }) {
         return;
       }
       const { data, error } = await supabase
-        .from("users")
-        .select("nama")
-        .eq("site", form.lokasi);
+        .from('users')
+        .select('nama')
+        .eq('site', form.lokasi);
       if (!error && data) {
         // Filter out current user dari PIC options
         const filteredPIC = data
-          .map((u) => u.nama)
+          .map(u => u.nama)
           .filter(Boolean)
-          .filter((nama) => nama !== user.nama); // Exclude current user
+          .filter(nama => nama !== user.nama); // Exclude current user
         setPicOptions(filteredPIC);
       } else {
         setPicOptions([]);
@@ -115,27 +115,27 @@ function HazardFormDesktop({ user }) {
       const options = getLocationOptions(form.lokasi);
       setLocationOptions(options);
       // Reset detail lokasi when lokasi changes
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
+      setForm(prev => ({ ...prev, detailLokasi: '' }));
       setShowCustomInput(false);
     } else {
       setLocationOptions([]);
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
+      setForm(prev => ({ ...prev, detailLokasi: '' }));
       setShowCustomInput(false);
     }
   }, [form.lokasi]);
 
   // Handle detail lokasi change
-  const handleDetailLokasiChange = (e) => {
+  const handleDetailLokasiChange = e => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
 
     // Show custom input if "Lainnya" is selected or if site allows custom input
     if (
-      value === "Lainnya" ||
-      (allowsCustomInput(form.lokasi) && value === "")
+      value === 'Lainnya' ||
+      (allowsCustomInput(form.lokasi) && value === '')
     ) {
       setShowCustomInput(true);
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
+      setForm(prev => ({ ...prev, detailLokasi: '' }));
     } else {
       setShowCustomInput(false);
     }
@@ -153,13 +153,13 @@ function HazardFormDesktop({ user }) {
   }, [evidence]);
 
   // Handler
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "lokasi") setForm((prev) => ({ ...prev, pic: "" }));
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (name === 'lokasi') setForm(prev => ({ ...prev, pic: '' }));
   };
 
-  const handleEvidence = (e) => {
+  const handleEvidence = e => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setRawImage(URL.createObjectURL(file));
@@ -175,8 +175,8 @@ function HazardFormDesktop({ user }) {
     fileInputRef.current?.click();
   };
 
-  const handleNext = () => setPage((p) => p + 1);
-  const handleBack = () => setPage((p) => p - 1);
+  const handleNext = () => setPage(p => p + 1);
+  const handleBack = () => setPage(p => p - 1);
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -185,8 +185,8 @@ function HazardFormDesktop({ user }) {
   const handleCropSave = async () => {
     try {
       const croppedImage = await getCroppedImg(rawImage, croppedAreaPixels);
-      const file = new File([croppedImage], "evidence.jpg", {
-        type: "image/jpeg",
+      const file = new File([croppedImage], 'evidence.jpg', {
+        type: 'image/jpeg',
       });
       setEvidence(file);
       setShowCrop(false);
@@ -200,11 +200,11 @@ function HazardFormDesktop({ user }) {
     setShowCrop(false);
     setRawImage(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   };
 
-  const handleSelectTake5 = (take5) => {
+  const handleSelectTake5 = take5 => {
     setSelectedTake5(take5);
     setSelectedTake5Id(take5.id);
 
@@ -214,9 +214,9 @@ function HazardFormDesktop({ user }) {
       lokasi: take5.site,
       detailLokasi: take5.detail_lokasi,
       keteranganLokasi: take5.potensi_bahaya,
-      ketidaksesuaian: "Safety", // Default value
+      ketidaksesuaian: 'Safety', // Default value
       subKetidaksesuaian: take5.potensi_bahaya,
-      quickAction: "STOP pekerjaan sesuai Take 5",
+      quickAction: 'STOP pekerjaan sesuai Take 5',
       deskripsiTemuan: take5.bukti_perbaikan
         ? `Kondisi kerja tidak aman berdasarkan Take 5 tanggal ${take5.tanggal}. ${take5.aman}\n\nDeskripsi dari Take 5:\n${take5.bukti_perbaikan}`
         : `Kondisi kerja tidak aman berdasarkan Take 5 tanggal ${take5.tanggal}. ${take5.aman}`,
@@ -231,19 +231,19 @@ function HazardFormDesktop({ user }) {
 
   async function uploadEvidence() {
     if (!evidence) return null;
-    const fileExt = evidence.name.split(".").pop();
+    const fileExt = evidence.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `hazard-evidence/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("img-test")
+      .from('img-test')
       .upload(filePath, evidence);
 
     if (uploadError) {
-      throw new Error("Error uploading evidence");
+      throw new Error('Error uploading evidence');
     }
 
-    const { data } = supabase.storage.from("img-test").getPublicUrl(filePath);
+    const { data } = supabase.storage.from('img-test').getPublicUrl(filePath);
     return data.publicUrl;
   }
 
@@ -261,7 +261,7 @@ function HazardFormDesktop({ user }) {
         evidenceUrl = selectedTake5.bukti_url;
       }
 
-      const { error } = await supabase.from("hazard_report").insert({
+      const { error } = await supabase.from('hazard_report').insert({
         user_id: user.id,
         user_nama: user.nama,
         user_jabatan: user.jabatan,
@@ -276,7 +276,7 @@ function HazardFormDesktop({ user }) {
         deskripsi_temuan: form.deskripsiTemuan,
         evidence_url: evidenceUrl,
         take_5_id: selectedTake5?.id || null,
-        status: "Open",
+        status: 'Open',
         created_at: new Date().toISOString(),
       });
 
@@ -285,25 +285,25 @@ function HazardFormDesktop({ user }) {
       // Jika ada Take 5 yang dipilih, update status menjadi "done"
       if (selectedTake5?.id) {
         const { error: updateError } = await supabase
-          .from("take_5")
-          .update({ status: "done" })
-          .eq("id", selectedTake5.id);
+          .from('take_5')
+          .update({ status: 'done' })
+          .eq('id', selectedTake5.id);
 
         if (updateError) {
-          console.error("Error updating Take 5 status:", updateError);
+          console.error('Error updating Take 5 status:', updateError);
         }
       }
 
       setSubmitSuccess(true);
       setForm({
-        lokasi: "",
-        detailLokasi: "",
-        keteranganLokasi: "",
-        pic: "",
-        ketidaksesuaian: "",
-        subKetidaksesuaian: "",
-        quickAction: "",
-        deskripsiTemuan: "",
+        lokasi: '',
+        detailLokasi: '',
+        keteranganLokasi: '',
+        pic: '',
+        ketidaksesuaian: '',
+        subKetidaksesuaian: '',
+        quickAction: '',
+        deskripsiTemuan: '',
       });
       setEvidence(null);
       setEvidencePreview(null);
@@ -316,8 +316,8 @@ function HazardFormDesktop({ user }) {
         setSubmitSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error("Error submitting hazard report:", error);
-      setSubmitError("Gagal menyimpan hazard report. Silakan coba lagi.");
+      console.error('Error submitting hazard report:', error);
+      setSubmitError('Gagal menyimpan hazard report. Silakan coba lagi.');
     } finally {
       setSubmitting(false);
     }
@@ -328,27 +328,27 @@ function HazardFormDesktop({ user }) {
     return (
       <div
         style={{
-          position: "fixed",
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0,0,0,0.8)",
+          background: 'rgba(0,0,0,0.8)',
           zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           padding: 20,
         }}
       >
         <div
           style={{
-            position: "relative",
+            position: 'relative',
             width: 400,
             height: 400,
-            background: "#fff",
+            background: '#fff',
             borderRadius: 12,
-            overflow: "hidden",
+            overflow: 'hidden',
           }}
         >
           <Cropper
@@ -359,34 +359,34 @@ function HazardFormDesktop({ user }) {
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
-            style={{ containerStyle: { width: "100%", height: "100%" } }}
+            style={{ containerStyle: { width: '100%', height: '100%' } }}
           />
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               bottom: 20,
               left: 0,
               right: 0,
-              display: "flex",
-              justifyContent: "center",
+              display: 'flex',
+              justifyContent: 'center',
               gap: 20,
             }}
           >
             <button
               onClick={handleCropCancel}
               style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
+                background: '#ef4444',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50%',
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
               }}
             >
               ✕
@@ -394,18 +394,18 @@ function HazardFormDesktop({ user }) {
             <button
               onClick={handleCropSave}
               style={{
-                background: "#22c55e",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
+                background: '#22c55e',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50%',
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
               }}
             >
               ✓
@@ -419,32 +419,32 @@ function HazardFormDesktop({ user }) {
   return (
     <div
       style={{
-        width: "100vw",
-        minHeight: "100vh",
-        background: "#e0e7ff",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
+        width: '100vw',
+        minHeight: '100vh',
+        background: '#e0e7ff',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
       <div
         style={{
-          background: "#fff",
+          background: '#fff',
           borderRadius: 18,
-          boxShadow: "0 4px 24px #2563eb33",
+          boxShadow: '0 4px 24px #2563eb33',
           padding: 36,
           maxWidth: 700,
-          width: "100%",
-          margin: "40px auto",
+          width: '100%',
+          margin: '40px auto',
         }}
       >
         <h2
           style={{
             fontWeight: 900,
             fontSize: 28,
-            color: "#2563eb",
-            textAlign: "center",
+            color: '#2563eb',
+            textAlign: 'center',
             marginBottom: 16,
           }}
         >
@@ -454,40 +454,40 @@ function HazardFormDesktop({ user }) {
         {/* Progress Indicator */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "center",
+            display: 'flex',
+            justifyContent: 'center',
             marginBottom: 24,
             gap: 8,
           }}
         >
-          {[1, 2, 3].map((pageNum) => (
+          {[1, 2, 3].map(pageNum => (
             <div
               key={pageNum}
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: "50%",
-                background: page >= pageNum ? "#2563eb" : "#e5e7eb",
-                color: page >= pageNum ? "#fff" : "#9ca3af",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: "bold",
+                borderRadius: '50%',
+                background: page >= pageNum ? '#2563eb' : '#e5e7eb',
+                color: page >= pageNum ? '#fff' : '#9ca3af',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
                 fontSize: 16,
-                position: "relative",
+                position: 'relative',
               }}
             >
               {pageNum}
               {pageNum < 3 && (
                 <div
                   style={{
-                    position: "absolute",
+                    position: 'absolute',
                     right: -12,
-                    top: "50%",
-                    transform: "translateY(-50%)",
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     width: 24,
                     height: 2,
-                    background: page > pageNum ? "#2563eb" : "#e5e7eb",
+                    background: page > pageNum ? '#2563eb' : '#e5e7eb',
                   }}
                 />
               )}
@@ -505,25 +505,25 @@ function HazardFormDesktop({ user }) {
         {/* Page Title */}
         <div
           style={{
-            textAlign: "center",
+            textAlign: 'center',
             marginBottom: 24,
-            color: "#6b7280",
+            color: '#6b7280',
             fontSize: 16,
             fontWeight: 600,
           }}
         >
-          {page === 1 && "📍 Informasi Lokasi"}
-          {page === 2 && "⚠️ Detail Ketidaksesuaian"}
-          {page === 3 && "📷 Evidence & Deskripsi"}
+          {page === 1 && '📍 Informasi Lokasi'}
+          {page === 2 && '⚠️ Detail Ketidaksesuaian'}
+          {page === 3 && '📷 Evidence & Deskripsi'}
         </div>
         <form
           onSubmit={handleSubmit}
           style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
             gap: 18,
-            height: "400px", // Tinggi tetap 400px
+            height: '400px', // Tinggi tetap 400px
           }}
         >
           {/* Multi-page form */}
@@ -532,10 +532,10 @@ function HazardFormDesktop({ user }) {
           {page === 1 && (
             <div
               style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
               }}
             >
               <>
@@ -543,10 +543,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Lokasi (Site)
@@ -558,14 +558,14 @@ function HazardFormDesktop({ user }) {
                     required
                     disabled={!!selectedTake5}
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 8,
                       fontSize: 15,
                     }}
                   >
                     <option value="">Pilih Lokasi</option>
-                    {lokasiOptions.map((opt) => (
+                    {lokasiOptions.map(opt => (
                       <option key={opt} value={opt}>
                         {opt}
                       </option>
@@ -577,10 +577,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Detail Lokasi
@@ -593,10 +593,10 @@ function HazardFormDesktop({ user }) {
                         onChange={handleDetailLokasiChange}
                         placeholder={
                           !form.lokasi
-                            ? "Pilih lokasi terlebih dahulu"
+                            ? 'Pilih lokasi terlebih dahulu'
                             : !!selectedTake5
-                            ? "Diisi otomatis dari Take 5"
-                            : "Pilih Detail Lokasi"
+                              ? 'Diisi otomatis dari Take 5'
+                              : 'Pilih Detail Lokasi'
                         }
                         disabled={!!selectedTake5 || !form.lokasi}
                         required
@@ -610,7 +610,7 @@ function HazardFormDesktop({ user }) {
                           required
                           placeholder="Ketik detail lokasi lainnya..."
                           style={{
-                            width: "100%",
+                            width: '100%',
                             borderRadius: 8,
                             padding: 8,
                             fontSize: 15,
@@ -629,12 +629,12 @@ function HazardFormDesktop({ user }) {
                       disabled={!!selectedTake5}
                       placeholder="Ketik detail lokasi..."
                       style={{
-                        width: "100%",
+                        width: '100%',
                         borderRadius: 8,
                         padding: 8,
                         fontSize: 15,
-                        backgroundColor: !!selectedTake5 ? "#f3f4f6" : "#fff",
-                        color: !!selectedTake5 ? "#9ca3af" : "#000",
+                        backgroundColor: !!selectedTake5 ? '#f3f4f6' : '#fff',
+                        color: !!selectedTake5 ? '#9ca3af' : '#000',
                       }}
                     />
                   )}
@@ -644,10 +644,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Keterangan Lokasi
@@ -659,11 +659,11 @@ function HazardFormDesktop({ user }) {
                     required
                     placeholder="Jelaskan detail lokasi temuan hazard"
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 8,
                       fontSize: 15,
-                      resize: "vertical",
+                      resize: 'vertical',
                     }}
                   />
                 </div>
@@ -672,10 +672,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     PIC (Person In Charge)
@@ -687,21 +687,21 @@ function HazardFormDesktop({ user }) {
                     required
                     disabled={!form.lokasi}
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 8,
                       fontSize: 15,
-                      backgroundColor: !form.lokasi ? "#f3f4f6" : "#fff",
-                      color: !form.lokasi ? "#9ca3af" : "#000",
-                      cursor: !form.lokasi ? "not-allowed" : "pointer",
+                      backgroundColor: !form.lokasi ? '#f3f4f6' : '#fff',
+                      color: !form.lokasi ? '#9ca3af' : '#000',
+                      cursor: !form.lokasi ? 'not-allowed' : 'pointer',
                     }}
                   >
                     <option value="">
                       {!form.lokasi
-                        ? "Pilih lokasi terlebih dahulu"
-                        : "Pilih PIC"}
+                        ? 'Pilih lokasi terlebih dahulu'
+                        : 'Pilih PIC'}
                     </option>
-                    {picOptions.map((opt) => (
+                    {picOptions.map(opt => (
                       <option key={opt} value={opt}>
                         {opt}
                       </option>
@@ -712,10 +712,10 @@ function HazardFormDesktop({ user }) {
                 {/* Tombol Navigasi - Halaman 1 */}
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "auto",
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 'auto',
                     gap: 16,
                   }}
                 >
@@ -724,25 +724,25 @@ function HazardFormDesktop({ user }) {
                     onClick={handleBack}
                     disabled={page === 1}
                     style={{
-                      background: page === 1 ? "#f3f4f6" : "#6b7280",
-                      color: page === 1 ? "#9ca3af" : "#fff",
-                      border: "none",
+                      background: page === 1 ? '#f3f4f6' : '#6b7280',
+                      color: page === 1 ? '#9ca3af' : '#fff',
+                      border: 'none',
                       borderRadius: 8,
-                      padding: "12px 24px",
+                      padding: '12px 24px',
                       fontSize: 16,
                       fontWeight: 600,
-                      cursor: page === 1 ? "not-allowed" : "pointer",
+                      cursor: page === 1 ? 'not-allowed' : 'pointer',
                       opacity: page === 1 ? 0.5 : 1,
                     }}
                   >
                     ← Kembali
                   </button>
 
-                  <div style={{ flex: 1, textAlign: "center" }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
                     <span
                       style={{
                         fontSize: 14,
-                        color: "#6b7280",
+                        color: '#6b7280',
                         fontWeight: 500,
                       }}
                     >
@@ -760,14 +760,14 @@ function HazardFormDesktop({ user }) {
                       !form.pic
                     }
                     style={{
-                      background: "#2563eb",
-                      color: "#fff",
-                      border: "none",
+                      background: '#2563eb',
+                      color: '#fff',
+                      border: 'none',
                       borderRadius: 8,
-                      padding: "12px 24px",
+                      padding: '12px 24px',
                       fontSize: 16,
                       fontWeight: 600,
-                      cursor: "pointer",
+                      cursor: 'pointer',
                     }}
                   >
                     Selanjutnya →
@@ -781,10 +781,10 @@ function HazardFormDesktop({ user }) {
           {page === 2 && (
             <div
               style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
               }}
             >
               <>
@@ -792,10 +792,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Ketidaksesuaian
@@ -806,7 +806,7 @@ function HazardFormDesktop({ user }) {
                     onChange={handleChange}
                     required
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 8,
                       fontSize: 15,
@@ -824,10 +824,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Sub Ketidaksesuaian
@@ -840,7 +840,7 @@ function HazardFormDesktop({ user }) {
                     required
                     placeholder="Contoh: PPE, Housekeeping, dll"
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 8,
                       fontSize: 15,
@@ -852,10 +852,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Quick Action
@@ -867,11 +867,11 @@ function HazardFormDesktop({ user }) {
                     required
                     placeholder="Tindakan cepat yang sudah dilakukan"
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 8,
                       fontSize: 15,
-                      resize: "vertical",
+                      resize: 'vertical',
                     }}
                   />
                 </div>
@@ -879,10 +879,10 @@ function HazardFormDesktop({ user }) {
                 {/* Tombol Navigasi - Halaman 2 */}
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "auto",
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 'auto',
                     gap: 16,
                   }}
                 >
@@ -891,25 +891,25 @@ function HazardFormDesktop({ user }) {
                     onClick={handleBack}
                     disabled={page === 1}
                     style={{
-                      background: page === 1 ? "#f3f4f6" : "#6b7280",
-                      color: page === 1 ? "#9ca3af" : "#fff",
-                      border: "none",
+                      background: page === 1 ? '#f3f4f6' : '#6b7280',
+                      color: page === 1 ? '#9ca3af' : '#fff',
+                      border: 'none',
                       borderRadius: 8,
-                      padding: "12px 24px",
+                      padding: '12px 24px',
                       fontSize: 16,
                       fontWeight: 600,
-                      cursor: page === 1 ? "not-allowed" : "pointer",
+                      cursor: page === 1 ? 'not-allowed' : 'pointer',
                       opacity: page === 1 ? 0.5 : 1,
                     }}
                   >
                     ← Kembali
                   </button>
 
-                  <div style={{ flex: 1, textAlign: "center" }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
                     <span
                       style={{
                         fontSize: 14,
-                        color: "#6b7280",
+                        color: '#6b7280',
                         fontWeight: 500,
                       }}
                     >
@@ -926,14 +926,14 @@ function HazardFormDesktop({ user }) {
                       !form.quickAction
                     }
                     style={{
-                      background: "#2563eb",
-                      color: "#fff",
-                      border: "none",
+                      background: '#2563eb',
+                      color: '#fff',
+                      border: 'none',
                       borderRadius: 8,
-                      padding: "12px 24px",
+                      padding: '12px 24px',
                       fontSize: 16,
                       fontWeight: 600,
-                      cursor: "pointer",
+                      cursor: 'pointer',
                     }}
                   >
                     Selanjutnya →
@@ -947,10 +947,10 @@ function HazardFormDesktop({ user }) {
           {page === 3 && (
             <div
               style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
               }}
             >
               <>
@@ -958,10 +958,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Deskripsi Temuan
@@ -973,12 +973,12 @@ function HazardFormDesktop({ user }) {
                     required
                     placeholder="Jelaskan detail temuan hazard"
                     style={{
-                      width: "100%",
+                      width: '100%',
                       borderRadius: 8,
                       padding: 8,
                       fontSize: 15,
-                      resize: "vertical",
-                      minHeight: "120px",
+                      resize: 'vertical',
+                      minHeight: '120px',
                     }}
                   />
                 </div>
@@ -987,10 +987,10 @@ function HazardFormDesktop({ user }) {
                   <label
                     style={{
                       fontWeight: 600,
-                      color: "#222",
+                      color: '#222',
                       marginBottom: 4,
-                      display: "block",
-                      textAlign: "center",
+                      display: 'block',
+                      textAlign: 'center',
                     }}
                   >
                     Foto Evidence
@@ -1001,20 +1001,20 @@ function HazardFormDesktop({ user }) {
                     accept="image/*"
                     onChange={handleEvidence}
                     required
-                    style={{ display: "none" }}
+                    style={{ display: 'none' }}
                   />
                   {evidencePreview ? (
-                    <div style={{ textAlign: "center" }}>
+                    <div style={{ textAlign: 'center' }}>
                       {selectedTake5?.bukti_url && !evidence && (
                         <div
                           style={{
-                            background: "#f0f9ff",
-                            border: "1px solid #0ea5e9",
-                            borderRadius: "8px",
-                            padding: "8px",
-                            marginBottom: "8px",
-                            fontSize: "12px",
-                            color: "#0369a1",
+                            background: '#f0f9ff',
+                            border: '1px solid #0ea5e9',
+                            borderRadius: '8px',
+                            padding: '8px',
+                            marginBottom: '8px',
+                            fontSize: '12px',
+                            color: '#0369a1',
                           }}
                         >
                           📸 Foto dari Take 5 tersedia. Silakan upload foto baru
@@ -1026,11 +1026,11 @@ function HazardFormDesktop({ user }) {
                         alt="Preview"
                         onClick={handleClickPreview}
                         style={{
-                          maxWidth: "100%",
+                          maxWidth: '100%',
                           maxHeight: 150,
                           borderRadius: 8,
-                          border: "2px solid #e5e7eb",
-                          cursor: "pointer",
+                          border: '2px solid #e5e7eb',
+                          cursor: 'pointer',
                         }}
                         title="Klik untuk ganti foto"
                       />
@@ -1040,14 +1040,14 @@ function HazardFormDesktop({ user }) {
                       type="button"
                       onClick={handleClickCamera}
                       style={{
-                        width: "100%",
-                        background: "#f3f4f6",
-                        border: "2px dashed #d1d5db",
+                        width: '100%',
+                        background: '#f3f4f6',
+                        border: '2px dashed #d1d5db',
                         borderRadius: 8,
-                        padding: "16px",
+                        padding: '16px',
                         fontSize: 15,
-                        color: "#6b7280",
-                        cursor: "pointer",
+                        color: '#6b7280',
+                        cursor: 'pointer',
                       }}
                     >
                       📷 Klik untuk mengambil foto
@@ -1058,10 +1058,10 @@ function HazardFormDesktop({ user }) {
                 {/* Tombol Navigasi - Halaman 3 */}
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "auto",
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 'auto',
                     gap: 16,
                   }}
                 >
@@ -1070,25 +1070,25 @@ function HazardFormDesktop({ user }) {
                     onClick={handleBack}
                     disabled={page === 1}
                     style={{
-                      background: page === 1 ? "#f3f4f6" : "#6b7280",
-                      color: page === 1 ? "#9ca3af" : "#fff",
-                      border: "none",
+                      background: page === 1 ? '#f3f4f6' : '#6b7280',
+                      color: page === 1 ? '#9ca3af' : '#fff',
+                      border: 'none',
                       borderRadius: 8,
-                      padding: "12px 24px",
+                      padding: '12px 24px',
                       fontSize: 16,
                       fontWeight: 600,
-                      cursor: page === 1 ? "not-allowed" : "pointer",
+                      cursor: page === 1 ? 'not-allowed' : 'pointer',
                       opacity: page === 1 ? 0.5 : 1,
                     }}
                   >
                     ← Kembali
                   </button>
 
-                  <div style={{ flex: 1, textAlign: "center" }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
                     <span
                       style={{
                         fontSize: 14,
-                        color: "#6b7280",
+                        color: '#6b7280',
                         fontWeight: 500,
                       }}
                     >
@@ -1108,20 +1108,20 @@ function HazardFormDesktop({ user }) {
                         submitting ||
                         (!evidence && !selectedTake5?.bukti_url) ||
                         !form.deskripsiTemuan
-                          ? "#9ca3af"
-                          : "#22c55e",
-                      color: "#fff",
-                      border: "none",
+                          ? '#9ca3af'
+                          : '#22c55e',
+                      color: '#fff',
+                      border: 'none',
                       borderRadius: 8,
-                      padding: "12px 24px",
+                      padding: '12px 24px',
                       fontSize: 16,
                       fontWeight: 600,
                       cursor:
                         submitting ||
                         (!evidence && !selectedTake5?.bukti_url) ||
                         !form.deskripsiTemuan
-                          ? "not-allowed"
-                          : "pointer",
+                          ? 'not-allowed'
+                          : 'pointer',
                       opacity:
                         submitting ||
                         (!evidence && !selectedTake5?.bukti_url) ||
@@ -1130,7 +1130,7 @@ function HazardFormDesktop({ user }) {
                           : 1,
                     }}
                   >
-                    {submitting ? "Menyimpan..." : "Simpan Hazard Report"}
+                    {submitting ? 'Menyimpan...' : 'Simpan Hazard Report'}
                   </button>
                 </div>
               </>
@@ -1140,10 +1140,10 @@ function HazardFormDesktop({ user }) {
           {submitError && (
             <div
               style={{
-                color: "#ef4444",
+                color: '#ef4444',
                 fontWeight: 500,
                 fontSize: 15,
-                textAlign: "center",
+                textAlign: 'center',
               }}
             >
               {submitError}
@@ -1152,10 +1152,10 @@ function HazardFormDesktop({ user }) {
           {submitSuccess && (
             <div
               style={{
-                color: "#22c55e",
+                color: '#22c55e',
                 fontWeight: 500,
                 fontSize: 15,
-                textAlign: "center",
+                textAlign: 'center',
               }}
             >
               Hazard Report berhasil disimpan!

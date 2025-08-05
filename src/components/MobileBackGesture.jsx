@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from 'react';
 
 const MobileBackGesture = ({ onBack, children }) => {
   const touchStartX = useRef(0);
@@ -6,13 +6,13 @@ const MobileBackGesture = ({ onBack, children }) => {
   const isBackGesture = useRef(false);
 
   useEffect(() => {
-    const handleTouchStart = (e) => {
+    const handleTouchStart = e => {
       // Don't interfere with input fields
       const target = e.target;
       if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.contentEditable === "true"
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
       ) {
         isBackGesture.current = false;
         return;
@@ -28,15 +28,15 @@ const MobileBackGesture = ({ onBack, children }) => {
       }
     };
 
-    const handleTouchMove = (e) => {
+    const handleTouchMove = e => {
       if (!isBackGesture.current) return;
 
       // Don't interfere with input fields
       const target = e.target;
       if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.contentEditable === "true"
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
       ) {
         isBackGesture.current = false;
         return;
@@ -59,7 +59,7 @@ const MobileBackGesture = ({ onBack, children }) => {
       }
     };
 
-    const handleTouchEnd = (e) => {
+    const handleTouchEnd = e => {
       if (!isBackGesture.current) return;
 
       const touchX = e.changedTouches[0].clientX;
@@ -74,16 +74,16 @@ const MobileBackGesture = ({ onBack, children }) => {
     };
 
     // Add event listeners
-    document.addEventListener("touchstart", handleTouchStart, {
+    document.addEventListener('touchstart', handleTouchStart, {
       passive: false,
     });
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      document.removeEventListener("touchstart", handleTouchStart);
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [onBack]);
 

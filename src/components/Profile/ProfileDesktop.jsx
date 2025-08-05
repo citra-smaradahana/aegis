@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
 
 function ProfileDesktop({ user, onClose, onLogout }) {
   const [profileData, setProfileData] = useState(null);
@@ -12,15 +12,15 @@ function ProfileDesktop({ user, onClose, onLogout }) {
   const fetchProfileData = async () => {
     try {
       const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
         .single();
 
       if (error) throw error;
       setProfileData(data);
     } catch (error) {
-      console.error("Error fetching profile data:", error);
+      console.error('Error fetching profile data:', error);
     } finally {
       setLoading(false);
     }
@@ -28,7 +28,7 @@ function ProfileDesktop({ user, onClose, onLogout }) {
 
   const handleChangePassword = () => {
     // Logic untuk ganti password akan dibuat selanjutnya
-    console.log("Change password clicked");
+    console.log('Change password clicked');
   };
 
   const handleLogout = () => {
@@ -41,14 +41,14 @@ function ProfileDesktop({ user, onClose, onLogout }) {
     return (
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '400px',
         }}
       >
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 16, color: "#6b7280" }}>Loading...</div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 16, color: '#6b7280' }}>Loading...</div>
         </div>
       </div>
     );
@@ -57,16 +57,16 @@ function ProfileDesktop({ user, onClose, onLogout }) {
   return (
     <div
       style={{
-        display: "flex",
+        display: 'flex',
         gap: 32,
-        background: "#fff",
+        background: '#fff',
         borderRadius: 16,
-        boxShadow: "0 4px 24px #2563eb33",
+        boxShadow: '0 4px 24px #2563eb33',
         padding: 32,
         maxWidth: 1000,
-        margin: "40px auto",
-        color: "#232946",
-        position: "relative",
+        margin: '40px auto',
+        color: '#232946',
+        position: 'relative',
       }}
     >
       {/* Tombol close kanan atas */}
@@ -74,14 +74,14 @@ function ProfileDesktop({ user, onClose, onLogout }) {
         <button
           onClick={onClose}
           style={{
-            position: "absolute",
+            position: 'absolute',
             top: 16,
             right: 16,
-            background: "transparent",
-            border: "none",
+            background: 'transparent',
+            border: 'none',
             fontSize: 24,
-            color: "#888",
-            cursor: "pointer",
+            color: '#888',
+            cursor: 'pointer',
             zIndex: 10,
           }}
           title="Tutup"
@@ -94,9 +94,9 @@ function ProfileDesktop({ user, onClose, onLogout }) {
       <div
         style={{
           flex: 1,
-          borderRight: "1px solid #e5e7eb",
+          borderRight: '1px solid #e5e7eb',
           paddingRight: 32,
-          textAlign: "center",
+          textAlign: 'center',
         }}
       >
         <h3 style={{ marginBottom: 24 }}>Profile</h3>
@@ -107,72 +107,72 @@ function ProfileDesktop({ user, onClose, onLogout }) {
             src={profileData.foto}
             alt="Profile"
             style={{
-              width: "150px",
-              height: "150px",
-              borderRadius: "50%",
-              objectFit: "cover",
-              margin: "0 auto 24px",
-              border: "3px solid #e5e7eb",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+              width: '150px',
+              height: '150px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              margin: '0 auto 24px',
+              border: '3px solid #e5e7eb',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
             }}
           />
         ) : (
           <div
             style={{
-              width: "150px",
-              height: "150px",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 24px",
-              fontSize: "60px",
-              color: "#fff",
-              fontWeight: "bold",
+              width: '150px',
+              height: '150px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px',
+              fontSize: '60px',
+              color: '#fff',
+              fontWeight: 'bold',
             }}
           >
-            {profileData?.nama ? profileData.nama.charAt(0).toUpperCase() : "U"}
+            {profileData?.nama ? profileData.nama.charAt(0).toUpperCase() : 'U'}
           </div>
         )}
 
         <h4
           style={{
-            margin: "0 0 8px 0",
+            margin: '0 0 8px 0',
             fontSize: 24,
             fontWeight: 600,
-            color: "#1f2937",
+            color: '#1f2937',
           }}
         >
-          {profileData?.nama || "User Name"}
+          {profileData?.nama || 'User Name'}
         </h4>
         <p
           style={{
-            margin: "0 0 32px 0",
+            margin: '0 0 32px 0',
             fontSize: 16,
-            color: "#6b7280",
+            color: '#6b7280',
           }}
         >
-          {profileData?.jabatan || "Jabatan"}
+          {profileData?.jabatan || 'Jabatan'}
         </p>
 
         {/* Change Password Button */}
         <button
           onClick={handleChangePassword}
           style={{
-            background: "#f3f4f6",
-            border: "1px solid #d1d5db",
-            borderRadius: "8px",
-            padding: "12px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            cursor: "pointer",
+            background: '#f3f4f6',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            padding: '12px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            cursor: 'pointer',
             fontSize: 14,
-            color: "#374151",
+            color: '#374151',
             fontWeight: 500,
-            margin: "0 auto 12px auto",
+            margin: '0 auto 12px auto',
           }}
         >
           <svg
@@ -196,19 +196,19 @@ function ProfileDesktop({ user, onClose, onLogout }) {
         <button
           onClick={handleLogout}
           style={{
-            background: "#ef4444",
-            border: "1px solid #dc2626",
-            borderRadius: "8px",
-            padding: "12px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            cursor: "pointer",
+            background: '#ef4444',
+            border: '1px solid #dc2626',
+            borderRadius: '8px',
+            padding: '12px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            cursor: 'pointer',
             fontSize: 14,
-            color: "#ffffff",
+            color: '#ffffff',
             fontWeight: 500,
-            margin: "0 auto",
+            margin: '0 auto',
           }}
         >
           <svg
@@ -235,50 +235,50 @@ function ProfileDesktop({ user, onClose, onLogout }) {
 
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "120px 1fr",
+            display: 'grid',
+            gridTemplateColumns: '120px 1fr',
             rowGap: 16,
             columnGap: 16,
-            alignItems: "center",
+            alignItems: 'center',
           }}
         >
-          <div style={{ fontWeight: 700, textAlign: "right" }}>Nama:</div>
-          <div>{profileData?.nama || "-"}</div>
+          <div style={{ fontWeight: 700, textAlign: 'right' }}>Nama:</div>
+          <div>{profileData?.nama || '-'}</div>
 
-          <div style={{ fontWeight: 700, textAlign: "right" }}>Jabatan:</div>
-          <div>{profileData?.jabatan || "-"}</div>
+          <div style={{ fontWeight: 700, textAlign: 'right' }}>Jabatan:</div>
+          <div>{profileData?.jabatan || '-'}</div>
 
-          <div style={{ fontWeight: 700, textAlign: "right" }}>NRP:</div>
-          <div>{profileData?.nrp || "-"}</div>
+          <div style={{ fontWeight: 700, textAlign: 'right' }}>NRP:</div>
+          <div>{profileData?.nrp || '-'}</div>
 
-          <div style={{ fontWeight: 700, textAlign: "right" }}>Site:</div>
-          <div>{profileData?.site || "-"}</div>
+          <div style={{ fontWeight: 700, textAlign: 'right' }}>Site:</div>
+          <div>{profileData?.site || '-'}</div>
 
-          <div style={{ fontWeight: 700, textAlign: "right" }}>Email:</div>
-          <div>{profileData?.email || "-"}</div>
+          <div style={{ fontWeight: 700, textAlign: 'right' }}>Email:</div>
+          <div>{profileData?.email || '-'}</div>
         </div>
 
         {/* Additional Info Section */}
         <div style={{ marginTop: 32 }}>
           <h4
             style={{
-              margin: "0 0 16px 0",
+              margin: '0 0 16px 0',
               fontSize: 16,
               fontWeight: 600,
-              color: "#374151",
+              color: '#374151',
             }}
           >
             Informasi Tambahan
           </h4>
           <div
             style={{
-              background: "#f8fafc",
+              background: '#f8fafc',
               padding: 16,
               borderRadius: 8,
-              border: "1px solid #e2e8f0",
+              border: '1px solid #e2e8f0',
             }}
           >
-            <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
               Profile ini menampilkan informasi dasar user yang terdaftar dalam
               sistem. Untuk mengubah informasi profile, silakan hubungi
               administrator.

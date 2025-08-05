@@ -2,10 +2,10 @@
 export default function getCroppedImg(imageSrc, crop) {
   return new Promise((resolve, reject) => {
     const image = new window.Image();
-    image.crossOrigin = "anonymous";
+    image.crossOrigin = 'anonymous';
     image.src = imageSrc;
     image.onload = () => {
-      const canvas = document.createElement("canvas");
+      const canvas = document.createElement('canvas');
 
       // Jika crop menggunakan persentase, konversi ke pixel
       let cropX, cropY, cropWidth, cropHeight;
@@ -38,13 +38,13 @@ export default function getCroppedImg(imageSrc, crop) {
 
       // Pastikan crop area minimal 1x1 pixel
       if (cropWidth <= 0 || cropHeight <= 0) {
-        reject(new Error("Invalid crop area"));
+        reject(new Error('Invalid crop area'));
         return;
       }
 
       canvas.width = cropWidth;
       canvas.height = cropHeight;
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext('2d');
 
       try {
         ctx.drawImage(
@@ -60,20 +60,20 @@ export default function getCroppedImg(imageSrc, crop) {
         );
 
         canvas.toBlob(
-          (blob) => {
+          blob => {
             if (!blob) {
-              reject(new Error("Canvas is empty"));
+              reject(new Error('Canvas is empty'));
               return;
             }
             resolve(blob);
           },
-          "image/jpeg",
+          'image/jpeg',
           0.9
         );
       } catch (error) {
         reject(new Error(`Failed to draw image: ${error.message}`));
       }
     };
-    image.onerror = () => reject(new Error("Failed to load image"));
+    image.onerror = () => reject(new Error('Failed to load image'));
   });
 }

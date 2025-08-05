@@ -1,7 +1,7 @@
 // Offline Storage Utility for PWA
 class OfflineStorage {
   constructor() {
-    this.dbName = "AegisKMBDB";
+    this.dbName = 'AegisKMBDB';
     this.dbVersion = 1;
     this.db = null;
     this.init();
@@ -17,34 +17,34 @@ class OfflineStorage {
         resolve();
       };
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = event => {
         const db = event.target.result;
 
         // Create object stores for different form types
-        if (!db.objectStoreNames.contains("fitToWork")) {
-          const fitToWorkStore = db.createObjectStore("fitToWork", {
-            keyPath: "id",
+        if (!db.objectStoreNames.contains('fitToWork')) {
+          const fitToWorkStore = db.createObjectStore('fitToWork', {
+            keyPath: 'id',
             autoIncrement: true,
           });
-          fitToWorkStore.createIndex("timestamp", "timestamp", {
+          fitToWorkStore.createIndex('timestamp', 'timestamp', {
             unique: false,
           });
         }
 
-        if (!db.objectStoreNames.contains("take5")) {
-          const take5Store = db.createObjectStore("take5", {
-            keyPath: "id",
+        if (!db.objectStoreNames.contains('take5')) {
+          const take5Store = db.createObjectStore('take5', {
+            keyPath: 'id',
             autoIncrement: true,
           });
-          take5Store.createIndex("timestamp", "timestamp", { unique: false });
+          take5Store.createIndex('timestamp', 'timestamp', { unique: false });
         }
 
-        if (!db.objectStoreNames.contains("hazard")) {
-          const hazardStore = db.createObjectStore("hazard", {
-            keyPath: "id",
+        if (!db.objectStoreNames.contains('hazard')) {
+          const hazardStore = db.createObjectStore('hazard', {
+            keyPath: 'id',
             autoIncrement: true,
           });
-          hazardStore.createIndex("timestamp", "timestamp", { unique: false });
+          hazardStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
       };
     });
@@ -53,7 +53,7 @@ class OfflineStorage {
   async saveFormData(formType, data) {
     await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([formType], "readwrite");
+      const transaction = this.db.transaction([formType], 'readwrite');
       const store = transaction.objectStore(formType);
 
       const formData = {
@@ -71,13 +71,13 @@ class OfflineStorage {
   async getPendingForms(formType) {
     await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([formType], "readonly");
+      const transaction = this.db.transaction([formType], 'readonly');
       const store = transaction.objectStore(formType);
-      const index = store.index("timestamp");
+      const index = store.index('timestamp');
 
       const request = index.getAll();
       request.onsuccess = () => {
-        const forms = request.result.filter((form) => !form.synced);
+        const forms = request.result.filter(form => !form.synced);
         resolve(forms);
       };
       request.onerror = () => reject(request.error);
@@ -87,7 +87,7 @@ class OfflineStorage {
   async markAsSynced(formType, id) {
     await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([formType], "readwrite");
+      const transaction = this.db.transaction([formType], 'readwrite');
       const store = transaction.objectStore(formType);
 
       const getRequest = store.get(id);
@@ -106,7 +106,7 @@ class OfflineStorage {
   async deleteForm(formType, id) {
     await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([formType], "readwrite");
+      const transaction = this.db.transaction([formType], 'readwrite');
       const store = transaction.objectStore(formType);
 
       const request = store.delete(id);
@@ -119,13 +119,13 @@ class OfflineStorage {
     await this.init();
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(
-        ["fitToWork", "take5", "hazard"],
-        "readwrite"
+        ['fitToWork', 'take5', 'hazard'],
+        'readwrite'
       );
 
-      const fitToWorkStore = transaction.objectStore("fitToWork");
-      const take5Store = transaction.objectStore("take5");
-      const hazardStore = transaction.objectStore("hazard");
+      const fitToWorkStore = transaction.objectStore('fitToWork');
+      const take5Store = transaction.objectStore('take5');
+      const hazardStore = transaction.objectStore('hazard');
 
       fitToWorkStore.clear();
       take5Store.clear();
@@ -143,11 +143,11 @@ class OfflineStorage {
 
   // Listen for online/offline events
   onOnline(callback) {
-    window.addEventListener("online", callback);
+    window.addEventListener('online', callback);
   }
 
   onOffline(callback) {
-    window.addEventListener("offline", callback);
+    window.addEventListener('offline', callback);
   }
 }
 

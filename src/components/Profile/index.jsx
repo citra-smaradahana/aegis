@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import ProfileMobile from "./ProfileMobile";
-import ProfileDesktop from "./ProfileDesktop";
+import React, { useState, useEffect } from 'react';
+import ProfileMobile from './ProfileMobile';
+import ProfileDesktop from './ProfileDesktop';
 
 function Profile({ user, onClose, onBack, onLogout }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -10,8 +10,8 @@ function Profile({ user, onClose, onBack, onLogout }) {
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   if (isMobile) {

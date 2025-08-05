@@ -1,42 +1,42 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient";
-import UserForm from "./UserForm";
-import "./UserManagement.css";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
+import UserForm from './UserForm';
+import './UserManagement.css';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [, setSelectedUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [siteFilter, setSiteFilter] = useState("");
-  const [jabatanFilter, setJabatanFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [siteFilter, setSiteFilter] = useState('');
+  const [jabatanFilter, setJabatanFilter] = useState('');
   const [forceUpdate, setForceUpdate] = useState(0); // Force re-render
 
   // Fetch users dari Supabase
   const fetchUsers = async () => {
     setLoading(true);
-    setError("");
+    setError('');
     try {
-      console.log("Fetching users from Supabase...");
+      console.log('Fetching users from Supabase...');
 
       const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .order("nama");
+        .from('users')
+        .select('*')
+        .order('nama');
 
       if (error) {
-        console.error("Error fetching users:", error);
-        setError("Gagal memuat data user: " + error.message);
+        console.error('Error fetching users:', error);
+        setError('Gagal memuat data user: ' + error.message);
       } else {
-        console.log("Users fetched successfully:", data);
+        console.log('Users fetched successfully:', data);
         setUsers(data || []);
       }
     } catch (e) {
-      console.error("Error in fetchUsers:", e);
-      setError("Gagal memuat data user.");
+      console.error('Error in fetchUsers:', e);
+      setError('Gagal memuat data user.');
     } finally {
       setLoading(false);
     }
@@ -55,9 +55,9 @@ function UserManagement() {
 
   // Filter, search, dan sort dengan null check yang lebih ketat
   const filteredUsers = users
-    .filter((u) => u && typeof u === "object") // Pastikan u ada dan adalah object
+    .filter(u => u && typeof u === 'object') // Pastikan u ada dan adalah object
     .filter(
-      (u) =>
+      u =>
         (!siteFilter || (u.site && u.site === siteFilter)) &&
         (!jabatanFilter || (u.jabatan && u.jabatan === jabatanFilter)) &&
         ((u.nama && u.nama.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -65,8 +65,8 @@ function UserManagement() {
     )
     .sort((a, b) => {
       // Handle null values in sorting
-      const namaA = a && a.nama ? a.nama : "";
-      const namaB = b && b.nama ? b.nama : "";
+      const namaA = a && a.nama ? a.nama : '';
+      const namaB = b && b.nama ? b.nama : '';
       return namaA.localeCompare(namaB);
     });
 
@@ -79,47 +79,47 @@ function UserManagement() {
 
   // Unique site & jabatan untuk filter dengan null check yang lebih ketat
   const siteOptions = [
-    ...new Set(users.filter((u) => u && u.site).map((u) => u.site)),
+    ...new Set(users.filter(u => u && u.site).map(u => u.site)),
   ];
   const jabatanOptions = [
-    ...new Set(users.filter((u) => u && u.jabatan).map((u) => u.jabatan)),
+    ...new Set(users.filter(u => u && u.jabatan).map(u => u.jabatan)),
   ];
 
   // Handler untuk Add User
-  const handleAddUser = async (userData) => {
+  const handleAddUser = async userData => {
     try {
       setLoading(true);
-      setError("");
+      setError('');
 
-      console.log("Adding user to Supabase:", userData);
+      console.log('Adding user to Supabase:', userData);
 
       const { data, error } = await supabase
-        .from("users")
+        .from('users')
         .insert([userData])
         .select();
 
       if (error) {
-        console.error("Error adding user:", error);
-        setError("Gagal menambah user: " + error.message);
+        console.error('Error adding user:', error);
+        setError('Gagal menambah user: ' + error.message);
         return;
       }
 
-      console.log("User added successfully:", data);
-      setUsers((prev) => [...prev, data[0]]);
+      console.log('User added successfully:', data);
+      setUsers(prev => [...prev, data[0]]);
       setShowForm(false);
     } catch (e) {
-      console.error("Error in handleAddUser:", e);
-      setError("Terjadi kesalahan saat menambah user");
+      console.error('Error in handleAddUser:', e);
+      setError('Terjadi kesalahan saat menambah user');
     } finally {
       setLoading(false);
     }
   };
 
   // Handler untuk Update User dengan validasi yang lebih ketat
-  const handleUpdateUser = async (userData) => {
+  const handleUpdateUser = async userData => {
     try {
       setLoading(true);
-      setError("");
+      setError('');
 
       // console.log("=== UPDATE USER DEBUG ===");
       // console.log("Received userData:", userData);
@@ -129,13 +129,13 @@ function UserManagement() {
       const updateData = {};
 
       // Ambil semua field yang ada di userData (kecuali id)
-      Object.keys(userData).forEach((key) => {
+      Object.keys(userData).forEach(key => {
         if (
-          key !== "id" &&
+          key !== 'id' &&
           userData[key] !== undefined &&
           userData[key] !== null
         ) {
-          if (typeof userData[key] === "string") {
+          if (typeof userData[key] === 'string') {
             updateData[key] = userData[key].trim();
           } else {
             updateData[key] = userData[key];
@@ -162,13 +162,13 @@ function UserManagement() {
       // Test koneksi Supabase terlebih dahulu
       // console.log("Testing Supabase connection...");
       const { data: testData, error: testError } = await supabase
-        .from("users")
-        .select("id")
+        .from('users')
+        .select('id')
         .limit(1);
 
       if (testError) {
-        console.error("Supabase connection test failed:", testError);
-        setError("Gagal terhubung ke database: " + testError.message);
+        console.error('Supabase connection test failed:', testError);
+        setError('Gagal terhubung ke database: ' + testError.message);
         return;
       }
 
@@ -181,9 +181,9 @@ function UserManagement() {
       // console.log("User ID:", userData.id);
 
       const { data, error } = await supabase
-        .from("users")
+        .from('users')
         .update(updateData)
-        .eq("id", userData.id)
+        .eq('id', userData.id)
         .select();
 
       // console.log("=== SUPABASE RESPONSE ===");
@@ -192,10 +192,10 @@ function UserManagement() {
       // console.log("Response data length:", data ? data.length : 0);
 
       if (error) {
-        console.error("Error updating user:", error);
-        console.error("Error details:", error.details);
-        console.error("Error hint:", error.hint);
-        setError("Gagal mengupdate user: " + error.message);
+        console.error('Error updating user:', error);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        setError('Gagal mengupdate user: ' + error.message);
         return;
       }
 
@@ -206,7 +206,7 @@ function UserManagement() {
       // console.log("=== SIMPLE STATE UPDATE ===");
       // console.log("Current users before update:", users);
 
-      const updatedUsers = users.map((u) => {
+      const updatedUsers = users.map(u => {
         if (u.id === userData.id) {
           const updatedUser = { ...u, ...updateData };
           // console.log("Updated user in state:", updatedUser);
@@ -220,7 +220,7 @@ function UserManagement() {
       // Update state dengan setTimeout untuk memastikan async update
       setTimeout(() => {
         setUsers(updatedUsers);
-        setForceUpdate((prev) => prev + 1);
+        setForceUpdate(prev => prev + 1);
         // console.log("State updated with setTimeout");
       }, 100);
 
@@ -229,49 +229,49 @@ function UserManagement() {
 
       // console.log("Update completed successfully!");
     } catch (e) {
-      console.error("Error in handleUpdateUser:", e);
-      setError("Terjadi kesalahan saat mengupdate user");
+      console.error('Error in handleUpdateUser:', e);
+      setError('Terjadi kesalahan saat mengupdate user');
     } finally {
       setLoading(false);
     }
   };
 
   // Handler untuk Delete User
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus user ini?")) {
+  const handleDeleteUser = async userId => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus user ini?')) {
       return;
     }
 
     try {
       setLoading(true);
-      setError("");
+      setError('');
 
-      console.log("Deleting user from Supabase:", userId);
+      console.log('Deleting user from Supabase:', userId);
 
-      const { error } = await supabase.from("users").delete().eq("id", userId);
+      const { error } = await supabase.from('users').delete().eq('id', userId);
 
       if (error) {
-        console.error("Error deleting user:", error);
-        setError("Gagal menghapus user: " + error.message);
+        console.error('Error deleting user:', error);
+        setError('Gagal menghapus user: ' + error.message);
         return;
       }
 
-      console.log("User deleted successfully");
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      console.log('User deleted successfully');
+      setUsers(prev => prev.filter(u => u.id !== userId));
       setEditingUser(null);
       setSelectedUser(null);
     } catch (e) {
-      console.error("Error in handleDeleteUser:", e);
-      setError("Terjadi kesalahan saat menghapus user");
+      console.error('Error in handleDeleteUser:', e);
+      setError('Terjadi kesalahan saat menghapus user');
     } finally {
       setLoading(false);
     }
   };
 
   // Error boundary untuk mencegah crash
-  if (error && error.includes("crash")) {
+  if (error && error.includes('crash')) {
     return (
-      <div style={{ padding: "20px", color: "red" }}>
+      <div style={{ padding: '20px', color: 'red' }}>
         <h3>Terjadi kesalahan</h3>
         <p>{error}</p>
         <button onClick={() => window.location.reload()}>
@@ -283,9 +283,9 @@ function UserManagement() {
 
   // Tambahan safety check untuk users array
   if (!Array.isArray(users)) {
-    console.error("Users is not an array:", users);
+    console.error('Users is not an array:', users);
     return (
-      <div style={{ padding: "20px", color: "red" }}>
+      <div style={{ padding: '20px', color: 'red' }}>
         <h3>Terjadi kesalahan</h3>
         <p>Data users tidak valid. Silakan refresh halaman.</p>
         <button onClick={() => window.location.reload()}>
@@ -302,7 +302,7 @@ function UserManagement() {
     >
       <div className="user-management-header">
         <h2>Manajemen User</h2>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <button className="add-user-btn" onClick={() => setShowForm(true)}>
             + Tambah User
           </button>
@@ -313,14 +313,14 @@ function UserManagement() {
           type="text"
           placeholder="Cari user berdasarkan nama, NRP"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
         />
         <select
           value={siteFilter}
-          onChange={(e) => setSiteFilter(e.target.value)}
+          onChange={e => setSiteFilter(e.target.value)}
         >
           <option value="">Semua Site</option>
-          {siteOptions.map((site) => (
+          {siteOptions.map(site => (
             <option key={site} value={site}>
               {site}
             </option>
@@ -328,10 +328,10 @@ function UserManagement() {
         </select>
         <select
           value={jabatanFilter}
-          onChange={(e) => setJabatanFilter(e.target.value)}
+          onChange={e => setJabatanFilter(e.target.value)}
         >
           <option value="">Semua Jabatan</option>
-          {jabatanOptions.map((jab) => (
+          {jabatanOptions.map(jab => (
             <option key={jab} value={jab}>
               {jab}
             </option>
@@ -344,7 +344,7 @@ function UserManagement() {
         <div className="error-message">{error}</div>
       ) : (
         <div>
-          <p style={{ marginBottom: "10px", color: "#666" }}>
+          <p style={{ marginBottom: '10px', color: '#666' }}>
             Total users: {users.length} | Filtered users: {filteredUsers.length}
           </p>
           <table className="user-management-table">
@@ -365,30 +365,30 @@ function UserManagement() {
                   <td
                     colSpan="7"
                     style={{
-                      textAlign: "center",
-                      padding: "20px",
-                      color: "#666",
+                      textAlign: 'center',
+                      padding: '20px',
+                      color: '#666',
                     }}
                   >
                     {users.length === 0
-                      ? "Tidak ada data users"
-                      : "Tidak ada data yang sesuai dengan filter"}
+                      ? 'Tidak ada data users'
+                      : 'Tidak ada data yang sesuai dengan filter'}
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => (
+                filteredUsers.map(u => (
                   <tr
                     key={u.id}
                     className={
-                      editingUser && editingUser.id === u.id ? "editing" : ""
+                      editingUser && editingUser.id === u.id ? 'editing' : ''
                     }
                   >
-                    <td>{u.nama || "-"}</td>
-                    <td>{u.nrp || "-"}</td>
-                    <td>{u.email || "-"}</td>
-                    <td>{u.jabatan || "-"}</td>
-                    <td>{u.site || "-"}</td>
-                    <td>{u.role || "-"}</td>
+                    <td>{u.nama || '-'}</td>
+                    <td>{u.nrp || '-'}</td>
+                    <td>{u.email || '-'}</td>
+                    <td>{u.jabatan || '-'}</td>
+                    <td>{u.site || '-'}</td>
+                    <td>{u.role || '-'}</td>
                     <td>
                       <button
                         onClick={() => {
@@ -397,19 +397,19 @@ function UserManagement() {
                         }}
                         className="edit-btn"
                         style={{
-                          backgroundColor: "#007bff",
-                          color: "white",
-                          padding: "8px 16px",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          marginRight: "8px",
-                          width: "70px",
-                          height: "36px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          padding: '8px 16px',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          marginRight: '8px',
+                          width: '70px',
+                          height: '36px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
                       >
                         Edit
@@ -418,18 +418,18 @@ function UserManagement() {
                         onClick={() => handleDeleteUser(u.id)}
                         className="delete-btn"
                         style={{
-                          backgroundColor: "#dc3545",
-                          color: "white",
-                          padding: "8px 16px",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          width: "70px",
-                          height: "36px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          padding: '8px 16px',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          width: '70px',
+                          height: '36px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
                       >
                         Hapus

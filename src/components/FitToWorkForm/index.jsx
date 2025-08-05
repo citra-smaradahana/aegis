@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import FitToWorkFormDesktop from "./FitToWorkFormDesktop";
-import FitToWorkFormMobile from "./FitToWorkFormMobile";
+import React, { useState, useEffect } from 'react';
+import FitToWorkFormDesktop from './FitToWorkFormDesktop';
+import FitToWorkFormMobile from './FitToWorkFormMobile';
 
 function FitToWorkForm({ user, onBack }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -10,8 +10,8 @@ function FitToWorkForm({ user, onBack }) {
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   return isMobile ? (

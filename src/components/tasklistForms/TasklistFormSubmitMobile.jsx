@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
 
 function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
   const [form, setForm] = useState({
-    action_plan: "",
-    due_date: "",
+    action_plan: '',
+    due_date: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -14,22 +14,22 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
   useEffect(() => {
     if (hazard) {
       setForm({
-        action_plan: hazard.action_plan || "",
-        due_date: hazard.due_date ? hazard.due_date.split("T")[0] : "",
+        action_plan: hazard.action_plan || '',
+        due_date: hazard.due_date ? hazard.due_date.split('T')[0] : '',
       });
     }
   }, [hazard]);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (readOnly) return;
     if (!form.action_plan || !form.due_date) {
-      setError("Action plan dan due date wajib diisi.");
+      setError('Action plan dan due date wajib diisi.');
       return;
     }
     setSubmitting(true);
@@ -39,63 +39,63 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
       const updateData = {
         action_plan: form.action_plan,
         due_date: form.due_date ? new Date(form.due_date).toISOString() : null,
-        status: "Open",
+        status: 'Open',
       };
 
       // Filter out empty values
-      Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === "" || updateData[key] === null) {
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === '' || updateData[key] === null) {
           delete updateData[key];
         }
       });
 
       const { error: updateError } = await supabase
-        .from("hazard_report")
+        .from('hazard_report')
         .update(updateData)
-        .eq("id", hazard.id);
+        .eq('id', hazard.id);
 
       if (updateError) throw updateError;
 
       onSuccess && onSuccess();
       onClose && onClose();
     } catch (err) {
-      console.error("Error updating hazard report:", err);
-      setError("Gagal menyimpan action plan. Silakan coba lagi.");
+      console.error('Error updating hazard report:', err);
+      setError('Gagal menyimpan action plan. Silakan coba lagi.');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Helper untuk ambil field hazard
-  const lokasi = hazard?.lokasi || "-";
-  const detailLokasi = hazard?.detail_lokasi || "-";
-  const keteranganLokasi = hazard?.keterangan_lokasi || "-";
-  const ketidaksesuaian = hazard?.ketidaksesuaian || "-";
-  const subKetidaksesuaian = hazard?.sub_ketidaksesuaian || "-";
-  const quickAction = hazard?.quick_action || "-";
-  const temuan = hazard?.deskripsi_temuan || hazard?.temuan || "-";
-  const evidence = hazard?.evidence || "-";
+  const lokasi = hazard?.lokasi || '-';
+  const detailLokasi = hazard?.detail_lokasi || '-';
+  const keteranganLokasi = hazard?.keterangan_lokasi || '-';
+  const ketidaksesuaian = hazard?.ketidaksesuaian || '-';
+  const subKetidaksesuaian = hazard?.sub_ketidaksesuaian || '-';
+  const quickAction = hazard?.quick_action || '-';
+  const temuan = hazard?.deskripsi_temuan || hazard?.temuan || '-';
+  const evidence = hazard?.evidence || '-';
 
   return (
     <div
       style={{
-        width: "100vw",
-        height: "100vh",
-        background: "#f3f4f6",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
+        width: '100vw',
+        height: '100vh',
+        background: '#f3f4f6',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
       <div
         style={{
-          background: "#fff",
-          padding: "16px",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          background: '#fff',
+          padding: '16px',
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
         <div>
@@ -104,16 +104,16 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
               margin: 0,
               fontSize: 18,
               fontWeight: 600,
-              color: "#1f2937",
+              color: '#1f2937',
             }}
           >
             Submit Action Plan
           </h2>
           <p
             style={{
-              margin: "4px 0 0 0",
+              margin: '4px 0 0 0',
               fontSize: 14,
-              color: "#6b7280",
+              color: '#6b7280',
             }}
           >
             Hazard #{hazard?.id}
@@ -122,12 +122,12 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         <button
           onClick={onClose}
           style={{
-            background: "none",
-            border: "none",
+            background: 'none',
+            border: 'none',
             fontSize: 24,
-            color: "#6b7280",
-            cursor: "pointer",
-            padding: "4px",
+            color: '#6b7280',
+            cursor: 'pointer',
+            padding: '4px',
           }}
         >
           ×
@@ -138,25 +138,25 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
       <div
         style={{
           flex: 1,
-          padding: "16px",
-          overflowY: "auto",
-          paddingBottom: "120px", // Tambah padding bottom agar due date bisa di-scroll
+          padding: '16px',
+          overflowY: 'auto',
+          paddingBottom: '120px', // Tambah padding bottom agar due date bisa di-scroll
         }}
       >
         {/* Lokasi */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            boxShadow: "0 1px 4px #0001",
-            padding: "16px",
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15, color: "#2563eb" }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#2563eb' }}>
             📍 Lokasi
           </h3>
-          <div style={{ fontSize: 15, color: "#374151", marginTop: 8 }}>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
             <div>
               <strong>Lokasi:</strong> {lokasi}
             </div>
@@ -172,17 +172,17 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         {/* Ketidaksesuaian */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            boxShadow: "0 1px 4px #0001",
-            padding: "16px",
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15, color: "#f59e42" }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#f59e42' }}>
             ⚠️ Ketidaksesuaian
           </h3>
-          <div style={{ fontSize: 15, color: "#374151", marginTop: 8 }}>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
             <div>
               <strong>Ketidaksesuaian:</strong> {ketidaksesuaian}
             </div>
@@ -202,17 +202,17 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         {/* Temuan */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            boxShadow: "0 1px 4px #0001",
-            padding: "16px",
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15, color: "#ef4444" }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#ef4444' }}>
             🔍 Temuan
           </h3>
-          <div style={{ fontSize: 15, color: "#374151", marginTop: 8 }}>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
             <div>
               <strong>Deskripsi Temuan:</strong>
             </div>
@@ -221,17 +221,17 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         </div>
 
         {/* Evidence */}
-        {evidence && evidence !== "-" && (
+        {evidence && evidence !== '-' && (
           <div
             style={{
-              background: "#fff",
-              borderRadius: "8px",
-              marginBottom: "24px",
-              boxShadow: "0 1px 4px #0001",
-              padding: "16px",
+              background: '#fff',
+              borderRadius: '8px',
+              marginBottom: '24px',
+              boxShadow: '0 1px 4px #0001',
+              padding: '16px',
             }}
           >
-            <h3 style={{ margin: 0, fontSize: 15, color: "#10b981" }}>
+            <h3 style={{ margin: 0, fontSize: 15, color: '#10b981' }}>
               📷 Evidence
             </h3>
             <div style={{ marginTop: 8 }}>
@@ -239,21 +239,21 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
                 src={evidence}
                 alt="Evidence"
                 style={{
-                  width: "100%",
-                  maxHeight: "150px", // Kurangi ukuran dari 200px ke 150px
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  cursor: "pointer",
+                  width: '100%',
+                  maxHeight: '150px', // Kurangi ukuran dari 200px ke 150px
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  cursor: 'pointer',
                 }}
                 onClick={() => setShowImagePopup(true)}
               />
               <div
                 style={{
                   fontSize: 12,
-                  color: "#6b7280",
+                  color: '#6b7280',
                   marginTop: 4,
-                  textAlign: "center",
+                  textAlign: 'center',
                 }}
               >
                 Tap untuk melihat detail
@@ -263,13 +263,13 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         )}
 
         {/* Action Plan */}
-        <div style={{ marginBottom: "20px" }}>
+        <div style={{ marginBottom: '20px' }}>
           <label
             style={{
-              display: "block",
+              display: 'block',
               fontWeight: 600,
-              color: "#374151",
-              marginBottom: "8px",
+              color: '#374151',
+              marginBottom: '8px',
               fontSize: 16,
             }}
           >
@@ -282,16 +282,16 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
             required
             placeholder="Jelaskan rencana tindakan yang akan dilakukan..."
             style={{
-              width: "100%",
-              minHeight: "120px",
-              padding: "12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
+              width: '100%',
+              minHeight: '120px',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
               fontSize: 16,
-              resize: "vertical",
-              fontFamily: "inherit",
-              background: readOnly ? "#f3f4f6" : undefined,
-              color: readOnly ? "#9ca3af" : undefined,
+              resize: 'vertical',
+              fontFamily: 'inherit',
+              background: readOnly ? '#f3f4f6' : undefined,
+              color: readOnly ? '#9ca3af' : undefined,
             }}
             readOnly={readOnly}
             disabled={readOnly}
@@ -299,13 +299,13 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         </div>
 
         {/* Due Date */}
-        <div style={{ marginBottom: "20px" }}>
+        <div style={{ marginBottom: '20px' }}>
           <label
             style={{
-              display: "block",
+              display: 'block',
               fontWeight: 600,
-              color: "#374151",
-              marginBottom: "8px",
+              color: '#374151',
+              marginBottom: '8px',
               fontSize: 16,
             }}
           >
@@ -317,16 +317,16 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
             value={form.due_date}
             onChange={handleChange}
             required
-            min={new Date().toISOString().split("T")[0]}
+            min={new Date().toISOString().split('T')[0]}
             style={{
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
               fontSize: 16,
-              fontFamily: "inherit",
-              background: readOnly ? "#f3f4f6" : undefined,
-              color: readOnly ? "#9ca3af" : undefined,
+              fontFamily: 'inherit',
+              background: readOnly ? '#f3f4f6' : undefined,
+              color: readOnly ? '#9ca3af' : undefined,
             }}
             readOnly={readOnly}
             disabled={readOnly}
@@ -337,12 +337,12 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         {error && (
           <div
             style={{
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              color: "#dc2626",
-              padding: "12px",
-              borderRadius: "8px",
-              marginBottom: "20px",
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '20px',
               fontSize: 14,
             }}
           >
@@ -355,39 +355,39 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
       {showImagePopup && (
         <div
           style={{
-            position: "fixed",
+            position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.9)",
+            background: 'rgba(0, 0, 0, 0.9)',
             zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
           }}
           onClick={() => setShowImagePopup(false)}
         >
           <div
             style={{
-              position: "relative",
-              maxWidth: "90vw",
-              maxHeight: "90vh",
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
             }}
           >
             <button
               onClick={() => setShowImagePopup(false)}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 top: -40,
                 right: 0,
-                background: "none",
-                border: "none",
-                color: "#fff",
+                background: 'none',
+                border: 'none',
+                color: '#fff',
                 fontSize: 24,
-                cursor: "pointer",
-                padding: "8px",
+                cursor: 'pointer',
+                padding: '8px',
               }}
             >
               ×
@@ -396,13 +396,13 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
               src={evidence}
               alt="Evidence Detail"
               style={{
-                width: "100%",
-                height: "auto",
-                maxHeight: "90vh",
-                objectFit: "contain",
-                borderRadius: "8px",
+                width: '100%',
+                height: 'auto',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
             />
           </div>
         </div>
@@ -411,10 +411,10 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
       {/* Fixed Submit Button */}
       <div
         style={{
-          background: "#fff",
-          padding: "16px",
-          borderTop: "1px solid #e5e7eb",
-          position: "fixed",
+          background: '#fff',
+          padding: '16px',
+          borderTop: '1px solid #e5e7eb',
+          position: 'fixed',
           left: 0,
           right: 0,
           bottom: 56, // asumsi navbar tinggi 56px
@@ -428,28 +428,28 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
             readOnly || submitting || !form.action_plan || !form.due_date
           }
           style={{
-            width: "100%",
-            padding: "16px",
+            width: '100%',
+            padding: '16px',
             background:
               readOnly || submitting || !form.action_plan || !form.due_date
-                ? "#9ca3af"
-                : "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
+                ? '#9ca3af'
+                : '#2563eb',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
             fontSize: 16,
             fontWeight: 600,
             cursor:
               readOnly || submitting || !form.action_plan || !form.due_date
-                ? "not-allowed"
-                : "pointer",
+                ? 'not-allowed'
+                : 'pointer',
             opacity:
               readOnly || submitting || !form.action_plan || !form.due_date
                 ? 0.6
                 : 1,
           }}
         >
-          {readOnly ? "Read Only" : submitting ? "Menyimpan..." : "Submit"}
+          {readOnly ? 'Read Only' : submitting ? 'Menyimpan...' : 'Submit'}
         </button>
       </div>
     </div>

@@ -1,10 +1,10 @@
 // Session management utilities
-const SESSION_KEY = "aegis_user_session";
+const SESSION_KEY = 'aegis_user_session';
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 export const sessionManager = {
   // Save user session
-  saveSession: (userData) => {
+  saveSession: userData => {
     const sessionData = {
       user: userData,
       timestamp: Date.now(),
@@ -32,7 +32,7 @@ export const sessionManager = {
 
       return session.user;
     } catch {
-      console.error("Error getting session");
+      console.error('Error getting session');
       sessionManager.clearSession();
       return null;
     }
@@ -48,7 +48,7 @@ export const sessionManager = {
       session.expiresAt = Date.now() + SESSION_DURATION;
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     } catch {
-      console.error("Error extending session");
+      console.error('Error extending session');
     }
   },
 
@@ -79,12 +79,12 @@ export const sessionManager = {
 // Auto-extend session on user activity
 export const setupSessionAutoExtend = () => {
   const events = [
-    "mousedown",
-    "mousemove",
-    "keypress",
-    "scroll",
-    "touchstart",
-    "click",
+    'mousedown',
+    'mousemove',
+    'keypress',
+    'scroll',
+    'touchstart',
+    'click',
   ];
 
   const extendSessionOnActivity = () => {
@@ -93,16 +93,19 @@ export const setupSessionAutoExtend = () => {
     }
   };
 
-  events.forEach((event) => {
+  events.forEach(event => {
     document.addEventListener(event, extendSessionOnActivity, {
       passive: true,
     });
   });
 
   // Also extend session every 30 minutes
-  setInterval(() => {
-    if (sessionManager.isLoggedIn()) {
-      sessionManager.extendSession();
-    }
-  }, 30 * 60 * 1000); // 30 minutes
+  setInterval(
+    () => {
+      if (sessionManager.isLoggedIn()) {
+        sessionManager.extendSession();
+      }
+    },
+    30 * 60 * 1000
+  ); // 30 minutes
 };

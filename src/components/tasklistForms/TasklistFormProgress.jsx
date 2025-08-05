@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient";
-import Cropper from "react-easy-crop";
-import getCroppedImg from "../Dropzone/cropImageUtil";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../Dropzone/cropImageUtil';
 
 function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   const [form, setForm] = useState({
-    deskripsi_penyelesaian: "",
+    deskripsi_penyelesaian: '',
   });
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
@@ -23,7 +23,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   useEffect(() => {
     if (hazard) {
       setForm({
-        deskripsi_penyelesaian: hazard.deskripsi_penyelesaian || "",
+        deskripsi_penyelesaian: hazard.deskripsi_penyelesaian || '',
       });
       if (hazard.evidence_perbaikan) {
         setEvidencePreview(hazard.evidence_perbaikan);
@@ -31,9 +31,9 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
     }
   }, [hazard]);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   // Cropper logic
@@ -41,7 +41,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 
-  const handleEvidence = (e) => {
+  const handleEvidence = e => {
     if (readOnly) return;
     const file = e.target.files[0];
     if (file) {
@@ -58,7 +58,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
       setShowCrop(false);
       setRawImage(null);
     } catch (err) {
-      setError("Gagal crop gambar");
+      setError('Gagal crop gambar');
       setShowCrop(false);
     }
   };
@@ -71,25 +71,25 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   // Upload evidence ke bucket closing-hazard
   const uploadEvidence = async () => {
     if (!evidence) return null;
-    const fileExt = evidence.type.split("/")[1];
+    const fileExt = evidence.type.split('/')[1];
     const fileName = `hazard_${hazard.id}_${Date.now()}.${fileExt}`;
     const { data, error } = await supabase.storage
-      .from("closing-hazard")
+      .from('closing-hazard')
       .upload(fileName, evidence, { upsert: true });
     if (error) throw error;
     const { data: urlData } = supabase.storage
-      .from("closing-hazard")
+      .from('closing-hazard')
       .getPublicUrl(fileName);
     return urlData.publicUrl;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (readOnly) return;
     setError(null);
 
     if (!form.deskripsi_penyelesaian || !evidence) {
-      setError("Deskripsi penyelesaian dan evidence perbaikan wajib diisi.");
+      setError('Deskripsi penyelesaian dan evidence perbaikan wajib diisi.');
       return;
     }
 
@@ -98,20 +98,20 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
       const evidenceUrl = await uploadEvidence();
 
       const { error } = await supabase
-        .from("hazard_report")
+        .from('hazard_report')
         .update({
           deskripsi_penyelesaian: form.deskripsi_penyelesaian,
           evidence_perbaikan: evidenceUrl,
-          status: "Done",
+          status: 'Done',
         })
-        .eq("id", hazard.id);
+        .eq('id', hazard.id);
 
       if (error) throw error;
 
       onSuccess();
     } catch (err) {
-      console.error("Error updating hazard:", err);
-      setError("Gagal menyimpan data. Silakan coba lagi.");
+      console.error('Error updating hazard:', err);
+      setError('Gagal menyimpan data. Silakan coba lagi.');
     } finally {
       setSubmitting(false);
     }
@@ -121,27 +121,27 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
     return (
       <div
         style={{
-          position: "fixed",
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0,0,0,0.8)",
+          background: 'rgba(0,0,0,0.8)',
           zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           padding: 20,
         }}
       >
         <div
           style={{
-            position: "relative",
+            position: 'relative',
             width: 400,
             height: 400,
-            background: "#fff",
+            background: '#fff',
             borderRadius: 12,
-            overflow: "hidden",
+            overflow: 'hidden',
           }}
         >
           <Cropper
@@ -152,34 +152,34 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
-            style={{ containerStyle: { width: "100%", height: "100%" } }}
+            style={{ containerStyle: { width: '100%', height: '100%' } }}
           />
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               bottom: 20,
               left: 0,
               right: 0,
-              display: "flex",
-              justifyContent: "center",
+              display: 'flex',
+              justifyContent: 'center',
               gap: 20,
             }}
           >
             <button
               onClick={handleCropCancel}
               style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
+                background: '#ef4444',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50%',
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
               }}
             >
               ✕
@@ -187,18 +187,18 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
             <button
               onClick={handleCropSave}
               style={{
-                background: "#22c55e",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
+                background: '#22c55e',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50%',
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
               }}
             >
               ✓
@@ -213,7 +213,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   if (readOnly) {
     return (
       <div className="modal-overlay">
-        <div className="modal" style={{ maxWidth: "1200px", width: "90%" }}>
+        <div className="modal" style={{ maxWidth: '1200px', width: '90%' }}>
           <div className="modal-header">
             <h2>Detail Hazard Report</h2>
             <button onClick={onClose} className="close-button">
@@ -221,14 +221,14 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
             </button>
           </div>
 
-          <div style={{ display: "flex", gap: "24px", padding: "20px" }}>
+          <div style={{ display: 'flex', gap: '24px', padding: '20px' }}>
             {/* Left Column - Detail Hazard */}
             <div style={{ flex: 1 }}>
               <h3
                 style={{
-                  marginBottom: "16px",
-                  color: "#374151",
-                  fontSize: "18px",
+                  marginBottom: '16px',
+                  color: '#374151',
+                  fontSize: '18px',
                 }}
               >
                 Detail Hazard
@@ -236,57 +236,57 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
 
               <div
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                  color: "#000000",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  color: '#000000',
                 }}
               >
                 <div>
-                  <strong>Site:</strong> {hazard?.lokasi || "-"}
+                  <strong>Site:</strong> {hazard?.lokasi || '-'}
                 </div>
                 <div>
-                  <strong>Nama Pelapor:</strong> {hazard?.pelapor_nama || "-"}
+                  <strong>Nama Pelapor:</strong> {hazard?.pelapor_nama || '-'}
                 </div>
                 <div>
-                  <strong>NRP Pelapor:</strong> {hazard?.pelapor_nrp || "-"}
+                  <strong>NRP Pelapor:</strong> {hazard?.pelapor_nrp || '-'}
                 </div>
                 <div>
-                  <strong>PIC:</strong> {hazard?.pic || "-"}
+                  <strong>PIC:</strong> {hazard?.pic || '-'}
                 </div>
                 <div>
-                  <strong>Deskripsi Temuan:</strong>{" "}
-                  {hazard?.deskripsi_temuan || "-"}
+                  <strong>Deskripsi Temuan:</strong>{' '}
+                  {hazard?.deskripsi_temuan || '-'}
                 </div>
                 <div>
-                  <strong>Quick Action:</strong> {hazard?.quick_action || "-"}
+                  <strong>Quick Action:</strong> {hazard?.quick_action || '-'}
                 </div>
                 <div>
-                  <strong>Ketidaksesuaian:</strong>{" "}
-                  {hazard?.ketidaksesuaian || "-"}
+                  <strong>Ketidaksesuaian:</strong>{' '}
+                  {hazard?.ketidaksesuaian || '-'}
                 </div>
                 <div>
-                  <strong>Sub Ketidaksesuaian:</strong>{" "}
-                  {hazard?.sub_ketidaksesuaian || "-"}
+                  <strong>Sub Ketidaksesuaian:</strong>{' '}
+                  {hazard?.sub_ketidaksesuaian || '-'}
                 </div>
                 <div>
-                  <strong>Keterangan Lokasi:</strong>{" "}
-                  {hazard?.keterangan_lokasi || "-"}
+                  <strong>Keterangan Lokasi:</strong>{' '}
+                  {hazard?.keterangan_lokasi || '-'}
                 </div>
                 <div>
-                  <strong>Detail Lokasi:</strong> {hazard?.detail_lokasi || "-"}
+                  <strong>Detail Lokasi:</strong> {hazard?.detail_lokasi || '-'}
                 </div>
                 <div>
-                  <strong>Action Plan:</strong> {hazard?.action_plan || "-"}
+                  <strong>Action Plan:</strong> {hazard?.action_plan || '-'}
                 </div>
                 <div>
-                  <strong>Due Date:</strong> {hazard?.due_date || "-"}
+                  <strong>Due Date:</strong> {hazard?.due_date || '-'}
                 </div>
               </div>
 
               {/* Evidence Temuan */}
-              <div style={{ marginTop: "20px" }}>
-                <h4 style={{ marginBottom: "12px", color: "#374151" }}>
+              <div style={{ marginTop: '20px' }}>
+                <h4 style={{ marginBottom: '12px', color: '#374151' }}>
                   Evidence Temuan
                 </h4>
                 {hazard?.evidence ? (
@@ -294,21 +294,21 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                     src={hazard.evidence}
                     alt="Evidence Temuan"
                     style={{
-                      maxWidth: "200px",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      cursor: "pointer",
+                      maxWidth: '200px',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      cursor: 'pointer',
                     }}
                     onClick={() => setShowImagePopup(true)}
                   />
                 ) : (
                   <div
                     style={{
-                      padding: "12px",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      color: "#000000",
+                      padding: '12px',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      color: '#000000',
                     }}
                   >
                     Tidak ada evidence temuan
@@ -319,42 +319,42 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
 
             {/* Right Column - Progress Information */}
             <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: "20px", color: "#000000" }}>
+              <div style={{ marginBottom: '20px', color: '#000000' }}>
                 <strong>Deskripsi Penyelesaian:</strong>
                 <div
                   className="read-only-content"
                   style={{
-                    padding: "12px",
-                    backgroundColor: "#f9fafb",
-                    borderRadius: "8px",
-                    border: "1px solid #e5e7eb",
-                    minHeight: "80px",
-                    whiteSpace: "pre-wrap",
-                    marginTop: "8px",
-                    color: "#000000",
+                    padding: '12px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    minHeight: '80px',
+                    whiteSpace: 'pre-wrap',
+                    marginTop: '8px',
+                    color: '#000000',
                   }}
                 >
                   {form.deskripsi_penyelesaian ||
-                    "Tidak ada deskripsi penyelesaian"}
+                    'Tidak ada deskripsi penyelesaian'}
                 </div>
               </div>
 
-              <div style={{ color: "#000000" }}>
+              <div style={{ color: '#000000' }}>
                 <strong>Evidence Perbaikan:</strong>
                 {evidencePreview ? (
                   <div
                     className="evidence-preview"
-                    style={{ marginTop: "8px" }}
+                    style={{ marginTop: '8px' }}
                   >
                     <img
                       src={evidencePreview}
                       alt="Evidence Preview"
                       onClick={() => setShowImagePopup(true)}
                       style={{
-                        cursor: "pointer",
-                        maxWidth: "200px",
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
+                        cursor: 'pointer',
+                        maxWidth: '200px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
                       }}
                     />
                   </div>
@@ -362,12 +362,12 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                   <div
                     className="read-only-content"
                     style={{
-                      padding: "12px",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      color: "#000000",
-                      marginTop: "8px",
+                      padding: '12px',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      color: '#000000',
+                      marginTop: '8px',
                     }}
                   >
                     Tidak ada evidence perbaikan
@@ -379,7 +379,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
 
           <div
             className="form-actions"
-            style={{ padding: "20px", borderTop: "1px solid #e5e7eb" }}
+            style={{ padding: '20px', borderTop: '1px solid #e5e7eb' }}
           >
             <button type="button" onClick={onClose} className="btn-cancel">
               Tutup
@@ -406,7 +406,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                   <img
                     src={evidencePreview || hazard?.evidence}
                     alt="Evidence"
-                    style={{ maxWidth: "100%", height: "auto" }}
+                    style={{ maxWidth: '100%', height: 'auto' }}
                   />
                 </div>
               </div>
@@ -420,7 +420,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   // Render edit form
   return (
     <div className="modal-overlay">
-      <div className="modal" style={{ maxWidth: "1200px", width: "90%" }}>
+      <div className="modal" style={{ maxWidth: '1200px', width: '90%' }}>
         <div className="modal-header">
           <h2>Progress Hazard Report</h2>
           <button onClick={onClose} className="close-button">
@@ -429,14 +429,14 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: "flex", gap: "24px", padding: "20px" }}>
+          <div style={{ display: 'flex', gap: '24px', padding: '20px' }}>
             {/* Left Column - Detail Hazard */}
             <div style={{ flex: 1 }}>
               <h3
                 style={{
-                  marginBottom: "16px",
-                  color: "#374151",
-                  fontSize: "18px",
+                  marginBottom: '16px',
+                  color: '#374151',
+                  fontSize: '18px',
                 }}
               >
                 Detail Hazard
@@ -444,57 +444,57 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
 
               <div
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                  color: "#000000",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  color: '#000000',
                 }}
               >
                 <div>
-                  <strong>Site:</strong> {hazard?.lokasi || "-"}
+                  <strong>Site:</strong> {hazard?.lokasi || '-'}
                 </div>
                 <div>
-                  <strong>Nama Pelapor:</strong> {hazard?.pelapor_nama || "-"}
+                  <strong>Nama Pelapor:</strong> {hazard?.pelapor_nama || '-'}
                 </div>
                 <div>
-                  <strong>NRP Pelapor:</strong> {hazard?.pelapor_nrp || "-"}
+                  <strong>NRP Pelapor:</strong> {hazard?.pelapor_nrp || '-'}
                 </div>
                 <div>
-                  <strong>PIC:</strong> {hazard?.pic || "-"}
+                  <strong>PIC:</strong> {hazard?.pic || '-'}
                 </div>
                 <div>
-                  <strong>Deskripsi Temuan:</strong>{" "}
-                  {hazard?.deskripsi_temuan || "-"}
+                  <strong>Deskripsi Temuan:</strong>{' '}
+                  {hazard?.deskripsi_temuan || '-'}
                 </div>
                 <div>
-                  <strong>Quick Action:</strong> {hazard?.quick_action || "-"}
+                  <strong>Quick Action:</strong> {hazard?.quick_action || '-'}
                 </div>
                 <div>
-                  <strong>Ketidaksesuaian:</strong>{" "}
-                  {hazard?.ketidaksesuaian || "-"}
+                  <strong>Ketidaksesuaian:</strong>{' '}
+                  {hazard?.ketidaksesuaian || '-'}
                 </div>
                 <div>
-                  <strong>Sub Ketidaksesuaian:</strong>{" "}
-                  {hazard?.sub_ketidaksesuaian || "-"}
+                  <strong>Sub Ketidaksesuaian:</strong>{' '}
+                  {hazard?.sub_ketidaksesuaian || '-'}
                 </div>
                 <div>
-                  <strong>Keterangan Lokasi:</strong>{" "}
-                  {hazard?.keterangan_lokasi || "-"}
+                  <strong>Keterangan Lokasi:</strong>{' '}
+                  {hazard?.keterangan_lokasi || '-'}
                 </div>
                 <div>
-                  <strong>Detail Lokasi:</strong> {hazard?.detail_lokasi || "-"}
+                  <strong>Detail Lokasi:</strong> {hazard?.detail_lokasi || '-'}
                 </div>
                 <div>
-                  <strong>Action Plan:</strong> {hazard?.action_plan || "-"}
+                  <strong>Action Plan:</strong> {hazard?.action_plan || '-'}
                 </div>
                 <div>
-                  <strong>Due Date:</strong> {hazard?.due_date || "-"}
+                  <strong>Due Date:</strong> {hazard?.due_date || '-'}
                 </div>
               </div>
 
               {/* Evidence Temuan */}
-              <div style={{ marginTop: "20px" }}>
-                <h4 style={{ marginBottom: "12px", color: "#374151" }}>
+              <div style={{ marginTop: '20px' }}>
+                <h4 style={{ marginBottom: '12px', color: '#374151' }}>
                   Evidence Temuan
                 </h4>
                 {hazard?.evidence ? (
@@ -502,21 +502,21 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                     src={hazard.evidence}
                     alt="Evidence Temuan"
                     style={{
-                      maxWidth: "200px",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      cursor: "pointer",
+                      maxWidth: '200px',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      cursor: 'pointer',
                     }}
                     onClick={() => setShowImagePopup(true)}
                   />
                 ) : (
                   <div
                     style={{
-                      padding: "12px",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      color: "#000000",
+                      padding: '12px',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      color: '#000000',
                     }}
                   >
                     Tidak ada evidence temuan
@@ -527,10 +527,10 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
 
             {/* Right Column - Progress Information (Editable) */}
             <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: "20px" }}>
+              <div style={{ marginBottom: '20px' }}>
                 <label
                   htmlFor="deskripsi_penyelesaian"
-                  style={{ color: "#000000", fontWeight: "600" }}
+                  style={{ color: '#000000', fontWeight: '600' }}
                 >
                   Deskripsi Penyelesaian *
                 </label>
@@ -542,13 +542,13 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                   rows={4}
                   placeholder="Jelaskan langkah-langkah penyelesaian yang telah dilakukan..."
                   style={{
-                    width: "100%",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    border: "1px solid #e5e7eb",
-                    marginTop: "8px",
-                    fontSize: "14px",
-                    resize: "vertical",
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    marginTop: '8px',
+                    fontSize: '14px',
+                    resize: 'vertical',
                   }}
                 />
               </div>
@@ -556,7 +556,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
               <div>
                 <label
                   htmlFor="evidence"
-                  style={{ color: "#000000", fontWeight: "600" }}
+                  style={{ color: '#000000', fontWeight: '600' }}
                 >
                   Evidence Perbaikan *
                 </label>
@@ -566,29 +566,29 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                   accept="image/*"
                   onChange={handleEvidence}
                   ref={fileInputRef}
-                  style={{ display: "none" }}
+                  style={{ display: 'none' }}
                 />
                 {evidencePreview ? (
                   <div
                     className="evidence-preview"
-                    style={{ marginTop: "8px" }}
+                    style={{ marginTop: '8px' }}
                   >
                     <img
                       src={evidencePreview}
                       alt="Evidence Preview"
                       onClick={() => fileInputRef.current?.click()}
                       style={{
-                        cursor: "pointer",
-                        maxWidth: "200px",
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        transition: "opacity 0.2s",
+                        cursor: 'pointer',
+                        maxWidth: '200px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        transition: 'opacity 0.2s',
                       }}
-                      onMouseOver={(e) => {
-                        e.target.style.opacity = "0.8";
+                      onMouseOver={e => {
+                        e.target.style.opacity = '0.8';
                       }}
-                      onMouseOut={(e) => {
-                        e.target.style.opacity = "1";
+                      onMouseOut={e => {
+                        e.target.style.opacity = '1';
                       }}
                       title="Klik untuk mengganti foto"
                     />
@@ -597,33 +597,33 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     style={{
-                      width: "200px",
-                      height: "150px",
-                      border: "2px dashed #e5e7eb",
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      marginTop: "8px",
-                      backgroundColor: "#f9fafb",
-                      transition: "border-color 0.2s, background-color 0.2s",
+                      width: '200px',
+                      height: '150px',
+                      border: '2px dashed #e5e7eb',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      marginTop: '8px',
+                      backgroundColor: '#f9fafb',
+                      transition: 'border-color 0.2s, background-color 0.2s',
                     }}
-                    onMouseOver={(e) => {
-                      e.target.style.borderColor = "#3b82f6";
-                      e.target.style.backgroundColor = "#f0f9ff";
+                    onMouseOver={e => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.backgroundColor = '#f0f9ff';
                     }}
-                    onMouseOut={(e) => {
-                      e.target.style.borderColor = "#e5e7eb";
-                      e.target.style.backgroundColor = "#f9fafb";
+                    onMouseOut={e => {
+                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.backgroundColor = '#f9fafb';
                     }}
                     title="Klik untuk upload foto"
                   >
-                    <div style={{ textAlign: "center", color: "#6b7280" }}>
-                      <div style={{ fontSize: "24px", marginBottom: "8px" }}>
+                    <div style={{ textAlign: 'center', color: '#6b7280' }}>
+                      <div style={{ fontSize: '24px', marginBottom: '8px' }}>
                         📷
                       </div>
-                      <div style={{ fontSize: "14px" }}>
+                      <div style={{ fontSize: '14px' }}>
                         Klik untuk upload foto
                       </div>
                     </div>
@@ -636,7 +636,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
           {error && (
             <div
               className="error-message"
-              style={{ padding: "0 20px", color: "#ef4444" }}
+              style={{ padding: '0 20px', color: '#ef4444' }}
             >
               {error}
             </div>
@@ -644,7 +644,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
 
           <div
             className="form-actions"
-            style={{ padding: "20px", borderTop: "1px solid #e5e7eb" }}
+            style={{ padding: '20px', borderTop: '1px solid #e5e7eb' }}
           >
             <button
               type="button"
@@ -655,7 +655,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
               Batal
             </button>
             <button type="submit" className="btn-submit" disabled={submitting}>
-              {submitting ? "Menyimpan..." : "Simpan Progress"}
+              {submitting ? 'Menyimpan...' : 'Simpan Progress'}
             </button>
           </div>
         </form>
@@ -680,7 +680,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                 <img
                   src={evidencePreview || hazard?.evidence}
                   alt="Evidence"
-                  style={{ maxWidth: "100%", height: "auto" }}
+                  style={{ maxWidth: '100%', height: 'auto' }}
                 />
               </div>
             </div>
