@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-function TasklistFormClosed({ hazard, readOnly, onClose }) {
+function TasklistFormClosed({ hazard, onClose }) {
   const [showImagePopup, setShowImagePopup] = useState(false);
   const [popupImage, setPopupImage] = useState(null);
 

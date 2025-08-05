@@ -31,8 +31,8 @@ export const sessionManager = {
       sessionManager.extendSession();
 
       return session.user;
-    } catch (error) {
-      console.error("Error getting session:", error);
+    } catch {
+      console.error("Error getting session");
       sessionManager.clearSession();
       return null;
     }
@@ -47,8 +47,8 @@ export const sessionManager = {
       const session = JSON.parse(sessionData);
       session.expiresAt = Date.now() + SESSION_DURATION;
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } catch (error) {
-      console.error("Error extending session:", error);
+    } catch {
+      console.error("Error extending session");
     }
   },
 
@@ -70,7 +70,7 @@ export const sessionManager = {
 
       const session = JSON.parse(sessionData);
       return session.expiresAt;
-    } catch (error) {
+    } catch {
       return null;
     }
   },

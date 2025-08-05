@@ -15,7 +15,7 @@ const FitToWorkFormDesktop = ({ user }) => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sudahIsiHariIni, setSudahIsiHariIni] = useState(false);
-  const [dataHariIni, setDataHariIni] = useState(null);
+  const [, setDataHariIni] = useState(null);
 
   // Get today's date in WITA (Waktu Indonesia Tengah)
   // This ensures users can fill Fit To Work again after 00:00 WITA

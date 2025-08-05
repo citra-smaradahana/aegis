@@ -111,7 +111,7 @@ function UploadKaryawan() {
       setPreviewUrl(URL.createObjectURL(croppedBlob));
       setShowCrop(false);
       setRawImage(null);
-    } catch (err) {
+    } catch {
       setUploadError("Gagal crop foto");
     }
   };
@@ -579,7 +579,6 @@ function UploadKaryawan() {
                 flexDirection: "column",
                 alignItems: "center",
                 margin: 0,
-                padding: 24,
               }}
             >
               <div

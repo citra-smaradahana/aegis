@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-function TasklistFormOpenMobile({
-  user,
-  hazard,
-  onClose,
-  onSuccess,
-  readOnly,
-}) {
+function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [approveSelected, setApproveSelected] = useState(null); // null, 'ya', 'tidak'

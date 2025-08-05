@@ -3,12 +3,12 @@ import { supabase } from "../../supabaseClient";
 import UserForm from "./UserForm";
 import "./UserManagement.css";
 
-function UserManagement({ user: currentUser }) {
+function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [, setSelectedUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [siteFilter, setSiteFilter] = useState("");

@@ -3,7 +3,7 @@ import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 
-function TasklistFormProgress({ user, hazard, onClose, onSuccess, readOnly }) {
+function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   const [form, setForm] = useState({
     deskripsi_penyelesaian: "",
   });

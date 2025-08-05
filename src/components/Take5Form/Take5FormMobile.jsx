@@ -37,7 +37,7 @@ function getToday() {
 const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
   const [site, setSite] = useState(user.site || "");
   const [detailLokasi, setDetailLokasi] = useState("");
-  const [locationOptions, setLocationOptions] = useState([]);
+  const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [potensiBahaya, setPotensiBahaya] = useState("");
   const [q1, setQ1] = useState(null);
@@ -54,7 +54,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
   const [success, setSuccess] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0, size: 200 });
+  const [, setCrop] = useState({ x: 0, y: 0, size: 200 });
 
   // Validasi form
   const isFormValid =

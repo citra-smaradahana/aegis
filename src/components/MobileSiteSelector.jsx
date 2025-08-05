@@ -7,7 +7,7 @@ const MobileSiteSelector = ({
   placeholder = "Pilih Lokasi",
   disabled = false,
   style = {},
-  required = false,
+
 }) => {
   const [showSiteSelection, setShowSiteSelection] = useState(false);
 

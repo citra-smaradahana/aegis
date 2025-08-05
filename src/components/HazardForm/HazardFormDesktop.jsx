@@ -46,11 +46,11 @@ function HazardFormDesktop({ user }) {
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
   const fileInputRef = useRef();
-  const [take5Pending, setTake5Pending] = useState([]);
+  const [, setTake5Pending] = useState([]);
   const [selectedTake5, setSelectedTake5] = useState(null);
   const [selectedTake5Id, setSelectedTake5Id] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
-  const [locationOptions, setLocationOptions] = useState([]);
+  const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);

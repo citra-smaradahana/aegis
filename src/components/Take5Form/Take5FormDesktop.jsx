@@ -36,7 +36,7 @@ function getToday() {
 const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const [site, setSite] = useState(user.site || "");
   const [detailLokasi, setDetailLokasi] = useState("");
-  const [locationOptions, setLocationOptions] = useState([]);
+  const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [potensiBahaya, setPotensiBahaya] = useState("");
   const [q1, setQ1] = useState(null);

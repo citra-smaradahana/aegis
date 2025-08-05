@@ -2206,7 +2206,7 @@ function App() {
 export default App;
 
 // Tambahkan komponen demo untuk menampilkan alur form tasklist
-function TasklistDemo({ user, onBack }) {
+function TasklistDemo({ user }) {
   const [hazards, setHazards] = React.useState([]);
   const [selectedHazard, setSelectedHazard] = React.useState(null);
   const [status, setStatus] = React.useState(null);

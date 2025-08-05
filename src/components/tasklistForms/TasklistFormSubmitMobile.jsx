@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-function TasklistFormSubmitMobile({
-  user,
-  hazard,
-  onClose,
-  onSuccess,
-  readOnly,
-}) {
+function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
   const [form, setForm] = useState({
     action_plan: "",
     due_date: "",

@@ -12,7 +12,7 @@ import MobileSiteSelector from "../MobileSiteSelector";
 import LocationDetailSelector from "../LocationDetailSelector";
 import PICSelector from "../PICSelector";
 
-const lokasiOptions = [
+const _lokasiOptions = [
   "Head Office",
   "Balikpapan",
   "ADRO",
@@ -48,11 +48,11 @@ function HazardFormMobile({ user, onBack }) {
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
   const fileInputRef = useRef();
-  const [take5Pending, setTake5Pending] = useState([]);
+  const [, setTake5Pending] = useState([]);
   const [selectedTake5, setSelectedTake5] = useState(null);
   const [selectedTake5Id, setSelectedTake5Id] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
-  const [locationOptions, setLocationOptions] = useState([]);
+  const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -235,7 +235,7 @@ function HazardFormMobile({ user, onBack }) {
     return form.deskripsiTemuan && (evidence || selectedTake5?.bukti_url);
   };
 
-  const isFormValid = () => {
+  const _isFormValid = () => {
     return isPage1Valid() && isPage2Valid() && isPage3Valid();
   };
 

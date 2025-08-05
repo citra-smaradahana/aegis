@@ -4,7 +4,6 @@ import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 
 function TasklistFormRejectAtDoneMobile({
-  user,
   hazard,
   onClose,
   onSuccess,

@@ -1,12 +1,6 @@
 import React, { useState } from "react";
 
-function TasklistFormClosedMobile({
-  user,
-  hazard,
-  onClose,
-  onSuccess,
-  readOnly,
-}) {
+function TasklistFormClosedMobile({ hazard, onClose }) {
   const [showImagePopup, setShowImagePopup] = useState(false);
 
   // Helper untuk ambil field hazard

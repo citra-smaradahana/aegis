@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
 function TasklistFormDone({ hazard, onApprove, onReject, readOnly, onClose }) {
-  const [showReject, setShowReject] = useState(false);
+  const [, setShowReject] = useState(false);
   const [alasan, setAlasan] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

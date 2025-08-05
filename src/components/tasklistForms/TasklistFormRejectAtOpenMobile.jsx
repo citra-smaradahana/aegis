@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
 function TasklistFormRejectAtOpenMobile({
-  user,
   hazard,
   onClose,
   onSuccess,

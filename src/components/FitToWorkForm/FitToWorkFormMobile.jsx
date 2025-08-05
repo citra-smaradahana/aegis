@@ -11,7 +11,7 @@ const FitToWorkFormMobile = ({ user, onBack }) => {
   const [siapBekerja, setSiapBekerja] = useState(""); // "Ya"/"Tidak"
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sudahIsiHariIni, setSudahIsiHariIni] = useState(false);
   const [totalJamTidurAngka, setTotalJamTidurAngka] = useState(0);
@@ -240,7 +240,7 @@ const FitToWorkFormMobile = ({ user, onBack }) => {
     textAlign: "center",
   };
 
-  const headerStyle = {
+  const _headerStyle = {
     textAlign: "center",
     marginBottom: 2, // lebih rapat
     marginTop: 0,
@@ -296,7 +296,6 @@ const FitToWorkFormMobile = ({ user, onBack }) => {
   const timeFieldStyle = {
     flex: 1,
     minWidth: 0,
-    marginRight: 0,
     width: "90%", // samakan lebar dengan field lain
     marginLeft: "auto",
     marginRight: "auto",
@@ -324,7 +323,7 @@ const FitToWorkFormMobile = ({ user, onBack }) => {
     flex: 1,
   });
 
-  const fitToWorkSubmitButtonStyle = {
+  const _fitToWorkSubmitButtonStyle = {
     background: "#2563eb",
     color: "#fff",
     border: "none",
