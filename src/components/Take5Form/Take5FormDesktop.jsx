@@ -5,7 +5,9 @@ import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
   allowsCustomInput,
+  shouldUseLocationSelector,
 } from "../../config/siteLocations";
+import LocationDetailSelector from "../LocationDetailSelector";
 
 const SITE_OPTIONS = [
   "Head Office",
@@ -547,30 +549,16 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
             <div style={fieldMargin}>
               <label style={labelStyle}>Detail Lokasi</label>
-              {allowsCustomInput(site) ? (
-                <input
-                  type="text"
-                  value={detailLokasi}
-                  onChange={(e) => setDetailLokasi(e.target.value)}
-                  required
-                  placeholder="Ketik detail lokasi..."
-                  style={inputStyle}
-                />
-              ) : (
+              {shouldUseLocationSelector(site) ? (
                 <>
-                  <select
+                  <LocationDetailSelector
+                    site={site}
                     value={detailLokasi}
                     onChange={handleDetailLokasiChange}
-                    required
+                    placeholder="Pilih Detail Lokasi"
                     style={inputStyle}
-                  >
-                    <option value="">Pilih Detail Lokasi</option>
-                    {locationOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    required
+                  />
                   {showCustomInput && (
                     <input
                       type="text"
@@ -585,6 +573,15 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                     />
                   )}
                 </>
+              ) : (
+                <input
+                  type="text"
+                  value={detailLokasi}
+                  onChange={(e) => setDetailLokasi(e.target.value)}
+                  required
+                  placeholder="Ketik detail lokasi..."
+                  style={inputStyle}
+                />
               )}
             </div>
 

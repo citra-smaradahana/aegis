@@ -5,8 +5,10 @@ import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
   allowsCustomInput,
+  shouldUseLocationSelector,
 } from "../../config/siteLocations";
 import PendingTake5List from "./PendingTake5List";
+import LocationDetailSelector from "../LocationDetailSelector";
 
 const lokasiOptions = [
   "Head Office",
@@ -583,64 +585,22 @@ function HazardFormDesktop({ user }) {
                   >
                     Detail Lokasi
                   </label>
-                  {allowsCustomInput(form.lokasi) ? (
-                    <input
-                      type="text"
-                      name="detailLokasi"
-                      value={form.detailLokasi}
-                      onChange={handleChange}
-                      required
-                      disabled={!!selectedTake5}
-                      placeholder="Ketik detail lokasi..."
-                      style={{
-                        width: "100%",
-                        borderRadius: 8,
-                        padding: 8,
-                        fontSize: 15,
-                        backgroundColor: !!selectedTake5 ? "#f3f4f6" : "#fff",
-                        color: !!selectedTake5 ? "#9ca3af" : "#000",
-                      }}
-                    />
-                  ) : (
+                  {shouldUseLocationSelector(form.lokasi) ? (
                     <>
-                      <select
-                        name="detailLokasi"
+                      <LocationDetailSelector
+                        site={form.lokasi}
                         value={form.detailLokasi}
                         onChange={handleDetailLokasiChange}
-                        required
-                        disabled={!!selectedTake5 || !form.lokasi}
-                        style={{
-                          width: "100%",
-                          borderRadius: 8,
-                          padding: 8,
-                          fontSize: 15,
-                          backgroundColor:
-                            !form.lokasi || !!selectedTake5
-                              ? "#f3f4f6"
-                              : "#fff",
-                          color:
-                            !form.lokasi || !!selectedTake5
-                              ? "#9ca3af"
-                              : "#000",
-                          cursor:
-                            !form.lokasi || !!selectedTake5
-                              ? "not-allowed"
-                              : "pointer",
-                        }}
-                      >
-                        <option value="">
-                          {!form.lokasi
+                        placeholder={
+                          !form.lokasi
                             ? "Pilih lokasi terlebih dahulu"
                             : !!selectedTake5
                             ? "Diisi otomatis dari Take 5"
-                            : "Pilih Detail Lokasi"}
-                        </option>
-                        {locationOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                            : "Pilih Detail Lokasi"
+                        }
+                        disabled={!!selectedTake5 || !form.lokasi}
+                        required
+                      />
                       {showCustomInput && (
                         <input
                           type="text"
@@ -659,6 +619,24 @@ function HazardFormDesktop({ user }) {
                         />
                       )}
                     </>
+                  ) : (
+                    <input
+                      type="text"
+                      name="detailLokasi"
+                      value={form.detailLokasi}
+                      onChange={handleChange}
+                      required
+                      disabled={!!selectedTake5}
+                      placeholder="Ketik detail lokasi..."
+                      style={{
+                        width: "100%",
+                        borderRadius: 8,
+                        padding: 8,
+                        fontSize: 15,
+                        backgroundColor: !!selectedTake5 ? "#f3f4f6" : "#fff",
+                        color: !!selectedTake5 ? "#9ca3af" : "#000",
+                      }}
+                    />
                   )}
                 </div>
 

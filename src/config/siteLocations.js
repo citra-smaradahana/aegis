@@ -18,6 +18,7 @@ export const CUSTOM_INPUT_SITES = [
   "Balikpapan",
   "ADRO",
   "AMMP",
+  "BSIB",
   "GAMR",
   "HRSB",
   "HRSE",
@@ -44,4 +45,9 @@ export const hasSpecificLocations = (site) => {
 // Function to check if a site allows custom input
 export const allowsCustomInput = (site) => {
   return CUSTOM_INPUT_SITES.includes(site);
+};
+
+// Function to check if a site should use LocationDetailSelector
+export const shouldUseLocationSelector = (site) => {
+  return SITE_LOCATIONS[site] && SITE_LOCATIONS[site].length > 0;
 };

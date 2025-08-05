@@ -5,6 +5,7 @@ import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
   allowsCustomInput,
+  shouldUseLocationSelector,
 } from "../../config/siteLocations";
 import PendingTake5List from "./PendingTake5List";
 import MobileSiteSelector from "../MobileSiteSelector";
@@ -766,26 +767,7 @@ function HazardFormMobile({ user, onBack }) {
                 >
                   Detail Lokasi
                 </label>
-                {allowsCustomInput(form.lokasi) ? (
-                  <input
-                    type="text"
-                    name="detailLokasi"
-                    value={form.detailLokasi}
-                    onChange={handleChange}
-                    required
-                    disabled={!!selectedTake5}
-                    placeholder="Ketik detail lokasi..."
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      padding: 4,
-                      fontSize: 13,
-                      backgroundColor: !!selectedTake5 ? "#f3f4f6" : "#fff",
-                      color: !!selectedTake5 ? "#9ca3af" : "#000",
-                      ...getFieldBorderStyle("detailLokasi"),
-                    }}
-                  />
-                ) : (
+                {shouldUseLocationSelector(form.lokasi) ? (
                   <>
                     <LocationDetailSelector
                       site={form.lokasi}
@@ -821,6 +803,25 @@ function HazardFormMobile({ user, onBack }) {
                       />
                     )}
                   </>
+                ) : (
+                  <input
+                    type="text"
+                    name="detailLokasi"
+                    value={form.detailLokasi}
+                    onChange={handleChange}
+                    required
+                    disabled={!!selectedTake5}
+                    placeholder="Ketik detail lokasi..."
+                    style={{
+                      width: "100%",
+                      borderRadius: 8,
+                      padding: 4,
+                      fontSize: 13,
+                      backgroundColor: !!selectedTake5 ? "#f3f4f6" : "#fff",
+                      color: !!selectedTake5 ? "#9ca3af" : "#000",
+                      ...getFieldBorderStyle("detailLokasi"),
+                    }}
+                  />
                 )}
                 {getFieldError("detailLokasi") && (
                   <div

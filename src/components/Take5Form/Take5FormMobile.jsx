@@ -4,6 +4,7 @@ import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
   allowsCustomInput,
+  shouldUseLocationSelector,
 } from "../../config/siteLocations";
 import MobileSiteSelector from "../MobileSiteSelector";
 import LocationDetailSelector from "../LocationDetailSelector";
@@ -734,16 +735,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
           {/* Detail Lokasi */}
           <div style={fieldMargin}>
             <label style={labelStyle}>Detail Lokasi</label>
-            {allowsCustomInput(site) ? (
-              <input
-                type="text"
-                value={detailLokasi}
-                onChange={(e) => setDetailLokasi(e.target.value)}
-                required
-                placeholder="Ketik detail lokasi..."
-                style={inputStyle}
-              />
-            ) : (
+            {shouldUseLocationSelector(site) ? (
               <>
                 <LocationDetailSelector
                   site={site}
@@ -767,6 +759,15 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                   />
                 )}
               </>
+            ) : (
+              <input
+                type="text"
+                value={detailLokasi}
+                onChange={(e) => setDetailLokasi(e.target.value)}
+                required
+                placeholder="Ketik detail lokasi..."
+                style={inputStyle}
+              />
             )}
           </div>
 
