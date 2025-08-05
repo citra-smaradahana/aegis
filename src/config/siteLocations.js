@@ -7,9 +7,8 @@ export const SITE_LOCATIONS = {
     "PIT A",
     "PIT C",
     "PIT E",
-    "HLO",
     "Candrian",
-    "Lainnya",
+    "HLO",
   ],
 };
 

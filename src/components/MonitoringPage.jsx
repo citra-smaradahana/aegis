@@ -1406,16 +1406,16 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   const getImageFromStorage = async (imagePath) => {
     try {
       if (!imagePath) return null;
-      
+
       const { data, error } = await supabase.storage
         .from("img-test")
         .download(imagePath);
-      
+
       if (error) {
         console.error("Error downloading image:", error);
         return null;
       }
-      
+
       return URL.createObjectURL(data);
     } catch (error) {
       console.error("Error getting image:", error);
@@ -1561,9 +1561,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     }
 
     // Add section for attached images if available
-    if (includeImages && hazardStats.recentReports && hazardStats.recentReports.length > 0) {
+    if (
+      includeImages &&
+      hazardStats.recentReports &&
+      hazardStats.recentReports.length > 0
+    ) {
       yPos = doc.lastAutoTable.finalY + 15;
-      
+
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("Laporan Terbaru dengan Bukti:", 20, yPos);
@@ -1571,40 +1575,48 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
       let imageCount = 0;
       const maxImagesPerPage = 2; // Maximum images per page to avoid overcrowding
-      
+
       for (const report of hazardStats.recentReports) {
         if (imageCount >= maxImagesPerPage) break;
-        
+
         if (report.bukti_url || report.evidence_url) {
           try {
-            const imageUrl = await getImageFromStorage(report.bukti_url || report.evidence_url);
+            const imageUrl = await getImageFromStorage(
+              report.bukti_url || report.evidence_url
+            );
             if (imageUrl) {
               // Add report info
               doc.setFontSize(10);
               doc.setFont("helvetica", "normal");
-              doc.text(`Laporan: ${report.deskripsi_temuan || report.deskripsi || 'N/A'}`, 20, yPos);
+              doc.text(
+                `Laporan: ${
+                  report.deskripsi_temuan || report.deskripsi || "N/A"
+                }`,
+                20,
+                yPos
+              );
               yPos += 5;
-              doc.text(`Site: ${report.lokasi || 'N/A'}`, 20, yPos);
+              doc.text(`Site: ${report.lokasi || "N/A"}`, 20, yPos);
               yPos += 5;
-              doc.text(`Status: ${report.status || 'N/A'}`, 20, yPos);
+              doc.text(`Status: ${report.status || "N/A"}`, 20, yPos);
               yPos += 8;
-              
+
               // Add image (resize to fit)
               const img = new Image();
               img.src = imageUrl;
-              
+
               await new Promise((resolve) => {
                 img.onload = () => {
                   const imgWidth = 80;
                   const imgHeight = (img.height * imgWidth) / img.width;
-                  
+
                   // Check if we need a new page
                   if (yPos + imgHeight > 250) {
                     doc.addPage();
                     yPos = 20;
                   }
-                  
-                  doc.addImage(img, 'JPEG', 20, yPos, imgWidth, imgHeight);
+
+                  doc.addImage(img, "JPEG", 20, yPos, imgWidth, imgHeight);
                   yPos += imgHeight + 10;
                   imageCount++;
                   resolve();

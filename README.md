@@ -1,122 +1,245 @@
-# Aplikasi Manajemen Keselamatan Kerja
+# 🛡️ AEGIS KMB - Safety Management System
 
-Aplikasi React untuk manajemen keselamatan kerja yang mencakup Fit to Work, Hazard forms, Take5 forms, dan manajemen pengguna.
+[![PWA Ready](https://img.shields.io/badge/PWA-Ready-blue?logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
+[![React](https://img.shields.io/badge/React-18.0-blue?logo=react)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.0-purple?logo=vite)](https://vitejs.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database-green?logo=supabase)](https://supabase.com/)
 
-## Fitur Utama
+AEGIS KMB adalah Progressive Web App (PWA) untuk sistem manajemen keselamatan yang memungkinkan karyawan melaporkan dan memantau keselamatan kerja secara real-time.
 
-- **Fit to Work Form**: Form untuk validasi kesiapan kerja
-- **Hazard Form**: Form untuk pelaporan bahaya di tempat kerja
-- **Take5 Form**: Form untuk penilaian keselamatan sebelum memulai pekerjaan
-- **User Management**: Manajemen pengguna dan hak akses
-- **Monitoring Page**: Halaman monitoring untuk tracking status
-- **Profile Management**: Manajemen profil pengguna
+## ✨ Fitur Utama
 
-## Teknologi yang Digunakan
+### 📱 Progressive Web App
 
-- **Frontend**: React 19.1.0 dengan Vite
-- **Styling**: Tailwind CSS
-- **Database**: Supabase
-- **PDF Generation**: jsPDF
-- **Excel Export**: xlsx
-- **Image Processing**: react-easy-crop
+- **Installable**: Dapat diinstall seperti aplikasi native
+- **Offline Support**: Bekerja tanpa internet
+- **Background Sync**: Sinkronisasi otomatis saat online
+- **Push Notifications**: Notifikasi real-time
 
-## Instalasi
+### 🛡️ Safety Management
 
-1. Clone repository ini:
+- **Fit To Work**: Pelaporan kondisi kerja karyawan
+- **Take 5**: Assessment keselamatan sebelum kerja
+- **Hazard Report**: Pelaporan bahaya dan insiden
+- **Tasklist**: Manajemen tugas keselamatan
+
+### 📊 Monitoring & Analytics
+
+- **Real-time Dashboard**: Statistik live
+- **Export Data**: Excel dan PDF
+- **Individual Reports**: Laporan per karyawan
+- **Site-based Analytics**: Analisis per lokasi
+
+### 🔧 Technical Features
+
+- **Responsive Design**: Optimal di semua device
+- **Image Upload**: Upload foto dengan crop
+- **Form Validation**: Validasi real-time
+- **Data Encryption**: Keamanan data
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- npm atau yarn
+- Supabase account
+
+### Installation
 
 ```bash
-git clone [URL_REPOSITORY]
-cd my-react-app
-```
+# Clone repository
+git clone https://github.com/username/aegis-kmb-pwa.git
+cd aegis-kmb-pwa
 
-2. Install dependencies:
-
-```bash
+# Install dependencies
 npm install
+
+# Setup environment variables
+cp .env.example .env
+# Edit .env with your Supabase credentials
+
+# Start development server
+npm run dev
 ```
 
-3. Setup environment variables:
-   Buat file `.env` di root directory dan tambahkan konfigurasi Supabase:
+### Build for Production
+
+```bash
+# Build PWA
+npm run build
+
+# Preview build
+npm run preview
+```
+
+## 📱 PWA Installation
+
+### Desktop
+
+1. Buka aplikasi di browser
+2. Klik icon "Install" di address bar
+3. Aplikasi akan terinstall di desktop
+
+### Mobile
+
+1. Buka aplikasi di browser mobile
+2. Tap "Add to Home Screen"
+3. Aplikasi akan terinstall di home screen
+
+## 🌐 Deployment
+
+### GitHub Pages
+
+```bash
+# Deploy ke GitHub Pages
+npm run build
+# Upload dist/ folder ke GitHub Pages
+```
+
+### Vercel
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel --prod
+```
+
+### Netlify
+
+```bash
+# Install Netlify CLI
+npm i -g netlify-cli
+
+# Deploy
+netlify deploy --prod --dir=dist
+```
+
+## 📱 Google Play Store
+
+### Build APK dengan Bubblewrap
+
+```bash
+# Install Bubblewrap
+npm install -g @bubblewrap/cli
+
+# Initialize TWA
+bubblewrap init --manifest https://your-domain.com/manifest.json
+
+# Build APK
+bubblewrap build
+```
+
+### Requirements
+
+- HTTPS domain
+- Valid manifest.json
+- Service worker
+- PWA score > 90
+
+## 🏗️ Project Structure
 
 ```
+src/
+├── components/          # React components
+│   ├── FitToWorkForm/   # Fit To Work forms
+│   ├── Take5Form/       # Take 5 forms
+│   ├── HazardForm/      # Hazard forms
+│   ├── tasklistForms/   # Tasklist forms
+│   └── MonitoringPage/  # Dashboard components
+├── config/             # Configuration files
+├── utils/              # Utility functions
+├── supabaseClient.js   # Supabase configuration
+└── App.jsx            # Main application
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-4. Jalankan aplikasi dalam mode development:
+### PWA Configuration
+
+- `public/manifest.json`: PWA manifest
+- `public/sw.js`: Service worker
+- `public/create-icons.html`: Icon generator
+
+## 📊 Database Schema
+
+### Tables
+
+- `users`: User management
+- `fit_to_work`: Fit To Work reports
+- `take_5`: Take 5 assessments
+- `hazard_report`: Hazard reports
+- `tasklist`: Task management
+
+## 🧪 Testing
+
+### PWA Testing
 
 ```bash
-npm run dev
-```
-
-## Build untuk Production
-
-Untuk membuat build production:
-
-```bash
+# Test PWA features
 npm run build
+npx serve dist
+# Open in browser and test:
+# - Install prompt
+# - Offline mode
+# - Background sync
 ```
 
-Build akan tersimpan di folder `dist/` yang siap untuk di-deploy.
+### Lighthouse Testing
 
-## Struktur Proyek
-
-```
-src/
-├── components/
-│   ├── Dropzone/           # Komponen upload file
-│   ├── FitToWorkForm/      # Form Fit to Work
-│   ├── FitToWorkValidation/ # Validasi Fit to Work
-│   ├── HazardForm/         # Form Hazard
-│   ├── Take5Form/          # Form Take5
-│   ├── TasklistPage/       # Halaman tasklist
-│   ├── UserManagement/     # Manajemen pengguna
-│   └── Profile/            # Manajemen profil
-├── config/
-│   └── siteLocations.js    # Konfigurasi lokasi
-└── supabaseClient.js       # Konfigurasi Supabase
+```bash
+# Run Lighthouse audit
+npx lighthouse https://your-domain.com --view
 ```
 
-## Scripts
+## 🔒 Security
 
-- `npm run dev` - Menjalankan aplikasi dalam mode development
-- `npm run build` - Membuat build production
-- `npm run preview` - Preview build production
-- `npm run lint` - Menjalankan ESLint
+- **HTTPS Required**: Semua deployment harus HTTPS
+- **Data Encryption**: Data dienkripsi di transit dan storage
+- **Authentication**: Supabase Auth integration
+- **Authorization**: Role-based access control
 
-## Deployment
+## 📈 Performance
 
-Aplikasi ini dapat di-deploy ke berbagai platform:
+- **Lighthouse Score**: > 90
+- **First Contentful Paint**: < 3s
+- **Largest Contentful Paint**: < 2.5s
+- **Cumulative Layout Shift**: < 0.1
 
-### Vercel
-
-1. Push kode ke GitHub
-2. Connect repository ke Vercel
-3. Deploy otomatis
-
-### Netlify
-
-1. Upload folder `dist/` ke Netlify
-2. Atau connect repository untuk auto-deploy
-
-### GitHub Pages
-
-1. Push kode ke GitHub
-2. Enable GitHub Pages di repository settings
-3. Set source ke folder `dist/`
-
-## Kontribusi
+## 🤝 Contributing
 
 1. Fork repository
-2. Buat branch fitur baru (`git checkout -b feature/AmazingFeature`)
-3. Commit perubahan (`git commit -m 'Add some AmazingFeature'`)
-4. Push ke branch (`git push origin feature/AmazingFeature`)
-5. Buat Pull Request
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
-## Lisensi
+## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Kontak
+## 📞 Support
 
-Untuk pertanyaan atau dukungan, silakan hubungi tim pengembang.
+- **Documentation**: [PWA_README.md](PWA_README.md)
+- **Deployment Guide**: [deploy-to-github.md](deploy-to-github.md)
+- **Issues**: [GitHub Issues](https://github.com/username/aegis-kmb-pwa/issues)
+
+## 🙏 Acknowledgments
+
+- [React](https://reactjs.org/) - UI Framework
+- [Vite](https://vitejs.dev/) - Build Tool
+- [Supabase](https://supabase.com/) - Backend as a Service
+- [PWA](https://web.dev/progressive-web-apps/) - Progressive Web Apps
+
+---
+
+**Made with ❤️ for Safety Management**

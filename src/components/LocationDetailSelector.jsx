@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { getLocationOptions } from "../config/siteLocations";
 import MobileBackGesture from "./MobileBackGesture";
 
@@ -12,7 +12,32 @@ const LocationDetailSelector = ({
   required = false,
 }) => {
   const [showLocationSelection, setShowLocationSelection] = useState(false);
-  const locationOptions = getLocationOptions(site);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // BSIB specific locations
+  const bsibLocations = [
+    "Office",
+    "Workshop",
+    "OSP",
+    "PIT A",
+    "PIT C",
+    "PIT E",
+    "Candrian",
+    "HLO",
+  ];
+
+  const locationOptions =
+    site === "BSIB" ? bsibLocations : getLocationOptions(site);
+
+  // Update mobile detection on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleLocationSelect = (location) => {
     onChange({ target: { name: "detailLokasi", value: location } });
@@ -23,6 +48,41 @@ const LocationDetailSelector = ({
     setShowLocationSelection(false);
   };
 
+  // Desktop dropdown for BSIB
+  const renderDesktopDropdown = () => {
+    if (site !== "BSIB" || isMobile) return null;
+
+    return (
+      <select
+        value={value || ""}
+        onChange={(e) =>
+          onChange({ target: { name: "detailLokasi", value: e.target.value } })
+        }
+        disabled={disabled}
+        required={required}
+        style={{
+          width: "100%",
+          padding: "8px 12px",
+          borderRadius: "8px",
+          border: "1px solid #d1d5db",
+          fontSize: "14px",
+          backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
+          color: disabled ? "#9ca3af" : "#000000",
+          cursor: disabled ? "not-allowed" : "pointer",
+          ...style,
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {locationOptions.map((location) => (
+          <option key={location} value={location}>
+            {location}
+          </option>
+        ))}
+      </select>
+    );
+  };
+
+  // Mobile page for BSIB
   const LocationSelectionPage = () => (
     <MobileBackGesture onBack={handleBack}>
       <div
@@ -194,8 +254,11 @@ const LocationDetailSelector = ({
     </MobileBackGesture>
   );
 
-  return (
-    <>
+  // Mobile dropdown for non-BSIB sites
+  const renderMobileDropdown = () => {
+    if (site === "BSIB" && isMobile) return null;
+
+    return (
       <div
         onClick={() => !disabled && setShowLocationSelection(true)}
         className="mobile-dropdown location-selector"
@@ -235,6 +298,59 @@ const LocationDetailSelector = ({
           </svg>
         )}
       </div>
+    );
+  };
+
+  return (
+    <>
+      {/* Desktop dropdown for BSIB */}
+      {renderDesktopDropdown()}
+
+      {/* Mobile dropdown for non-BSIB sites */}
+      {renderMobileDropdown()}
+
+      {/* Mobile page for BSIB */}
+      {site === "BSIB" && isMobile && (
+        <div
+          onClick={() => !disabled && setShowLocationSelection(true)}
+          className="mobile-dropdown location-selector"
+          style={{
+            width: "100%",
+            borderRadius: 8,
+            padding: "4px 12px",
+            fontSize: 14,
+            backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
+            color: disabled ? "#9ca3af" : "#000000",
+            border: "1px solid #d1d5db",
+            cursor: disabled ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            minHeight: "32px",
+            boxSizing: "border-box",
+            ...style,
+          }}
+        >
+          <span style={{ color: value ? "#000000" : "#6b7280" }}>
+            {value || placeholder}
+          </span>
+          {!disabled && (
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "#6b7280" }}
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          )}
+        </div>
+      )}
 
       {showLocationSelection && <LocationSelectionPage />}
     </>

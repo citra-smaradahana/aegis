@@ -13,6 +13,7 @@ import TasklistForm from "./components/tasklistForms/index.jsx";
 import Profile from "./components/Profile/index.jsx";
 import UserManagement from "./components/UserManagement/index.jsx";
 import { sessionManager, setupSessionAutoExtend } from "./utils/sessionManager";
+import OfflineStatus from "./components/OfflineStatus";
 
 const allMenuItems = [
   "Home",
@@ -634,6 +635,7 @@ function App() {
         overflowX: "hidden",
       }}
     >
+      <OfflineStatus />
       {/* Background pattern overlay untuk menu area */}
       <div
         style={{

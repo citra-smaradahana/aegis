@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AEGIS KMB Icon Generator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .icon-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+      }
+      .icon-preview {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      canvas {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+      .download-btn {
+        background: #1e40af;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 10px;
+      }
+      .download-btn:hover {
+        background: #1e3a8a;
+      }
+      h1 {
+        text-align: center;
+        color: #1e40af;
+        margin-bottom: 30px;
+      }
+      .instructions {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎨 AEGIS KMB PWA Icon Generator</h1>
+
+    <div class="instructions">
+      <h3>📋 Instructions:</h3>
+      <ol>
+        <li>Download semua icon di bawah ini</li>
+        <li>Pindahkan semua file .png ke folder <code>dist/</code></li>
+        <li>Pastikan nama file sesuai dengan yang ada di manifest.json</li>
+      </ol>
+    </div>
+
+    <div class="icon-container" id="icons"></div>
+
+    <script>
+      const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+      const iconsContainer = document.getElementById("icons");
+
+      function generateIcon(size) {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = size;
+        canvas.height = size;
+
+        // Background gradient
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, "#254188");
+        gradient.addColorStop(1, "#ff6b35");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        // Safety helmet icon
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(size * 0.5, size * 0.35, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Helmet visor
+        ctx.fillStyle = "#254188";
+        ctx.beginPath();
+        ctx.arc(size * 0.5, size * 0.35, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Safety shield background
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        ctx.beginPath();
+        ctx.moveTo(size * 0.5, size * 0.2);
+        ctx.lineTo(size * 0.7, size * 0.4);
+        ctx.lineTo(size * 0.5, size * 0.8);
+        ctx.lineTo(size * 0.3, size * 0.4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Text "AEGIS"
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${size * 0.12}px Arial`;
+        ctx.textAlign = "center";
+        ctx.fillText("AEGIS", size * 0.5, size * 0.65);
+
+        // Text "KMB"
+        ctx.font = `${size * 0.08}px Arial`;
+        ctx.fillText("KMB", size * 0.5, size * 0.78);
+
+        // Download link
+        const link = document.createElement("a");
+        link.download = `icon-${size}x${size}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.className = "download-btn";
+        link.textContent = `Download ${size}x${size}`;
+
+        const div = document.createElement("div");
+        div.className = "icon-preview";
+        div.innerHTML = `<h4>${size}x${size}</h4>`;
+        div.appendChild(canvas);
+        div.appendChild(document.createElement("br"));
+        div.appendChild(link);
+
+        iconsContainer.appendChild(div);
+      }
+
+      // Generate all icons
+      sizes.forEach(generateIcon);
+
+      // Auto-download all icons
+      function downloadAllIcons() {
+        const links = document.querySelectorAll(".download-btn");
+        links.forEach((link, index) => {
+          setTimeout(() => {
+            link.click();
+          }, index * 500);
+        });
+      }
+
+      // Add download all button
+      const downloadAllBtn = document.createElement("button");
+      downloadAllBtn.textContent = "📥 Download All Icons";
+      downloadAllBtn.onclick = downloadAllIcons;
+      downloadAllBtn.style.cssText = `
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 20px auto;
+            display: block;
+        `;
+      document.body.insertBefore(downloadAllBtn, iconsContainer);
+    </script>
+  </body>
+</html>
