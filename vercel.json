@@ -32,5 +32,7 @@
       "main": true,
       "gh-pages": false
     }
-  }
+  },
+  "functions": {},
+  "regions": ["sin1"]
 }
