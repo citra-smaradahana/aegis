@@ -24,18 +24,29 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      // Register Service Worker
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker
-            .register('/sw.js')
-            .then(registration => {
-              console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
+      // Service Worker: aktifkan hanya di production (bukan localhost/127.0.0.1)
+      if ("serviceWorker" in navigator) {
+        const isLocalhost = /^(localhost|127\.0\.0\.1)$/i.test(
+          location.hostname
+        );
+        if (!isLocalhost) {
+          window.addEventListener("load", () => {
+            navigator.serviceWorker
+              .register("/sw.js")
+              .then((registration) => {
+                console.log("SW registered: ", registration);
+              })
+              .catch((registrationError) => {
+                console.log("SW registration failed: ", registrationError);
+              });
+          });
+        } else {
+          // Dev: pastikan tidak ada SW yang aktif
+          navigator.serviceWorker.getRegistrations().then((regs) => {
+            regs.forEach((reg) => reg.unregister());
+            console.log("SW unregistered in development");
+          });
+        }
       }
     </script>
   </body>

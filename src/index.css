@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
 
 :root {
-  font-family: 'Poppins', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Poppins", system-ui, Avenir, Helvetica, Arial, sans-serif;
   color-scheme: dark;
   color: #e5e7eb;
   background: linear-gradient(135deg, #181c2f 0%, #232946 100%);
@@ -71,7 +71,8 @@ select:focus {
   background: #e0e7ef;
 }
 
-button {
+/* Global button styles for components that need default styling */
+button.global-button {
   border-radius: 16px;
   border: none;
   padding: 12px 0;
@@ -85,7 +86,6 @@ button {
   transition:
     background 0.2s,
     box-shadow 0.2s;
-  /* Prevent zoom on mobile */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -94,7 +94,7 @@ button {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-button:hover {
+button.global-button:hover {
   background: linear-gradient(90deg, #a78bfa 60%, #06b6d4 100%);
 }
 
@@ -152,19 +152,48 @@ textarea {
   color: #cbd5e1;
 }
 
+/* PTO Navigation Button Override - Global */
+button.pto-nav-button {
+  border-radius: 8px !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  font-family: inherit !important;
+  background: inherit !important;
+  color: inherit !important;
+  cursor: inherit !important;
+  box-shadow: none !important;
+  transition: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Override hover effects for PTO buttons */
+button.pto-nav-button:hover {
+  background: inherit !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 /* Mobile-specific styles to prevent zoom */
 @media screen and (max-width: 768px) {
   /* Prevent zoom on input focus */
-  input[type='text'],
-  input[type='email'],
-  input[type='password'],
-  input[type='number'],
-  input[type='tel'],
-  input[type='url'],
-  input[type='search'],
-  input[type='date'],
-  input[type='time'],
-  input[type='datetime-local'],
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
   select,
   textarea {
     font-size: 16px !important;
@@ -175,7 +204,7 @@ textarea {
 
   /* Prevent zoom on button tap */
   button,
-  [role='button'],
+  [role="button"],
   .clickable {
     -webkit-touch-callout: none !important;
     -webkit-user-select: none !important;
@@ -225,7 +254,7 @@ textarea {
   }
 
   /* Ensure input stays focused */
-  .mobile-search-input[data-focused='true'] {
+  .mobile-search-input[data-focused="true"] {
     -webkit-user-select: text !important;
     -webkit-touch-callout: none !important;
     touch-action: manipulation !important;

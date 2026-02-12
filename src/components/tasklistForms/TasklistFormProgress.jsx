@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabaseClient';
-import Cropper from 'react-easy-crop';
-import getCroppedImg from '../Dropzone/cropImageUtil';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
+import Cropper from "react-easy-crop";
+import getCroppedImg from "../Dropzone/cropImageUtil";
 
 function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
+  if (!hazard) {
+    return (
+      <div style={{ color: "#ef4444", padding: 32 }}>
+        Data hazard tidak ditemukan.
+      </div>
+    );
+  }
+
   const [form, setForm] = useState({
-    deskripsi_penyelesaian: '',
+    deskripsi_penyelesaian: "",
   });
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
@@ -23,7 +31,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   useEffect(() => {
     if (hazard) {
       setForm({
-        deskripsi_penyelesaian: hazard.deskripsi_penyelesaian || '',
+        deskripsi_penyelesaian: hazard.deskripsi_penyelesaian || "",
       });
       if (hazard.evidence_perbaikan) {
         setEvidencePreview(hazard.evidence_perbaikan);
@@ -31,9 +39,9 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
     }
   }, [hazard]);
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   // Cropper logic
@@ -41,7 +49,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 
-  const handleEvidence = e => {
+  const handleEvidence = (e) => {
     if (readOnly) return;
     const file = e.target.files[0];
     if (file) {
@@ -58,7 +66,7 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
       setShowCrop(false);
       setRawImage(null);
     } catch (err) {
-      setError('Gagal crop gambar');
+      setError("Gagal crop gambar");
       setShowCrop(false);
     }
   };
@@ -71,47 +79,77 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   // Upload evidence ke bucket closing-hazard
   const uploadEvidence = async () => {
     if (!evidence) return null;
-    const fileExt = evidence.type.split('/')[1];
+    const fileExt = evidence.type.split("/")[1];
     const fileName = `hazard_${hazard.id}_${Date.now()}.${fileExt}`;
     const { data, error } = await supabase.storage
-      .from('closing-hazard')
+      .from("closing-hazard")
       .upload(fileName, evidence, { upsert: true });
     if (error) throw error;
     const { data: urlData } = supabase.storage
-      .from('closing-hazard')
+      .from("closing-hazard")
       .getPublicUrl(fileName);
     return urlData.publicUrl;
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (readOnly) return;
     setError(null);
 
-    if (!form.deskripsi_penyelesaian || !evidence) {
-      setError('Deskripsi penyelesaian dan evidence perbaikan wajib diisi.');
+    // Untuk status Reject at Done, evidence tidak wajib jika sudah ada
+    const isRejectAtDone = hazard.status === "Reject at Done";
+    const hasExistingEvidence = hazard.evidence_perbaikan;
+
+    if (!form.deskripsi_penyelesaian) {
+      setError(
+        isRejectAtDone
+          ? "Deskripsi penyelesaian revisi wajib diisi."
+          : "Deskripsi penyelesaian wajib diisi."
+      );
+      return;
+    }
+
+    if (!evidence && !hasExistingEvidence) {
+      setError(
+        isRejectAtDone
+          ? "Evidence perbaikan revisi wajib diisi."
+          : "Evidence perbaikan wajib diisi."
+      );
       return;
     }
 
     try {
       setSubmitting(true);
-      const evidenceUrl = await uploadEvidence();
+
+      // Gunakan evidence yang sudah ada jika tidak ada evidence baru
+      let evidenceUrl = hazard.evidence_perbaikan;
+      if (evidence) {
+        evidenceUrl = await uploadEvidence();
+      }
+
+      // Untuk status Reject at Done, update deskripsi dan evidence (jika ada yang baru)
+      const updateData = {
+        deskripsi_penyelesaian: form.deskripsi_penyelesaian,
+        evidence_perbaikan: evidenceUrl,
+        status: "Done",
+      };
+
+      // Hapus alasan penolakan jika ada
+      if (isRejectAtDone) {
+        updateData.alasan_penolakan_done = null;
+      }
 
       const { error } = await supabase
-        .from('hazard_report')
-        .update({
-          deskripsi_penyelesaian: form.deskripsi_penyelesaian,
-          evidence_perbaikan: evidenceUrl,
-          status: 'Done',
-        })
-        .eq('id', hazard.id);
+        .from("hazard_report")
+        .update(updateData)
+        .eq("id", hazard.id);
 
       if (error) throw error;
 
       onSuccess();
     } catch (err) {
-      console.error('Error updating hazard:', err);
-      setError('Gagal menyimpan data. Silakan coba lagi.');
+      console.error("Error updating hazard:", err);
+      setError("Gagal menyimpan data. Silakan coba lagi.");
     } finally {
       setSubmitting(false);
     }
@@ -121,27 +159,27 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
     return (
       <div
         style={{
-          position: 'fixed',
+          position: "fixed",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
+          background: "rgba(0,0,0,0.8)",
           zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           padding: 20,
         }}
       >
         <div
           style={{
-            position: 'relative',
+            position: "relative",
             width: 400,
             height: 400,
-            background: '#fff',
+            background: "#fff",
             borderRadius: 12,
-            overflow: 'hidden',
+            overflow: "hidden",
           }}
         >
           <Cropper
@@ -152,34 +190,34 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
-            style={{ containerStyle: { width: '100%', height: '100%' } }}
+            style={{ containerStyle: { width: "100%", height: "100%" } }}
           />
           <div
             style={{
-              position: 'absolute',
+              position: "absolute",
               bottom: 20,
               left: 0,
               right: 0,
-              display: 'flex',
-              justifyContent: 'center',
+              display: "flex",
+              justifyContent: "center",
               gap: 20,
             }}
           >
             <button
               onClick={handleCropCancel}
               style={{
-                background: '#ef4444',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '50%',
+                background: "#ef4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
               }}
             >
               ✕
@@ -187,18 +225,18 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
             <button
               onClick={handleCropSave}
               style={{
-                background: '#22c55e',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '50%',
+                background: "#10b981",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
               }}
             >
               ✓
@@ -209,484 +247,702 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
     );
   }
 
-  // Render read-only view
-  if (readOnly) {
-    return (
-      <div className="modal-overlay">
-        <div className="modal" style={{ maxWidth: '1200px', width: '90%' }}>
-          <div className="modal-header">
-            <h2>Detail Hazard Report</h2>
-            <button onClick={onClose} className="close-button">
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100vh",
+        background: "transparent",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "flex-start",
+        padding: "0 0 0 120px",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          background: "transparent",
+          borderRadius: 18,
+          boxShadow: "none",
+          padding: 16,
+          maxWidth: 1400,
+          width: "100%",
+          margin: "0",
+          height: "100vh",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 24,
+            background: "transparent",
+            border: "none",
+            borderRadius: 16,
+            padding: 24,
+            color: "#e5e7eb",
+            position: "relative",
+            height: "100vh",
+            alignItems: "flex-start",
+          }}
+        >
+          {/* Tombol close kanan atas */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                fontSize: 24,
+                color: "#9ca3af",
+                cursor: "pointer",
+                zIndex: 10,
+                padding: 0,
+                width: "auto",
+                height: "auto",
+              }}
+              title="Tutup"
+            >
               ×
             </button>
-          </div>
-
-          <div style={{ display: 'flex', gap: '24px', padding: '20px' }}>
-            {/* Left Column - Detail Hazard */}
-            <div style={{ flex: 1 }}>
-              <h3
-                style={{
-                  marginBottom: '16px',
-                  color: '#374151',
-                  fontSize: '18px',
-                }}
-              >
-                Detail Hazard
-              </h3>
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  color: '#000000',
-                }}
-              >
-                <div>
-                  <strong>Site:</strong> {hazard?.lokasi || '-'}
-                </div>
-                <div>
-                  <strong>Nama Pelapor:</strong> {hazard?.pelapor_nama || '-'}
-                </div>
-                <div>
-                  <strong>NRP Pelapor:</strong> {hazard?.pelapor_nrp || '-'}
-                </div>
-                <div>
-                  <strong>PIC:</strong> {hazard?.pic || '-'}
-                </div>
-                <div>
-                  <strong>Deskripsi Temuan:</strong>{' '}
-                  {hazard?.deskripsi_temuan || '-'}
-                </div>
-                <div>
-                  <strong>Quick Action:</strong> {hazard?.quick_action || '-'}
-                </div>
-                <div>
-                  <strong>Ketidaksesuaian:</strong>{' '}
-                  {hazard?.ketidaksesuaian || '-'}
-                </div>
-                <div>
-                  <strong>Sub Ketidaksesuaian:</strong>{' '}
-                  {hazard?.sub_ketidaksesuaian || '-'}
-                </div>
-                <div>
-                  <strong>Keterangan Lokasi:</strong>{' '}
-                  {hazard?.keterangan_lokasi || '-'}
-                </div>
-                <div>
-                  <strong>Detail Lokasi:</strong> {hazard?.detail_lokasi || '-'}
-                </div>
-                <div>
-                  <strong>Action Plan:</strong> {hazard?.action_plan || '-'}
-                </div>
-                <div>
-                  <strong>Due Date:</strong> {hazard?.due_date || '-'}
-                </div>
-              </div>
-
-              {/* Evidence Temuan */}
-              <div style={{ marginTop: '20px' }}>
-                <h4 style={{ marginBottom: '12px', color: '#374151' }}>
-                  Evidence Temuan
-                </h4>
-                {hazard?.evidence ? (
-                  <img
-                    src={hazard.evidence}
-                    alt="Evidence Temuan"
-                    style={{
-                      maxWidth: '200px',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setShowImagePopup(true)}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      padding: '12px',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      color: '#000000',
-                    }}
-                  >
-                    Tidak ada evidence temuan
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column - Progress Information */}
-            <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: '20px', color: '#000000' }}>
-                <strong>Deskripsi Penyelesaian:</strong>
-                <div
-                  className="read-only-content"
-                  style={{
-                    padding: '12px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    minHeight: '80px',
-                    whiteSpace: 'pre-wrap',
-                    marginTop: '8px',
-                    color: '#000000',
-                  }}
-                >
-                  {form.deskripsi_penyelesaian ||
-                    'Tidak ada deskripsi penyelesaian'}
-                </div>
-              </div>
-
-              <div style={{ color: '#000000' }}>
-                <strong>Evidence Perbaikan:</strong>
-                {evidencePreview ? (
-                  <div
-                    className="evidence-preview"
-                    style={{ marginTop: '8px' }}
-                  >
-                    <img
-                      src={evidencePreview}
-                      alt="Evidence Preview"
-                      onClick={() => setShowImagePopup(true)}
-                      style={{
-                        cursor: 'pointer',
-                        maxWidth: '200px',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb',
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="read-only-content"
-                    style={{
-                      padding: '12px',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      color: '#000000',
-                      marginTop: '8px',
-                    }}
-                  >
-                    Tidak ada evidence perbaikan
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="form-actions"
-            style={{ padding: '20px', borderTop: '1px solid #e5e7eb' }}
-          >
-            <button type="button" onClick={onClose} className="btn-cancel">
-              Tutup
-            </button>
-          </div>
-
-          {/* Image Popup */}
-          {showImagePopup && (evidencePreview || hazard?.evidence) && (
-            <div
-              className="modal-overlay"
-              onClick={() => setShowImagePopup(false)}
-            >
-              <div className="modal">
-                <div className="modal-header">
-                  <h2>Evidence Preview</h2>
-                  <button
-                    onClick={() => setShowImagePopup(false)}
-                    className="close-button"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="modal-content">
-                  <img
-                    src={evidencePreview || hazard?.evidence}
-                    alt="Evidence"
-                    style={{ maxWidth: '100%', height: 'auto' }}
-                  />
-                </div>
-              </div>
-            </div>
           )}
-        </div>
-      </div>
-    );
-  }
 
-  // Render edit form
-  return (
-    <div className="modal-overlay">
-      <div className="modal" style={{ maxWidth: '1200px', width: '90%' }}>
-        <div className="modal-header">
-          <h2>Progress Hazard Report</h2>
-          <button onClick={onClose} className="close-button">
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', gap: '24px', padding: '20px' }}>
-            {/* Left Column - Detail Hazard */}
-            <div style={{ flex: 1 }}>
-              <h3
-                style={{
-                  marginBottom: '16px',
-                  color: '#374151',
-                  fontSize: '18px',
-                }}
-              >
-                Detail Hazard
-              </h3>
-
+          {/* Kiri: Detail hazard report */}
+          <div
+            style={{
+              flex: 1,
+              borderRight: "1px solid #334155",
+              paddingRight: 24,
+              color: "#e5e7eb",
+              height: "100vh",
+              overflow: "hidden",
+            }}
+          >
+            <h3 style={{ marginBottom: 24, color: "#60a5fa", fontWeight: 600 }}>
+              Detail Hazard Report
+            </h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "160px 1fr",
+                rowGap: 12,
+                columnGap: 12,
+                alignItems: "center",
+              }}
+            >
               <div
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  color: '#000000',
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
                 }}
               >
-                <div>
-                  <strong>Site:</strong> {hazard?.lokasi || '-'}
-                </div>
-                <div>
-                  <strong>Nama Pelapor:</strong> {hazard?.pelapor_nama || '-'}
-                </div>
-                <div>
-                  <strong>NRP Pelapor:</strong> {hazard?.pelapor_nrp || '-'}
-                </div>
-                <div>
-                  <strong>PIC:</strong> {hazard?.pic || '-'}
-                </div>
-                <div>
-                  <strong>Deskripsi Temuan:</strong>{' '}
-                  {hazard?.deskripsi_temuan || '-'}
-                </div>
-                <div>
-                  <strong>Quick Action:</strong> {hazard?.quick_action || '-'}
-                </div>
-                <div>
-                  <strong>Ketidaksesuaian:</strong>{' '}
-                  {hazard?.ketidaksesuaian || '-'}
-                </div>
-                <div>
-                  <strong>Sub Ketidaksesuaian:</strong>{' '}
-                  {hazard?.sub_ketidaksesuaian || '-'}
-                </div>
-                <div>
-                  <strong>Keterangan Lokasi:</strong>{' '}
-                  {hazard?.keterangan_lokasi || '-'}
-                </div>
-                <div>
-                  <strong>Detail Lokasi:</strong> {hazard?.detail_lokasi || '-'}
-                </div>
-                <div>
-                  <strong>Action Plan:</strong> {hazard?.action_plan || '-'}
-                </div>
-                <div>
-                  <strong>Due Date:</strong> {hazard?.due_date || '-'}
-                </div>
+                Site:
               </div>
-
-              {/* Evidence Temuan */}
-              <div style={{ marginTop: '20px' }}>
-                <h4 style={{ marginBottom: '12px', color: '#374151' }}>
-                  Evidence Temuan
-                </h4>
-                {hazard?.evidence ? (
-                  <img
-                    src={hazard.evidence}
-                    alt="Evidence Temuan"
-                    style={{
-                      maxWidth: '200px',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setShowImagePopup(true)}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      padding: '12px',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      color: '#000000',
-                    }}
-                  >
-                    Tidak ada evidence temuan
-                  </div>
-                )}
+              <div>{hazard.lokasi || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Nama Pelapor:
               </div>
+              <div>{hazard.pelapor_nama || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                NRP Pelapor:
+              </div>
+              <div>{hazard.pelapor_nrp || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                PIC:
+              </div>
+              <div>{hazard.pic || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Deskripsi Temuan:
+              </div>
+              <div>{hazard.deskripsi_temuan || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Quick Action:
+              </div>
+              <div>{hazard.quick_action || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Ketidaksesuaian:
+              </div>
+              <div>{hazard.ketidaksesuaian || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Sub Ketidaksesuaian:
+              </div>
+              <div>{hazard.sub_ketidaksesuaian || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Keterangan Lokasi:
+              </div>
+              <div>{hazard.keterangan_lokasi || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Detail Lokasi:
+              </div>
+              <div>{hazard.detail_lokasi || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Action Plan:
+              </div>
+              <div>{hazard.action_plan || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Due Date:
+              </div>
+              <div>{hazard.due_date || "-"}</div>
             </div>
 
-            {/* Right Column - Progress Information (Editable) */}
-            <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  htmlFor="deskripsi_penyelesaian"
-                  style={{ color: '#000000', fontWeight: '600' }}
-                >
-                  Deskripsi Penyelesaian *
-                </label>
-                <textarea
-                  id="deskripsi_penyelesaian"
-                  name="deskripsi_penyelesaian"
-                  value={form.deskripsi_penyelesaian}
-                  onChange={handleChange}
-                  rows={4}
-                  placeholder="Jelaskan langkah-langkah penyelesaian yang telah dilakukan..."
+            {/* Evidence Temuan */}
+            {hazard.evidence && (
+              <div style={{ marginTop: 24 }}>
+                <h4
                   style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    marginTop: '8px',
-                    fontSize: '14px',
-                    resize: 'vertical',
+                    marginBottom: 12,
+                    color: "#60a5fa",
+                    fontWeight: 600,
                   }}
+                >
+                  Evidence Temuan
+                </h4>
+                <img
+                  src={hazard.evidence}
+                  alt="Evidence Temuan"
+                  style={{
+                    maxWidth: "200px",
+                    borderRadius: 8,
+                    border: "1px solid #374151",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setShowImagePopup(true)}
                 />
               </div>
+            )}
+          </div>
 
-              <div>
-                <label
-                  htmlFor="evidence"
-                  style={{ color: '#000000', fontWeight: '600' }}
+          {/* Kanan: Form Progress */}
+          <div
+            style={{
+              flex: 1,
+              paddingLeft: 24,
+              color: "#e5e7eb",
+              height: "100vh",
+              overflow: "hidden",
+            }}
+          >
+            <h3 style={{ marginBottom: 24, color: "#60a5fa", fontWeight: 600 }}>
+              Progress Hazard Report
+            </h3>
+
+            {/* Informasi Progress Sebelumnya (untuk status Reject at Done) */}
+            {hazard.status === "Reject at Done" && (
+              <div style={{ marginBottom: 24 }}>
+                <h4
+                  style={{
+                    marginBottom: 16,
+                    color: "#ef4444",
+                    fontWeight: 600,
+                  }}
                 >
-                  Evidence Perbaikan *
-                </label>
-                <input
-                  type="file"
-                  id="evidence"
-                  accept="image/*"
-                  onChange={handleEvidence}
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                />
-                {evidencePreview ? (
-                  <div
-                    className="evidence-preview"
-                    style={{ marginTop: '8px' }}
-                  >
-                    <img
-                      src={evidencePreview}
-                      alt="Evidence Preview"
-                      onClick={() => fileInputRef.current?.click()}
+                  Progress Sebelumnya (Ditolak)
+                </h4>
+
+                {/* Deskripsi Penyelesaian Sebelumnya */}
+                {hazard.deskripsi_penyelesaian && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div
                       style={{
-                        cursor: 'pointer',
-                        maxWidth: '200px',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb',
-                        transition: 'opacity 0.2s',
+                        color: "#60a5fa",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        marginBottom: 8,
                       }}
-                      onMouseOver={e => {
-                        e.target.style.opacity = '0.8';
+                    >
+                      Deskripsi Penyelesaian:
+                    </div>
+                    <div
+                      style={{
+                        background: "#1f2937",
+                        padding: 12,
+                        borderRadius: 6,
+                        color: "#e5e7eb",
+                        fontSize: 14,
+                        border: "1px solid #ef4444",
                       }}
-                      onMouseOut={e => {
-                        e.target.style.opacity = '1';
+                    >
+                      {hazard.deskripsi_penyelesaian}
+                    </div>
+                  </div>
+                )}
+
+                {/* Evidence Perbaikan Sebelumnya */}
+                {hazard.evidence_perbaikan && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        color: "#60a5fa",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        marginBottom: 8,
                       }}
-                      title="Klik untuk mengganti foto"
+                    >
+                      Evidence Perbaikan:
+                    </div>
+                    <img
+                      src={hazard.evidence_perbaikan}
+                      alt="Evidence Perbaikan Sebelumnya"
+                      style={{
+                        maxWidth: "200px",
+                        borderRadius: 8,
+                        border: "2px solid #ef4444",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setShowImagePopup(true)}
                     />
                   </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      width: '200px',
-                      height: '150px',
-                      border: '2px dashed #e5e7eb',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      marginTop: '8px',
-                      backgroundColor: '#f9fafb',
-                      transition: 'border-color 0.2s, background-color 0.2s',
-                    }}
-                    onMouseOver={e => {
-                      e.target.style.borderColor = '#3b82f6';
-                      e.target.style.backgroundColor = '#f0f9ff';
-                    }}
-                    onMouseOut={e => {
-                      e.target.style.borderColor = '#e5e7eb';
-                      e.target.style.backgroundColor = '#f9fafb';
-                    }}
-                    title="Klik untuk upload foto"
-                  >
-                    <div style={{ textAlign: 'center', color: '#6b7280' }}>
-                      <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-                        📷
-                      </div>
-                      <div style={{ fontSize: '14px' }}>
-                        Klik untuk upload foto
-                      </div>
+                )}
+
+                {/* Alasan Penolakan */}
+                {hazard.alasan_penolakan_done && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        color: "#ef4444",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        marginBottom: 8,
+                      }}
+                    >
+                      Alasan Penolakan:
+                    </div>
+                    <div
+                      style={{
+                        background: "#1f2937",
+                        padding: 12,
+                        borderRadius: 6,
+                        color: "#ef4444",
+                        fontSize: 14,
+                        border: "2px solid #ef4444",
+                      }}
+                    >
+                      {hazard.alasan_penolakan_done}
                     </div>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            )}
 
-          {error && (
-            <div
-              className="error-message"
-              style={{ padding: '0 20px', color: '#ef4444' }}
-            >
-              {error}
-            </div>
-          )}
+            {/* Deskripsi Penyelesaian dan Evidence Perbaikan (untuk status Reject at Done) */}
+            {hazard.status === "Reject at Done" && (
+              <div style={{ marginBottom: 24 }}>
+                {/* Deskripsi Penyelesaian */}
+                {hazard.deskripsi_penyelesaian && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        color: "#60a5fa",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        marginBottom: 8,
+                      }}
+                    >
+                      Deskripsi Penyelesaian:
+                    </div>
+                    <div
+                      style={{
+                        background: "#1f2937",
+                        padding: 12,
+                        borderRadius: 6,
+                        color: "#e5e7eb",
+                        fontSize: 14,
+                      }}
+                    >
+                      {hazard.deskripsi_penyelesaian}
+                    </div>
+                  </div>
+                )}
 
-          <div
-            className="form-actions"
-            style={{ padding: '20px', borderTop: '1px solid #e5e7eb' }}
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-cancel"
-              disabled={submitting}
-            >
-              Batal
-            </button>
-            <button type="submit" className="btn-submit" disabled={submitting}>
-              {submitting ? 'Menyimpan...' : 'Simpan Progress'}
-            </button>
-          </div>
-        </form>
+                {/* Evidence Perbaikan */}
+                {hazard.evidence_perbaikan && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        color: "#60a5fa",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        marginBottom: 8,
+                      }}
+                    >
+                      Evidence Perbaikan:
+                    </div>
+                    <img
+                      src={hazard.evidence_perbaikan}
+                      alt="Evidence Perbaikan"
+                      style={{
+                        maxWidth: "200px",
+                        borderRadius: 8,
+                        border: "1px solid #374151",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setShowImagePopup(true)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
-        {/* Image Popup */}
-        {showImagePopup && (evidencePreview || hazard?.evidence) && (
-          <div
-            className="modal-overlay"
-            onClick={() => setShowImagePopup(false)}
-          >
-            <div className="modal">
-              <div className="modal-header">
-                <h2>Evidence Preview</h2>
-                <button
-                  onClick={() => setShowImagePopup(false)}
-                  className="close-button"
+            {/* Form Revisi untuk status Reject at Done */}
+            {hazard.status === "Reject at Done" && (
+              <form onSubmit={handleSubmit} style={{ marginBottom: 24 }}>
+                <h4
+                  style={{
+                    marginBottom: 16,
+                    color: "#60a5fa",
+                    fontWeight: 600,
+                  }}
                 >
-                  ×
-                </button>
+                  Form Revisi Progress
+                </h4>
+
+                <div>
+                  <label
+                    style={{
+                      color: "#e5e7eb",
+                      marginBottom: 8,
+                      display: "block",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Deskripsi Penyelesaian Revisi*
+                  </label>
+                  <textarea
+                    name="deskripsi_penyelesaian"
+                    value={form.deskripsi_penyelesaian}
+                    onChange={handleChange}
+                    disabled={readOnly}
+                    placeholder="Jelaskan langkah-langkah penyelesaian revisi yang telah dilakukan..."
+                    style={{
+                      width: "100%",
+                      minHeight: 100,
+                      padding: 12,
+                      borderRadius: 8,
+                      border: "1px solid #374151",
+                      background: readOnly ? "#1f2937" : "#1f2937",
+                      color: readOnly ? "#9ca3af" : "#e5e7eb",
+                      resize: "vertical",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <label
+                    style={{
+                      color: "#e5e7eb",
+                      marginBottom: 8,
+                      display: "block",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Evidence Perbaikan Revisi*
+                  </label>
+                  {evidencePreview ? (
+                    <div style={{ marginBottom: 12 }}>
+                      <img
+                        src={evidencePreview}
+                        alt="Evidence Preview"
+                        style={{
+                          maxWidth: "200px",
+                          borderRadius: 8,
+                          border: "1px solid #374151",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setShowImagePopup(true)}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        border: "2px dashed #374151",
+                        borderRadius: 8,
+                        padding: 24,
+                        textAlign: "center",
+                        cursor: readOnly ? "default" : "pointer",
+                        background: readOnly ? "#1f2937" : "#1f2937",
+                        color: readOnly ? "#9ca3af" : "#9ca3af",
+                      }}
+                      onClick={() => !readOnly && fileInputRef.current?.click()}
+                    >
+                      <div style={{ fontSize: 24, marginBottom: 8 }}>📷</div>
+                      <div>Klik untuk upload foto revisi</div>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEvidence}
+                    style={{ display: "none" }}
+                    disabled={readOnly}
+                  />
+                </div>
+
+                {error && (
+                  <div
+                    style={{ color: "#ef4444", fontSize: 14, marginTop: 12 }}
+                  >
+                    {error}
+                  </div>
+                )}
+
+                {!readOnly && (
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      background: submitting ? "#6b7280" : "#60a5fa",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "12px 24px",
+                      fontSize: 16,
+                      fontWeight: 600,
+                      cursor: submitting ? "not-allowed" : "pointer",
+                      marginTop: 16,
+                    }}
+                  >
+                    {submitting ? "Menyimpan..." : "Submit Revisi Progress"}
+                  </button>
+                )}
+              </form>
+            )}
+
+            {readOnly && (
+              <div
+                style={{
+                  color: "#9ca3af",
+                  marginBottom: 16,
+                  fontStyle: "italic",
+                }}
+              >
+                Anda tidak memiliki akses untuk mengisi progress pada status
+                ini.
               </div>
-              <div className="modal-content">
-                <img
-                  src={evidencePreview || hazard?.evidence}
-                  alt="Evidence"
-                  style={{ maxWidth: '100%', height: 'auto' }}
-                />
-              </div>
-            </div>
+            )}
+
+            {/* Form Progress untuk status Progress (bukan Reject at Done) */}
+            {hazard.status !== "Reject at Done" && (
+              <form
+                onSubmit={handleSubmit}
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
+                <div>
+                  <label
+                    style={{
+                      color: "#e5e7eb",
+                      marginBottom: 8,
+                      display: "block",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Deskripsi Penyelesaian*
+                  </label>
+                  <textarea
+                    name="deskripsi_penyelesaian"
+                    value={form.deskripsi_penyelesaian}
+                    onChange={handleChange}
+                    disabled={readOnly}
+                    placeholder="Jelaskan langkah-langkah penyelesaian yang telah dilakukan..."
+                    style={{
+                      width: "100%",
+                      minHeight: 120,
+                      padding: 12,
+                      borderRadius: 8,
+                      border: "1px solid #374151",
+                      background: readOnly ? "#1f2937" : "#1f2937",
+                      color: readOnly ? "#9ca3af" : "#e5e7eb",
+                      resize: "vertical",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      color: "#e5e7eb",
+                      marginBottom: 8,
+                      display: "block",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Evidence Perbaikan*
+                  </label>
+                  {evidencePreview || hazard.evidence_perbaikan ? (
+                    <div style={{ marginBottom: 12 }}>
+                      <img
+                        src={evidencePreview}
+                        alt="Evidence Preview"
+                        style={{
+                          maxWidth: "200px",
+                          borderRadius: 8,
+                          border: "1px solid #374151",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setShowImagePopup(true)}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        border: "2px dashed #374151",
+                        borderRadius: 8,
+                        padding: 24,
+                        textAlign: "center",
+                        cursor: readOnly ? "default" : "pointer",
+                        background: readOnly ? "#1f2937" : "#1f2937",
+                        color: readOnly ? "#9ca3af" : "#9ca3af",
+                      }}
+                      onClick={() => !readOnly && fileInputRef.current?.click()}
+                    >
+                      <div style={{ fontSize: 24, marginBottom: 8 }}>📷</div>
+                      <div>Klik untuk upload foto</div>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEvidence}
+                    style={{ display: "none" }}
+                    disabled={readOnly}
+                  />
+                </div>
+
+                {error && (
+                  <div style={{ color: "#ef4444", fontSize: 14 }}>{error}</div>
+                )}
+
+                {!readOnly && (
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      background: submitting ? "#6b7280" : "#60a5fa",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "12px 24px",
+                      fontSize: 16,
+                      fontWeight: 600,
+                      cursor: submitting ? "not-allowed" : "pointer",
+                      marginTop: 16,
+                    }}
+                  >
+                    {submitting ? "Menyimpan..." : "Submit Progress"}
+                  </button>
+                )}
+              </form>
+            )}
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Image Popup */}
+      {showImagePopup && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.9)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setShowImagePopup(false)}
+        >
+          <img
+            src={
+              evidencePreview || hazard.evidence || hazard.evidence_perbaikan
+            }
+            alt="Full Size"
+            style={{
+              maxWidth: "90%",
+              maxHeight: "90%",
+              borderRadius: 8,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabaseClient';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
+import MobileBottomNavigation from "../MobileBottomNavigation";
 
-function ProfileMobile({ user, onClose, onBack, onLogout }) {
+function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -13,15 +14,15 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
   const fetchProfileData = async () => {
     try {
       const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
       setProfileData(data);
     } catch (error) {
-      console.error('Error fetching profile data:', error);
+      console.error("Error fetching profile data:", error);
     } finally {
       setLoading(false);
     }
@@ -29,7 +30,7 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
 
   const handleChangePassword = () => {
     // Logic untuk ganti password akan dibuat selanjutnya
-    console.log('Change password clicked');
+    console.log("Change password clicked");
   };
 
   const handleLogout = () => {
@@ -47,8 +48,8 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
         onLogout();
       }
     } catch (error) {
-      console.error('Error logging out:', error);
-      alert('Gagal logout. Silakan coba lagi.');
+      console.error("Error logging out:", error);
+      alert("Gagal logout. Silakan coba lagi.");
     }
   };
 
@@ -60,16 +61,16 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
     return (
       <div
         style={{
-          width: '100vw',
-          height: '100vh',
-          background: '#f3f4f6',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          width: "100vw",
+          height: "100vh",
+          background: "#f3f4f6",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 16, color: '#6b7280' }}>Loading...</div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 16, color: "#6b7280" }}>Loading...</div>
         </div>
       </div>
     );
@@ -78,161 +79,136 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
   return (
     <div
       style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#f3f4f6',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
+        width: "100vw",
+        height: "100vh",
+        background: "#f3f4f6",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-      {/* Header */}
+      {/* Header - Orange seperti TasklistMobile */}
       <div
         style={{
-          background: '#fff',
-          padding: '16px',
-          borderBottom: '1px solid #e5e7eb',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          background: "#f97316", // Orange
+          padding: "16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "relative",
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            position: 'relative',
-            flex: 1,
-          }}
-        >
-          {/* Back Button */}
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="back-button-no-hover"
-              style={{
-                position: 'absolute',
-                left: '0px',
-                top: '8px',
-                background: 'none',
-                border: 'none',
-                color: '#3b82f6',
-                cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                zIndex: 20,
-                transition: 'none',
-                transform: 'none',
-                boxShadow: 'none',
-              }}
-              onMouseEnter={e => {
-                e.target.style.transform = 'none';
-                e.target.style.boxShadow = 'none';
-              }}
-              onMouseLeave={e => {
-                e.target.style.transform = 'none';
-                e.target.style.boxShadow = 'none';
-              }}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
-          )}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#fff',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              fontSize: 14,
-              fontWeight: 600,
-              marginRight: 12,
-            }}
-          >
-            AEGIS
-          </div>
+        <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
           <h2
             style={{
               margin: 0,
               fontSize: 18,
               fontWeight: 600,
-              color: '#1f2937',
-              textAlign: 'center',
+              color: "white",
+              textAlign: "center",
               flex: 1,
             }}
           >
             Profile
           </h2>
         </div>
-        <button
-          onClick={onClose}
+        {/* User Avatar */}
+        <div
           style={{
-            background: 'none',
-            border: 'none',
-            fontSize: 24,
-            color: '#6b7280',
-            cursor: 'pointer',
-            padding: '4px',
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "14px",
+            fontWeight: "600",
+            color: "#f97316",
           }}
         >
-          ×
-        </button>
+          {profileData?.nama
+            ? profileData.nama.charAt(0).toUpperCase()
+            : user?.nama?.charAt(0).toUpperCase() || "U"}
+        </div>
       </div>
+
+      {/* Back Button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            position: "absolute",
+            top: "16px",
+            left: "16px",
+            background: "none",
+            border: "none",
+            color: "white",
+            cursor: "pointer",
+            padding: "8px",
+            borderRadius: "8px",
+            zIndex: 20,
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+      )}
 
       {/* Profile Content */}
       <div
         style={{
           flex: 1,
-          padding: '20px',
-          overflowY: 'auto',
-          paddingBottom: '120px', // Tambah padding bottom untuk navbar bawah
+          padding: "20px",
+          overflowY: "auto",
+          paddingBottom: "120px", // Tambah padding bottom untuk navbar bawah
         }}
       >
         {/* Profile Photo */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
           {profileData?.foto ? (
             <img
               src={profileData.foto}
               alt="Profile"
               style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                margin: '0 auto 16px',
-                border: '3px solid #e5e7eb',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                width: "120px",
+                height: "120px",
+                borderRadius: "50%",
+                objectFit: "cover",
+                margin: "0 auto 16px",
+                border: "3px solid #e5e7eb",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
               }}
             />
           ) : (
             <div
               style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 16px',
-                fontSize: '48px',
-                color: '#fff',
-                fontWeight: 'bold',
+                width: "120px",
+                height: "120px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+                fontSize: "48px",
+                color: "#fff",
+                fontWeight: "bold",
               }}
             >
               {profileData?.nama
                 ? profileData.nama.charAt(0).toUpperCase()
-                : 'U'}
+                : "U"}
             </div>
           )}
           <h3
@@ -240,44 +216,44 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               margin: 0,
               fontSize: 20,
               fontWeight: 600,
-              color: '#1f2937',
+              color: "#1f2937",
             }}
           >
-            {profileData?.nama || 'User Name'}
+            {profileData?.nama || "User Name"}
           </h3>
         </div>
 
         {/* Profile Information */}
         <div
           style={{
-            background: '#fff',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '20px',
-            boxShadow: '0 1px 4px #0001',
+            background: "#fff",
+            borderRadius: "12px",
+            padding: "20px",
+            marginBottom: "20px",
+            boxShadow: "0 1px 4px #0001",
           }}
         >
           <h4
             style={{
-              margin: '0 0 16px 0',
+              margin: "0 0 16px 0",
               fontSize: 16,
               fontWeight: 600,
-              color: '#374151',
+              color: "#374151",
             }}
           >
             Informasi Profile
           </h4>
 
           <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           >
             {/* NRP */}
             <div>
               <div
                 style={{
                   fontSize: 12,
-                  color: '#6b7280',
-                  marginBottom: '4px',
+                  color: "#6b7280",
+                  marginBottom: "4px",
                   fontWeight: 500,
                 }}
               >
@@ -286,11 +262,11 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               <div
                 style={{
                   fontSize: 16,
-                  color: '#1f2937',
+                  color: "#1f2937",
                   fontWeight: 500,
                 }}
               >
-                {profileData?.nrp || '-'}
+                {profileData?.nrp || "-"}
               </div>
             </div>
 
@@ -299,8 +275,8 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               <div
                 style={{
                   fontSize: 12,
-                  color: '#6b7280',
-                  marginBottom: '4px',
+                  color: "#6b7280",
+                  marginBottom: "4px",
                   fontWeight: 500,
                 }}
               >
@@ -309,11 +285,11 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               <div
                 style={{
                   fontSize: 16,
-                  color: '#1f2937',
+                  color: "#1f2937",
                   fontWeight: 500,
                 }}
               >
-                {profileData?.site || '-'}
+                {profileData?.site || "-"}
               </div>
             </div>
 
@@ -322,8 +298,8 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               <div
                 style={{
                   fontSize: 12,
-                  color: '#6b7280',
-                  marginBottom: '4px',
+                  color: "#6b7280",
+                  marginBottom: "4px",
                   fontWeight: 500,
                 }}
               >
@@ -332,11 +308,11 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               <div
                 style={{
                   fontSize: 16,
-                  color: '#1f2937',
+                  color: "#1f2937",
                   fontWeight: 500,
                 }}
               >
-                {profileData?.email || '-'}
+                {profileData?.email || "-"}
               </div>
             </div>
 
@@ -345,8 +321,8 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               <div
                 style={{
                   fontSize: 12,
-                  color: '#6b7280',
-                  marginBottom: '4px',
+                  color: "#6b7280",
+                  marginBottom: "4px",
                   fontWeight: 500,
                 }}
               >
@@ -355,11 +331,11 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
               <div
                 style={{
                   fontSize: 16,
-                  color: '#1f2937',
+                  color: "#1f2937",
                   fontWeight: 500,
                 }}
               >
-                {profileData?.jabatan || '-'}
+                {profileData?.jabatan || "-"}
               </div>
             </div>
           </div>
@@ -369,35 +345,35 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
       {/* Fixed Buttons Container */}
       <div
         style={{
-          background: '#fff',
-          padding: '16px',
-          borderTop: '1px solid #e5e7eb',
-          position: 'fixed',
+          background: "#fff",
+          padding: "16px",
+          borderTop: "1px solid #e5e7eb",
+          position: "fixed",
           left: 0,
           right: 0,
           bottom: 56, // asumsi navbar tinggi 56px
           zIndex: 100,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
         }}
       >
         {/* Change Password Button */}
         <button
           onClick={handleChangePassword}
           style={{
-            width: '100%',
-            background: '#f3f4f6',
-            border: '1px solid #d1d5db',
-            borderRadius: '8px',
-            padding: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            cursor: 'pointer',
+            width: "100%",
+            background: "#f3f4f6",
+            border: "1px solid #d1d5db",
+            borderRadius: "8px",
+            padding: "16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            cursor: "pointer",
             fontSize: 16,
-            color: '#374151',
+            color: "#374151",
             fontWeight: 500,
           }}
         >
@@ -422,18 +398,18 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
         <button
           onClick={handleLogout}
           style={{
-            width: '100%',
-            background: '#ef4444',
-            border: '1px solid #dc2626',
-            borderRadius: '8px',
-            padding: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            cursor: 'pointer',
+            width: "100%",
+            background: "#ef4444",
+            border: "1px solid #dc2626",
+            borderRadius: "8px",
+            padding: "16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            cursor: "pointer",
             fontSize: 16,
-            color: '#fff',
+            color: "#fff",
             fontWeight: 500,
           }}
         >
@@ -459,42 +435,42 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
       {showLogoutConfirm && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             zIndex: 1000,
-            padding: '20px',
+            padding: "20px",
           }}
         >
           <div
             style={{
-              background: '#fff',
-              borderRadius: '16px',
-              padding: '24px',
-              maxWidth: '320px',
-              width: '100%',
-              textAlign: 'center',
+              background: "#fff",
+              borderRadius: "16px",
+              padding: "24px",
+              maxWidth: "320px",
+              width: "100%",
+              textAlign: "center",
               boxShadow:
-                '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
             }}
           >
             {/* Icon */}
             <div
               style={{
-                width: '60px',
-                height: '60px',
-                background: '#fef2f2',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 16px',
+                width: "60px",
+                height: "60px",
+                background: "#fef2f2",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
               }}
             >
               <svg
@@ -516,10 +492,10 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
             {/* Title */}
             <h3
               style={{
-                margin: '0 0 8px 0',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#1f2937',
+                margin: "0 0 8px 0",
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "#1f2937",
               }}
             >
               Keluar Aplikasi
@@ -528,10 +504,10 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
             {/* Message */}
             <p
               style={{
-                margin: '0 0 24px 0',
-                fontSize: '14px',
-                color: '#6b7280',
-                lineHeight: '1.5',
+                margin: "0 0 24px 0",
+                fontSize: "14px",
+                color: "#6b7280",
+                lineHeight: "1.5",
               }}
             >
               Apakah yakin ingin keluar dari aplikasi?
@@ -540,22 +516,22 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
             {/* Buttons */}
             <div
               style={{
-                display: 'flex',
-                gap: '12px',
+                display: "flex",
+                gap: "12px",
               }}
             >
               <button
                 onClick={cancelLogout}
                 style={{
                   flex: 1,
-                  background: '#f3f4f6',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  cursor: 'pointer',
+                  background: "#f3f4f6",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  padding: "12px 16px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  color: "#374151",
+                  cursor: "pointer",
                 }}
               >
                 Batal
@@ -564,14 +540,14 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
                 onClick={confirmLogout}
                 style={{
                   flex: 1,
-                  background: '#ef4444',
-                  border: '1px solid #dc2626',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#fff',
-                  cursor: 'pointer',
+                  background: "#ef4444",
+                  border: "1px solid #dc2626",
+                  borderRadius: "8px",
+                  padding: "12px 16px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  color: "#fff",
+                  cursor: "pointer",
                 }}
               >
                 Ya, Keluar
@@ -580,6 +556,20 @@ function ProfileMobile({ user, onClose, onBack, onLogout }) {
           </div>
         </div>
       )}
+
+      {/* Bottom Navigation */}
+      <MobileBottomNavigation
+        activeTab="profile"
+        onNavigate={(tab) => {
+          if (tab === "home") {
+            onBack && onBack();
+          } else if (tab === "tasklist") {
+            // Navigate to tasklist menggunakan callback dari parent
+            onNavigate && onNavigate("tasklist");
+          }
+          // profile tab tidak perlu handling karena sudah di halaman profile
+        }}
+      />
     </div>
   );
 }

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import TasklistPageDesktop from './TasklistPageDesktop';
-import TasklistPageMobile from './TasklistPageMobile';
+import React, { useState, useEffect } from "react";
+import TasklistPageDesktop from "./TasklistPageDesktop";
+import TasklistPageMobile from "./TasklistPageMobile";
 
-function TasklistPage({ user }) {
+function TasklistPage({ user, onBack, onNavigate }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -10,12 +10,12 @@ function TasklistPage({ user }) {
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return isMobile ? (
-    <TasklistPageMobile user={user} />
+    <TasklistPageMobile user={user} onBack={onBack} onNavigate={onNavigate} />
   ) : (
     <TasklistPageDesktop user={user} />
   );

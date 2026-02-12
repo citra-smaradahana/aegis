@@ -1,9 +1,8 @@
 {
   "name": "aegis.kmb",
-  "private": false,
+  "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://citra-smaradahana.github.io/safety-management-app",
   "repository": {
     "type": "git",
     "url": "https://github.com/citra-smaradahana/safety-management-app.git"
@@ -23,7 +22,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
-    "react-easy-crop": "^5.0.4",
+    "react-easy-crop": "^5.5.0",
     "react-icons": "^5.5.0",
     "xlsx": "^0.18.5"
   },

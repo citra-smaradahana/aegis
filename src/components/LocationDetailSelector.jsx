@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { getLocationOptions } from '../config/siteLocations';
-import MobileBackGesture from './MobileBackGesture';
+import React, { useState, useEffect } from "react";
+import { getLocationOptions } from "../config/siteLocations";
+import MobileBackGesture from "./MobileBackGesture";
 
 const LocationDetailSelector = ({
   site,
   value,
   onChange,
-  placeholder = 'Pilih Detail Lokasi',
+  placeholder = "Pilih Detail Lokasi",
   disabled = false,
   style = {},
   required = false,
@@ -16,18 +16,18 @@ const LocationDetailSelector = ({
 
   // BSIB specific locations
   const bsibLocations = [
-    'Office',
-    'Workshop',
-    'OSP',
-    'PIT A',
-    'PIT C',
-    'PIT E',
-    'Candrian',
-    'HLO',
+    "Office",
+    "Workshop",
+    "OSP",
+    "PIT A",
+    "PIT C",
+    "PIT E",
+    "Candrian",
+    "HLO",
   ];
 
   const locationOptions =
-    site === 'BSIB' ? bsibLocations : getLocationOptions(site);
+    site === "BSIB" ? bsibLocations : getLocationOptions(site);
 
   // Update mobile detection on resize
   useEffect(() => {
@@ -35,12 +35,12 @@ const LocationDetailSelector = ({
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleLocationSelect = location => {
-    onChange({ target: { name: 'detailLokasi', value: location } });
+  const handleLocationSelect = (location) => {
+    onChange({ target: { name: "detailLokasi", value: location } });
     setShowLocationSelection(false);
   };
 
@@ -50,30 +50,38 @@ const LocationDetailSelector = ({
 
   // Desktop dropdown for BSIB
   const renderDesktopDropdown = () => {
-    if (site !== 'BSIB' || isMobile) return null;
+    if (site !== "BSIB" || isMobile) return null;
+
+    // Debug: Log props received
+    console.log("LocationDetailSelector props:", {
+      site,
+      value,
+      disabled,
+      placeholder,
+    });
 
     return (
       <select
-        value={value || ''}
-        onChange={e =>
-          onChange({ target: { name: 'detailLokasi', value: e.target.value } })
+        value={value || ""}
+        onChange={(e) =>
+          onChange({ target: { name: "detailLokasi", value: e.target.value } })
         }
         disabled={disabled}
         required={required}
         style={{
-          width: '100%',
-          padding: '8px 12px',
-          borderRadius: '8px',
-          border: '1px solid #d1d5db',
-          fontSize: '14px',
-          backgroundColor: disabled ? '#f3f4f6' : '#ffffff',
-          color: disabled ? '#9ca3af' : '#000000',
-          cursor: disabled ? 'not-allowed' : 'pointer',
+          width: "100%",
+          padding: "12px 16px",
+          borderRadius: "8px",
+          border: "1px solid #334155",
+          fontSize: "14px",
+          backgroundColor: disabled ? "#1f2937" : "#0b1220",
+          color: disabled ? "#9ca3af" : "#e5e7eb",
+          cursor: disabled ? "not-allowed" : "pointer",
           ...style,
         }}
       >
-        <option value="">{placeholder}</option>
-        {locationOptions.map(location => (
+        {!value && <option value="">{placeholder}</option>}
+        {locationOptions.map((location) => (
           <option key={location} value={location}>
             {location}
           </option>
@@ -87,39 +95,39 @@ const LocationDetailSelector = ({
     <MobileBackGesture onBack={handleBack}>
       <div
         style={{
-          position: 'fixed',
+          position: "fixed",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: '#f8f9fa',
+          backgroundColor: "#f8f9fa",
           zIndex: 1000,
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* Header */}
         <div
           style={{
-            backgroundColor: '#ffffff',
-            padding: '16px',
-            borderBottom: '1px solid #e5e7eb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderBottom: "1px solid #e5e7eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
           <button
             onClick={handleBack}
             className="clickable"
             style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '16px',
-              color: '#3b82f6',
-              cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '4px',
+              background: "none",
+              border: "none",
+              fontSize: "16px",
+              color: "#3b82f6",
+              cursor: "pointer",
+              padding: "8px",
+              borderRadius: "4px",
             }}
           >
             ← Kembali
@@ -127,70 +135,70 @@ const LocationDetailSelector = ({
           <h1
             style={{
               margin: 0,
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#1f2937',
+              fontSize: "18px",
+              fontWeight: "600",
+              color: "#1f2937",
             }}
           >
             Pilih Detail Lokasi
           </h1>
-          <div style={{ width: '60px' }}></div>
+          <div style={{ width: "60px" }}></div>
         </div>
 
         {/* Location List */}
         <div
           style={{
             flex: 1,
-            overflowY: 'auto',
-            padding: '16px',
+            overflowY: "auto",
+            padding: "16px",
           }}
         >
           <div
             style={{
-              display: 'grid',
-              gap: '12px',
+              display: "grid",
+              gap: "12px",
             }}
           >
-            {locationOptions.map(location => (
+            {locationOptions.map((location) => (
               <div
                 key={location}
                 onClick={() => handleLocationSelect(location)}
                 className="clickable"
                 style={{
-                  backgroundColor: '#ffffff',
-                  padding: '16px',
-                  borderRadius: '12px',
+                  backgroundColor: "#ffffff",
+                  padding: "16px",
+                  borderRadius: "12px",
                   border:
                     value === location
-                      ? '2px solid #3b82f6'
-                      : '1px solid #e5e7eb',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                      ? "2px solid #3b82f6"
+                      : "1px solid #e5e7eb",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                   boxShadow:
                     value === location
-                      ? '0 4px 12px rgba(59, 130, 246, 0.15)'
-                      : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                      ? "0 4px 12px rgba(59, 130, 246, 0.15)"
+                      : "0 1px 3px rgba(0, 0, 0, 0.1)",
                 }}
-                onMouseEnter={e => {
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                onMouseEnter={(e) => {
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                 }}
-                onMouseLeave={e => {
-                  e.target.style.transform = 'translateY(0)';
+                onMouseLeave={(e) => {
+                  e.target.style.transform = "translateY(0)";
                   e.target.style.boxShadow =
                     value === location
-                      ? '0 4px 12px rgba(59, 130, 246, 0.15)'
-                      : '0 1px 3px rgba(0, 0, 0, 0.1)';
+                      ? "0 4px 12px rgba(59, 130, 246, 0.15)"
+                      : "0 1px 3px rgba(0, 0, 0, 0.1)";
                 }}
               >
                 <span
                   style={{
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    color: '#1f2937',
+                    fontSize: "16px",
+                    fontWeight: "500",
+                    color: "#1f2937",
                   }}
                 >
                   {location}
@@ -198,21 +206,21 @@ const LocationDetailSelector = ({
                 {value === location && (
                   <div
                     style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      backgroundColor: '#3b82f6',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      backgroundColor: "#3b82f6",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
                     <div
                       style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: '#ffffff',
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: "#ffffff",
                       }}
                     />
                   </div>
@@ -225,9 +233,9 @@ const LocationDetailSelector = ({
         {/* Footer */}
         <div
           style={{
-            backgroundColor: '#ffffff',
-            padding: '16px',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderTop: "1px solid #e5e7eb",
           }}
         >
           <button
@@ -235,16 +243,16 @@ const LocationDetailSelector = ({
             disabled={!value}
             className="clickable"
             style={{
-              width: '100%',
-              padding: '12px',
-              backgroundColor: value ? '#3b82f6' : '#9ca3af',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: value ? 'pointer' : 'not-allowed',
-              transition: 'background-color 0.2s ease',
+              width: "100%",
+              padding: "12px",
+              backgroundColor: value ? "#3b82f6" : "#9ca3af",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: value ? "pointer" : "not-allowed",
+              transition: "background-color 0.2s ease",
             }}
           >
             Pilih Detail Lokasi
@@ -254,32 +262,33 @@ const LocationDetailSelector = ({
     </MobileBackGesture>
   );
 
-  // Mobile dropdown for non-BSIB sites
+  // Mobile dropdown untuk non-BSIB. Paksa tidak tampil di desktop
   const renderMobileDropdown = () => {
-    if (site === 'BSIB' && isMobile) return null;
+    if (!isMobile) return null; // cegah render di desktop sepenuhnya
+    if (site === "BSIB") return null;
 
     return (
       <div
         onClick={() => !disabled && setShowLocationSelection(true)}
         className="mobile-dropdown location-selector"
         style={{
-          width: '100%',
+          width: "100%",
           borderRadius: 8,
-          padding: '4px 12px',
+          padding: "4px 12px",
           fontSize: 14,
-          backgroundColor: disabled ? '#f3f4f6' : '#ffffff',
-          color: disabled ? '#9ca3af' : '#000000',
-          border: '1px solid #d1d5db',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          minHeight: '32px',
-          boxSizing: 'border-box',
+          backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
+          color: disabled ? "#9ca3af" : "#000000",
+          border: "1px solid #d1d5db",
+          cursor: disabled ? "not-allowed" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          minHeight: "32px",
+          boxSizing: "border-box",
           ...style,
         }}
       >
-        <span style={{ color: value ? '#000000' : '#6b7280' }}>
+        <span style={{ color: value ? "#000000" : "#6b7280" }}>
           {value || placeholder}
         </span>
         {!disabled && (
@@ -292,7 +301,7 @@ const LocationDetailSelector = ({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ color: '#6b7280' }}
+            style={{ color: "#6b7280" }}
           >
             <path d="m6 9 6 6 6-6" />
           </svg>
@@ -309,29 +318,32 @@ const LocationDetailSelector = ({
       {/* Mobile dropdown for non-BSIB sites */}
       {renderMobileDropdown()}
 
-      {/* Mobile page for BSIB */}
-      {site === 'BSIB' && isMobile && (
+      {/* Mobile page for BSIB - hanya saat mobile */}
+      {isMobile && site === "BSIB" && (
         <div
           onClick={() => !disabled && setShowLocationSelection(true)}
           className="mobile-dropdown location-selector"
           style={{
-            width: '100%',
+            width: "100%",
             borderRadius: 8,
-            padding: '4px 12px',
+            padding: "4px 12px",
             fontSize: 14,
-            backgroundColor: disabled ? '#f3f4f6' : '#ffffff',
-            color: disabled ? '#9ca3af' : '#000000',
-            border: '1px solid #d1d5db',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            minHeight: '32px',
-            boxSizing: 'border-box',
+            backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
+            color: disabled ? "#9ca3af" : "#000000",
+            border: "1px solid #d1d5db",
+            cursor: disabled ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            minHeight: "32px",
+            boxSizing: "border-box",
             ...style,
+            // Sembunyikan pada mode desktop untuk memastikan tidak muncul
+            // meskipun class ada di DOM
+            ...(window.innerWidth > 768 ? { display: "none" } : {}),
           }}
         >
-          <span style={{ color: value ? '#000000' : '#6b7280' }}>
+          <span style={{ color: value ? "#000000" : "#6b7280" }}>
             {value || placeholder}
           </span>
           {!disabled && (
@@ -344,7 +356,7 @@ const LocationDetailSelector = ({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ color: '#6b7280' }}
+              style={{ color: "#6b7280" }}
             >
               <path d="m6 9 6 6 6-6" />
             </svg>

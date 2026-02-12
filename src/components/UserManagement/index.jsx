@@ -1,42 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabaseClient';
-import UserForm from './UserForm';
-import './UserManagement.css';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
+import UserForm from "./UserForm";
+import "./UserManagement.css";
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [, setSelectedUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [siteFilter, setSiteFilter] = useState('');
-  const [jabatanFilter, setJabatanFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [siteFilter, setSiteFilter] = useState("");
+  const [jabatanFilter, setJabatanFilter] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0); // Force re-render
 
   // Fetch users dari Supabase
   const fetchUsers = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      console.log('Fetching users from Supabase...');
+      console.log("Fetching users from Supabase...");
 
       const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('nama');
+        .from("users")
+        .select("*")
+        .order("nama");
 
       if (error) {
-        console.error('Error fetching users:', error);
-        setError('Gagal memuat data user: ' + error.message);
+        console.error("Error fetching users:", error);
+        setError("Gagal memuat data user: " + error.message);
       } else {
-        console.log('Users fetched successfully:', data);
+        console.log("Users fetched successfully:", data);
         setUsers(data || []);
       }
     } catch (e) {
-      console.error('Error in fetchUsers:', e);
-      setError('Gagal memuat data user.');
+      console.error("Error in fetchUsers:", e);
+      setError("Gagal memuat data user.");
     } finally {
       setLoading(false);
     }
@@ -55,9 +55,9 @@ function UserManagement() {
 
   // Filter, search, dan sort dengan null check yang lebih ketat
   const filteredUsers = users
-    .filter(u => u && typeof u === 'object') // Pastikan u ada dan adalah object
+    .filter((u) => u && typeof u === "object") // Pastikan u ada dan adalah object
     .filter(
-      u =>
+      (u) =>
         (!siteFilter || (u.site && u.site === siteFilter)) &&
         (!jabatanFilter || (u.jabatan && u.jabatan === jabatanFilter)) &&
         ((u.nama && u.nama.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -65,8 +65,8 @@ function UserManagement() {
     )
     .sort((a, b) => {
       // Handle null values in sorting
-      const namaA = a && a.nama ? a.nama : '';
-      const namaB = b && b.nama ? b.nama : '';
+      const namaA = a && a.nama ? a.nama : "";
+      const namaB = b && b.nama ? b.nama : "";
       return namaA.localeCompare(namaB);
     });
 
@@ -79,47 +79,47 @@ function UserManagement() {
 
   // Unique site & jabatan untuk filter dengan null check yang lebih ketat
   const siteOptions = [
-    ...new Set(users.filter(u => u && u.site).map(u => u.site)),
+    ...new Set(users.filter((u) => u && u.site).map((u) => u.site)),
   ];
   const jabatanOptions = [
-    ...new Set(users.filter(u => u && u.jabatan).map(u => u.jabatan)),
+    ...new Set(users.filter((u) => u && u.jabatan).map((u) => u.jabatan)),
   ];
 
   // Handler untuk Add User
-  const handleAddUser = async userData => {
+  const handleAddUser = async (userData) => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
-      console.log('Adding user to Supabase:', userData);
+      console.log("Adding user to Supabase:", userData);
 
       const { data, error } = await supabase
-        .from('users')
+        .from("users")
         .insert([userData])
         .select();
 
       if (error) {
-        console.error('Error adding user:', error);
-        setError('Gagal menambah user: ' + error.message);
+        console.error("Error adding user:", error);
+        setError("Gagal menambah user: " + error.message);
         return;
       }
 
-      console.log('User added successfully:', data);
-      setUsers(prev => [...prev, data[0]]);
+      console.log("User added successfully:", data);
+      setUsers((prev) => [...prev, data[0]]);
       setShowForm(false);
     } catch (e) {
-      console.error('Error in handleAddUser:', e);
-      setError('Terjadi kesalahan saat menambah user');
+      console.error("Error in handleAddUser:", e);
+      setError("Terjadi kesalahan saat menambah user");
     } finally {
       setLoading(false);
     }
   };
 
   // Handler untuk Update User dengan validasi yang lebih ketat
-  const handleUpdateUser = async userData => {
+  const handleUpdateUser = async (userData) => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
       // console.log("=== UPDATE USER DEBUG ===");
       // console.log("Received userData:", userData);
@@ -129,13 +129,13 @@ function UserManagement() {
       const updateData = {};
 
       // Ambil semua field yang ada di userData (kecuali id)
-      Object.keys(userData).forEach(key => {
+      Object.keys(userData).forEach((key) => {
         if (
-          key !== 'id' &&
+          key !== "id" &&
           userData[key] !== undefined &&
           userData[key] !== null
         ) {
-          if (typeof userData[key] === 'string') {
+          if (typeof userData[key] === "string") {
             updateData[key] = userData[key].trim();
           } else {
             updateData[key] = userData[key];
@@ -162,13 +162,13 @@ function UserManagement() {
       // Test koneksi Supabase terlebih dahulu
       // console.log("Testing Supabase connection...");
       const { data: testData, error: testError } = await supabase
-        .from('users')
-        .select('id')
+        .from("users")
+        .select("id")
         .limit(1);
 
       if (testError) {
-        console.error('Supabase connection test failed:', testError);
-        setError('Gagal terhubung ke database: ' + testError.message);
+        console.error("Supabase connection test failed:", testError);
+        setError("Gagal terhubung ke database: " + testError.message);
         return;
       }
 
@@ -181,9 +181,9 @@ function UserManagement() {
       // console.log("User ID:", userData.id);
 
       const { data, error } = await supabase
-        .from('users')
+        .from("users")
         .update(updateData)
-        .eq('id', userData.id)
+        .eq("id", userData.id)
         .select();
 
       // console.log("=== SUPABASE RESPONSE ===");
@@ -192,10 +192,10 @@ function UserManagement() {
       // console.log("Response data length:", data ? data.length : 0);
 
       if (error) {
-        console.error('Error updating user:', error);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
-        setError('Gagal mengupdate user: ' + error.message);
+        console.error("Error updating user:", error);
+        console.error("Error details:", error.details);
+        console.error("Error hint:", error.hint);
+        setError("Gagal mengupdate user: " + error.message);
         return;
       }
 
@@ -206,7 +206,7 @@ function UserManagement() {
       // console.log("=== SIMPLE STATE UPDATE ===");
       // console.log("Current users before update:", users);
 
-      const updatedUsers = users.map(u => {
+      const updatedUsers = users.map((u) => {
         if (u.id === userData.id) {
           const updatedUser = { ...u, ...updateData };
           // console.log("Updated user in state:", updatedUser);
@@ -220,7 +220,7 @@ function UserManagement() {
       // Update state dengan setTimeout untuk memastikan async update
       setTimeout(() => {
         setUsers(updatedUsers);
-        setForceUpdate(prev => prev + 1);
+        setForceUpdate((prev) => prev + 1);
         // console.log("State updated with setTimeout");
       }, 100);
 
@@ -229,49 +229,49 @@ function UserManagement() {
 
       // console.log("Update completed successfully!");
     } catch (e) {
-      console.error('Error in handleUpdateUser:', e);
-      setError('Terjadi kesalahan saat mengupdate user');
+      console.error("Error in handleUpdateUser:", e);
+      setError("Terjadi kesalahan saat mengupdate user");
     } finally {
       setLoading(false);
     }
   };
 
   // Handler untuk Delete User
-  const handleDeleteUser = async userId => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus user ini?')) {
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus user ini?")) {
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
-      console.log('Deleting user from Supabase:', userId);
+      console.log("Deleting user from Supabase:", userId);
 
-      const { error } = await supabase.from('users').delete().eq('id', userId);
+      const { error } = await supabase.from("users").delete().eq("id", userId);
 
       if (error) {
-        console.error('Error deleting user:', error);
-        setError('Gagal menghapus user: ' + error.message);
+        console.error("Error deleting user:", error);
+        setError("Gagal menghapus user: " + error.message);
         return;
       }
 
-      console.log('User deleted successfully');
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      console.log("User deleted successfully");
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
       setEditingUser(null);
       setSelectedUser(null);
     } catch (e) {
-      console.error('Error in handleDeleteUser:', e);
-      setError('Terjadi kesalahan saat menghapus user');
+      console.error("Error in handleDeleteUser:", e);
+      setError("Terjadi kesalahan saat menghapus user");
     } finally {
       setLoading(false);
     }
   };
 
   // Error boundary untuk mencegah crash
-  if (error && error.includes('crash')) {
+  if (error && error.includes("crash")) {
     return (
-      <div style={{ padding: '20px', color: 'red' }}>
+      <div style={{ padding: "20px", color: "red" }}>
         <h3>Terjadi kesalahan</h3>
         <p>{error}</p>
         <button onClick={() => window.location.reload()}>
@@ -283,9 +283,9 @@ function UserManagement() {
 
   // Tambahan safety check untuk users array
   if (!Array.isArray(users)) {
-    console.error('Users is not an array:', users);
+    console.error("Users is not an array:", users);
     return (
-      <div style={{ padding: '20px', color: 'red' }}>
+      <div style={{ padding: "20px", color: "red" }}>
         <h3>Terjadi kesalahan</h3>
         <p>Data users tidak valid. Silakan refresh halaman.</p>
         <button onClick={() => window.location.reload()}>
@@ -295,178 +295,441 @@ function UserManagement() {
     );
   }
 
+  // Jika sedang edit user atau tambah user, tampilkan form saja
+  if (editingUser || showForm) {
+    return (
+      <UserForm
+        user={editingUser}
+        onSubmit={editingUser ? handleUpdateUser : handleAddUser}
+        onClose={() => {
+          setEditingUser(null);
+          setShowForm(false);
+        }}
+        loading={loading}
+      />
+    );
+  }
+
+  // Jika tidak sedang edit/tambah, tampilkan halaman management user
   return (
     <div
-      className="user-management-list-container"
+      style={{
+        width: "100%",
+        height: "100vh",
+        background: "transparent",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: "0 0 0 120px",
+        overflow: "hidden",
+      }}
       key={`user-management-${forceUpdate}`}
     >
-      <div className="user-management-header">
-        <h2>Manajemen User</h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="add-user-btn" onClick={() => setShowForm(true)}>
-            + Tambah User
-          </button>
-        </div>
-      </div>
-      <div className="user-management-filters">
-        <input
-          type="text"
-          placeholder="Cari user berdasarkan nama, NRP"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
-        <select
-          value={siteFilter}
-          onChange={e => setSiteFilter(e.target.value)}
+      <div
+        style={{
+          background: "transparent",
+          borderRadius: 18,
+          boxShadow: "none",
+          padding: 16,
+          maxWidth: 1400,
+          width: "100%",
+          margin: "0 auto",
+          height: "100vh",
+        }}
+      >
+        <div
+          style={{
+            background: "transparent",
+            border: "none",
+            borderRadius: 16,
+            padding: 24,
+            color: "#e5e7eb",
+            position: "relative",
+            height: "100vh",
+            width: "100%",
+            alignItems: "flex-start",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+          }}
         >
-          <option value="">Semua Site</option>
-          {siteOptions.map(site => (
-            <option key={site} value={site}>
-              {site}
-            </option>
-          ))}
-        </select>
-        <select
-          value={jabatanFilter}
-          onChange={e => setJabatanFilter(e.target.value)}
-        >
-          <option value="">Semua Jabatan</option>
-          {jabatanOptions.map(jab => (
-            <option key={jab} value={jab}>
-              {jab}
-            </option>
-          ))}
-        </select>
-      </div>
-      {loading ? (
-        <div>Loading...</div>
-      ) : error ? (
-        <div className="error-message">{error}</div>
-      ) : (
-        <div>
-          <p style={{ marginBottom: '10px', color: '#666' }}>
-            Total users: {users.length} | Filtered users: {filteredUsers.length}
-          </p>
-          <table className="user-management-table">
-            <thead>
-              <tr>
-                <th>Nama</th>
-                <th>NRP</th>
-                <th>Email</th>
-                <th>Jabatan</th>
-                <th>Site</th>
-                <th>Role</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="7"
-                    style={{
-                      textAlign: 'center',
-                      padding: '20px',
-                      color: '#666',
-                    }}
-                  >
-                    {users.length === 0
-                      ? 'Tidak ada data users'
-                      : 'Tidak ada data yang sesuai dengan filter'}
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map(u => (
-                  <tr
-                    key={u.id}
-                    className={
-                      editingUser && editingUser.id === u.id ? 'editing' : ''
-                    }
-                  >
-                    <td>{u.nama || '-'}</td>
-                    <td>{u.nrp || '-'}</td>
-                    <td>{u.email || '-'}</td>
-                    <td>{u.jabatan || '-'}</td>
-                    <td>{u.site || '-'}</td>
-                    <td>{u.role || '-'}</td>
-                    <td>
-                      <button
-                        onClick={() => {
-                          // console.log("Edit button clicked for user:", u);
-                          setEditingUser(u);
-                        }}
-                        className="edit-btn"
-                        style={{
-                          backgroundColor: '#007bff',
-                          color: 'white',
-                          padding: '8px 16px',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          marginRight: '8px',
-                          width: '70px',
-                          height: '36px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(u.id)}
-                        className="delete-btn"
-                        style={{
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          padding: '8px 16px',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          width: '70px',
-                          height: '36px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        Hapus
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal untuk Tambah User */}
-      {showForm && (
-        <UserForm
-          onSubmit={handleAddUser}
-          onClose={() => setShowForm(false)}
-          loading={loading}
-        />
-      )}
-
-      {/* Modal untuk Edit User */}
-      {editingUser && (
-        <div>
-          {/* {console.log("Rendering UserForm modal with user:", editingUser)} */}
-          <UserForm
-            user={editingUser}
-            onSubmit={handleUpdateUser}
-            onClose={() => {
-              // console.log("Closing edit modal");
-              setEditingUser(null);
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "24px",
+              width: "100%",
             }}
-            loading={loading}
-          />
+          >
+            <h2
+              style={{
+                margin: 0,
+                color: "#60a5fa",
+                fontWeight: 600,
+                fontSize: "24px",
+              }}
+            >
+              Management User
+            </h2>
+            <button
+              onClick={() => setShowForm(true)}
+              style={{
+                background: "#60a5fa",
+                color: "#ffffff",
+                border: "none",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "600",
+                fontSize: "14px",
+              }}
+            >
+              + Tambah User
+            </button>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              marginBottom: "24px",
+              flexWrap: "wrap",
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Cari user berdasarkan nama, NRP"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #374151",
+                borderRadius: "6px",
+                backgroundColor: "#1f2937",
+                color: "#e5e7eb",
+                fontSize: "14px",
+                outline: "none",
+                minWidth: "200px",
+              }}
+            />
+            <select
+              value={siteFilter}
+              onChange={(e) => setSiteFilter(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #374151",
+                borderRadius: "6px",
+                backgroundColor: "#1f2937",
+                color: "#e5e7eb",
+                fontSize: "14px",
+                outline: "none",
+              }}
+            >
+              <option value="">Semua Site</option>
+              {siteOptions.map((site) => (
+                <option key={site} value={site}>
+                  {site}
+                </option>
+              ))}
+            </select>
+            <select
+              value={jabatanFilter}
+              onChange={(e) => setJabatanFilter(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #374151",
+                borderRadius: "6px",
+                backgroundColor: "#1f2937",
+                color: "#e5e7eb",
+                fontSize: "14px",
+                outline: "none",
+              }}
+            >
+              <option value="">Semua Jabatan</option>
+              {jabatanOptions.map((jab) => (
+                <option key={jab} value={jab}>
+                  {jab}
+                </option>
+              ))}
+            </select>
+          </div>
+          {loading ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px",
+                color: "#9ca3af",
+              }}
+            >
+              Loading...
+            </div>
+          ) : error ? (
+            <div
+              style={{
+                padding: "16px",
+                backgroundColor: "#dc2626",
+                color: "#ffffff",
+                borderRadius: "8px",
+                marginBottom: "16px",
+              }}
+            >
+              {error}
+            </div>
+          ) : (
+            <div>
+              <p
+                style={{
+                  marginBottom: "16px",
+                  color: "#9ca3af",
+                  fontSize: "14px",
+                }}
+              >
+                Total users: {users.length} | Filtered users:{" "}
+                {filteredUsers.length}
+              </p>
+              <div
+                style={{
+                  backgroundColor: "#1f2937",
+                  borderRadius: "12px",
+                  border: "1px solid #374151",
+                  overflow: "hidden",
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    color: "#e5e7eb",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        backgroundColor: "#374151",
+                        borderBottom: "1px solid #4b5563",
+                      }}
+                    >
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          textAlign: "left",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Nama
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          textAlign: "left",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          fontSize: "14px",
+                        }}
+                      >
+                        NRP
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          textAlign: "left",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Email
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          textAlign: "left",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Jabatan
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          textAlign: "left",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Site
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          textAlign: "left",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Role
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 16px",
+                          textAlign: "left",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          style={{
+                            textAlign: "center",
+                            padding: "40px",
+                            color: "#9ca3af",
+                            fontSize: "16px",
+                          }}
+                        >
+                          {users.length === 0
+                            ? "Tidak ada data users"
+                            : "Tidak ada data yang sesuai dengan filter"}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <tr
+                          key={u.id}
+                          style={{
+                            borderBottom: "1px solid #374151",
+                            backgroundColor:
+                              editingUser && editingUser.id === u.id
+                                ? "#1e40af"
+                                : "transparent",
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: "#e5e7eb",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {u.nama || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: "#e5e7eb",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {u.nrp || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: "#e5e7eb",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {u.email || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: "#e5e7eb",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {u.jabatan || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: "#e5e7eb",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {u.site || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              color: "#e5e7eb",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {u.role || "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                            }}
+                          >
+                            <button
+                              onClick={() => {
+                                setEditingUser(u);
+                              }}
+                              style={{
+                                backgroundColor: "#60a5fa",
+                                color: "white",
+                                padding: "8px 16px",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                                marginRight: "8px",
+                                width: "70px",
+                                height: "36px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u.id)}
+                              style={{
+                                backgroundColor: "#dc2626",
+                                color: "white",
+                                padding: "8px 16px",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                                width: "70px",
+                                height: "36px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Hapus
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

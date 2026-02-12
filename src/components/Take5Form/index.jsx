@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import Take5FormDesktop from './Take5FormDesktop';
-import Take5FormMobile from './Take5FormMobile';
+import React, { useState, useEffect } from "react";
+import Take5FormDesktop from "./Take5FormDesktop";
+import Take5FormMobile from "./Take5FormMobile";
 
-function Take5Form({ user, onRedirectHazard, onBack }) {
+function Take5Form({ user, onRedirectHazard, onBack, onNavigate }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -10,8 +10,8 @@ function Take5Form({ user, onRedirectHazard, onBack }) {
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return isMobile ? (
@@ -19,6 +19,7 @@ function Take5Form({ user, onRedirectHazard, onBack }) {
       user={user}
       onRedirectHazard={onRedirectHazard}
       onBack={onBack}
+      onNavigate={onNavigate}
     />
   ) : (
     <Take5FormDesktop user={user} onRedirectHazard={onRedirectHazard} />

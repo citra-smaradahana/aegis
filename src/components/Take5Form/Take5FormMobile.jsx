@@ -1,32 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabaseClient';
-import getCroppedImg from '../Dropzone/cropImageUtil';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
+import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
   allowsCustomInput,
   shouldUseLocationSelector,
-} from '../../config/siteLocations';
-import MobileSiteSelector from '../MobileSiteSelector';
-import LocationDetailSelector from '../LocationDetailSelector';
-import PICSelector from '../PICSelector';
+} from "../../config/siteLocations";
+import MobileSiteSelector from "../MobileSiteSelector";
+import LocationDetailSelector from "../LocationDetailSelector";
+import PICSelector from "../PICSelector";
+import MobileHeader from "../MobileHeader";
+import MobileBottomNavigation from "../MobileBottomNavigation";
 
 const SITE_OPTIONS = [
-  'Head Office',
-  'Balikpapan',
-  'ADRO',
-  'AMMP',
-  'BSIB',
-  'GAMR',
-  'HRSB',
-  'HRSE',
-  'PABB',
-  'PBRB',
-  'PKJA',
-  'PPAB',
-  'PSMM',
-  'REBH',
-  'RMTU',
-  'PMTU',
+  "Head Office",
+  "Balikpapan",
+  "ADRO",
+  "AMMP",
+  "BSIB",
+  "GAMR",
+  "HRSB",
+  "HRSE",
+  "PABB",
+  "PBRB",
+  "PKJA",
+  "PPAB",
+  "PSMM",
+  "REBH",
+  "RMTU",
+  "PMTU",
 ];
 
 function getToday() {
@@ -34,23 +36,23 @@ function getToday() {
   return today.toISOString().slice(0, 10);
 }
 
-const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
-  const [site, setSite] = useState(user.site || '');
-  const [detailLokasi, setDetailLokasi] = useState('');
+const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
+  const [site, setSite] = useState(user.site || "");
+  const [detailLokasi, setDetailLokasi] = useState("");
   const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
-  const [potensiBahaya, setPotensiBahaya] = useState('');
+  const [potensiBahaya, setPotensiBahaya] = useState("");
   const [q1, setQ1] = useState(null);
   const [q2, setQ2] = useState(null);
   const [q3, setQ3] = useState(null);
   const [q4, setQ4] = useState(null);
-  const [aman, setAman] = useState('');
+  const [aman, setAman] = useState("");
   const [buktiPerbaikan, setBuktiPerbaikan] = useState(null);
   const [buktiPreview, setBuktiPreview] = useState(null);
-  const [deskripsiPerbaikan, setDeskripsiPerbaikan] = useState('');
-  const [deskripsiKondisi, setDeskripsiKondisi] = useState('');
+  const [deskripsiPerbaikan, setDeskripsiPerbaikan] = useState("");
+  const [deskripsiKondisi, setDeskripsiKondisi] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
@@ -68,11 +70,11 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
     aman &&
     // Validasi untuk perbaikan
     !(
-      aman === 'perbaikan' &&
+      aman === "perbaikan" &&
       (!buktiPerbaikan || !deskripsiPerbaikan.trim())
     ) &&
     // Validasi untuk stop
-    !(aman === 'stop' && !deskripsiKondisi.trim());
+    !(aman === "stop" && !deskripsiKondisi.trim());
 
   // Cek apakah ada jawaban "Tidak" pada pertanyaan
   const hasNegativeAnswer =
@@ -83,8 +85,8 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
 
   // Otomatis ubah kondisi kerja jika ada jawaban "Tidak" dan kondisi kerja adalah "aman"
   useEffect(() => {
-    if (hasNegativeAnswer && aman === 'aman') {
-      setAman('');
+    if (hasNegativeAnswer && aman === "aman") {
+      setAman("");
     }
   }, [hasNegativeAnswer, aman]);
 
@@ -94,24 +96,24 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
       const options = getLocationOptions(site);
       setLocationOptions(options);
       // Reset detail lokasi when site changes
-      setDetailLokasi('');
+      setDetailLokasi("");
       setShowCustomInput(false);
     } else {
       setLocationOptions([]);
-      setDetailLokasi('');
+      setDetailLokasi("");
       setShowCustomInput(false);
     }
   }, [site]);
 
   // Handle detail lokasi change
-  const handleDetailLokasiChange = e => {
+  const handleDetailLokasiChange = (e) => {
     const value = e.target.value;
     setDetailLokasi(value);
 
     // Show custom input if "Lainnya" is selected or if site allows custom input
-    if (value === 'Lainnya' || (allowsCustomInput(site) && value === '')) {
+    if (value === "Lainnya" || (allowsCustomInput(site) && value === "")) {
       setShowCustomInput(true);
-      setDetailLokasi('');
+      setDetailLokasi("");
     } else {
       setShowCustomInput(false);
     }
@@ -119,15 +121,15 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
 
   // Debug useEffect untuk monitoring state
   useEffect(() => {
-    console.log('State changed - aman:', aman, 'isFormValid:', isFormValid);
+    console.log("State changed - aman:", aman, "isFormValid:", isFormValid);
   }, [aman, isFormValid]);
 
   // Handler untuk file input
-  const handleBuktiChange = e => {
+  const handleBuktiChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = ev => {
+      reader.onload = (ev) => {
         setCropImageSrc(ev.target.result);
         setShowCropper(true);
       };
@@ -146,29 +148,29 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
       };
 
       const croppedImage = await getCroppedImg(cropImageSrc, cropArea);
-      const file = new File([croppedImage], 'bukti-perbaikan.jpg', {
-        type: 'image/jpeg',
+      const file = new File([croppedImage], "bukti-perbaikan.jpg", {
+        type: "image/jpeg",
       });
       setBuktiPerbaikan(file);
       setBuktiPreview(URL.createObjectURL(croppedImage));
       setShowCropper(false);
       setCropImageSrc(null);
     } catch (e) {
-      console.error('Error cropping image:', e);
+      console.error("Error cropping image:", e);
       // Fallback: gunakan gambar asli tanpa crop
       try {
         const response = await fetch(cropImageSrc);
         const blob = await response.blob();
-        const file = new File([blob], 'bukti-perbaikan.jpg', {
-          type: 'image/jpeg',
+        const file = new File([blob], "bukti-perbaikan.jpg", {
+          type: "image/jpeg",
         });
         setBuktiPerbaikan(file);
         setBuktiPreview(cropImageSrc);
         setShowCropper(false);
         setCropImageSrc(null);
       } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-        setError('Gagal memproses gambar. Silakan coba lagi.');
+        console.error("Fallback error:", fallbackError);
+        setError("Gagal memproses gambar. Silakan coba lagi.");
         setShowCropper(false);
         setCropImageSrc(null);
       }
@@ -180,13 +182,13 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
     setCropImageSrc(null);
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
-    console.log('=== DEBUG TAKE 5 MOBILE ===');
-    console.log('Form values:', {
+    console.log("=== DEBUG TAKE 5 MOBILE ===");
+    console.log("Form values:", {
       site,
       detailLokasi,
       potensiBahaya,
@@ -199,44 +201,44 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
       deskripsiPerbaikan,
       deskripsiKondisi,
     });
-    console.log('isFormValid:', isFormValid);
+    console.log("isFormValid:", isFormValid);
 
     // Validasi manual untuk file bukti
-    if (aman === 'perbaikan' && !buktiPerbaikan) {
+    if (aman === "perbaikan" && !buktiPerbaikan) {
       setLoading(false);
-      setError('Silakan upload bukti foto terlebih dahulu.');
+      setError("Silakan upload bukti foto terlebih dahulu.");
       return;
     }
 
-    if (aman === 'stop' && !deskripsiKondisi.trim()) {
+    if (aman === "stop" && !deskripsiKondisi.trim()) {
       setLoading(false);
-      setError('Silakan isi deskripsi kondisi terlebih dahulu.');
+      setError("Silakan isi deskripsi kondisi terlebih dahulu.");
       return;
     }
 
     try {
       let buktiUrl = null;
       if (buktiPerbaikan) {
-        const fileExt = buktiPerbaikan.name.split('.').pop();
+        const fileExt = buktiPerbaikan.name.split(".").pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `take5-bukti/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('img-test')
+          .from("img-test")
           .upload(filePath, buktiPerbaikan);
 
         if (uploadError) {
-          throw new Error('Error uploading bukti');
+          throw new Error("Error uploading bukti");
         }
 
         const { data } = supabase.storage
-          .from('img-test')
+          .from("img-test")
           .getPublicUrl(filePath);
         buktiUrl = data.publicUrl;
       }
 
       // Tentukan status berdasarkan kondisi kerja
-      const status = aman === 'stop' ? 'pending' : 'closed';
+      const status = aman === "stop" ? "pending" : "closed";
 
       // Log data yang akan dikirim untuk debugging
       const take5Data = {
@@ -244,7 +246,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
         tanggal: getToday(),
         site: site,
         detail_lokasi: detailLokasi,
-        judul_pekerjaan: 'Take 5 Assessment', // Field required di database
+        judul_pekerjaan: "Take 5 Assessment", // Field required di database
         potensi_bahaya: potensiBahaya,
         q1: q1,
         q2: q2,
@@ -252,8 +254,8 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
         q4: q4,
         aman: aman,
         status: status,
-        pelapor_nama: user.nama || 'Unknown', // Nama pelapor dari user login
-        nrp: user.nrp || '', // NRP dari user login
+        pelapor_nama: user.nama || "Unknown", // Nama pelapor dari user login
+        nrp: user.nrp || "", // NRP dari user login
       };
 
       // Tambahkan field opsional hanya jika ada data
@@ -267,38 +269,38 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
         take5Data.deskripsi_kondisi = deskripsiKondisi; // Tambahkan deskripsi kondisi
       }
 
-      console.log('Data yang akan dikirim ke Supabase:', take5Data);
-      console.log('User data for pelapor_nama:', user);
-      console.log('User nama:', user.nama);
-      console.log('User nrp:', user.nrp);
+      console.log("Data yang akan dikirim ke Supabase:", take5Data);
+      console.log("User data for pelapor_nama:", user);
+      console.log("User nama:", user.nama);
+      console.log("User nrp:", user.nrp);
 
-      const { data, error } = await supabase.from('take_5').insert(take5Data);
+      const { data, error } = await supabase.from("take_5").insert(take5Data);
 
-      console.log('Supabase response:', { data, error });
+      console.log("Supabase response:", { data, error });
 
       if (error) {
-        console.error('Supabase error details:', error);
+        console.error("Supabase error details:", error);
         throw error;
       }
 
-      console.log('Take 5 berhasil disimpan!');
+      console.log("Take 5 berhasil disimpan!");
       setSuccess(true);
 
       // Jika kondisi kerja adalah "stop", redirect ke Hazard Report setelah 2 detik
-      if (aman === 'stop') {
+      if (aman === "stop") {
         // Reset form immediately untuk STOP
-        setSite(user.site || '');
-        setDetailLokasi('');
-        setPotensiBahaya('');
+        setSite(user.site || "");
+        setDetailLokasi("");
+        setPotensiBahaya("");
         setQ1(null);
         setQ2(null);
         setQ3(null);
         setQ4(null);
-        setAman('');
+        setAman("");
         setBuktiPerbaikan(null);
         setBuktiPreview(null);
-        setDeskripsiPerbaikan('');
-        setDeskripsiKondisi('');
+        setDeskripsiPerbaikan("");
+        setDeskripsiKondisi("");
 
         setTimeout(() => {
           onRedirectHazard();
@@ -307,23 +309,23 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
         // Reset form after 3 seconds untuk kondisi lain (aman dan perbaikan)
         setTimeout(() => {
           setSuccess(false);
-          setSite(user.site || '');
-          setDetailLokasi('');
-          setPotensiBahaya('');
+          setSite(user.site || "");
+          setDetailLokasi("");
+          setPotensiBahaya("");
           setQ1(null);
           setQ2(null);
           setQ3(null);
           setQ4(null);
-          setAman('');
+          setAman("");
           setBuktiPerbaikan(null);
           setBuktiPreview(null);
-          setDeskripsiPerbaikan('');
-          setDeskripsiKondisi('');
+          setDeskripsiPerbaikan("");
+          setDeskripsiKondisi("");
         }, 3000);
       }
     } catch (err) {
-      console.error('Error submitting take 5:', err);
-      setError('Gagal menyimpan data Take 5. Silakan coba lagi.');
+      console.error("Error submitting take 5:", err);
+      setError("Gagal menyimpan data Take 5. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -331,56 +333,56 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
 
   // Styles untuk mobile
   const contentAreaStyle = {
-    width: '100vw',
-    minHeight: '100vh', // ubah dari height fixed ke minHeight
-    background: '#f3f4f6',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: '0px',
-    overflow: 'auto', // ubah dari hidden ke auto untuk allow scroll
+    width: "100vw",
+    minHeight: "100vh", // ubah dari height fixed ke minHeight
+    background: "#f3f4f6",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    padding: "0px",
+    overflow: "auto", // ubah dari hidden ke auto untuk allow scroll
   };
 
   const mobileCardStyle = {
-    background: '#fff',
+    background: "#fff",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomLeftRadius: 16, // tambahkan border radius bottom
     borderBottomRightRadius: 16, // tambahkan border radius bottom
-    boxShadow: '0 2px 16px #0001',
+    boxShadow: "0 2px 16px #0001",
     paddingTop: 6,
     paddingRight: 6,
     paddingBottom: 80, // tambahkan padding bottom untuk space tombol submit
     paddingLeft: 6,
-    width: '100%',
+    width: "100%",
     maxWidth: 425, // fit untuk mobile 425px
     marginBottom: 0,
-    minHeight: '100vh', // ubah dari height fixed ke minHeight
+    minHeight: "100vh", // ubah dari height fixed ke minHeight
     // Hapus height fixed agar card bisa expand
   };
 
   // Tambahkan style khusus untuk card header mobile agar lebih rapat
   const cardHeaderMobileStyle = {
-    background: '#fff',
+    background: "#fff",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    padding: '8px 0 4px 0', // lebih rapat atas bawah
+    padding: "8px 0 4px 0", // lebih rapat atas bawah
     marginBottom: 0,
-    textAlign: 'center',
+    textAlign: "center",
   };
 
   const headerStyle = {
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 2, // lebih rapat
     marginTop: 0,
     padding: 0, // lebih rapat
   };
 
   const formStyle = {
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
     gap: 2, // lebih rapat
     flex: 1,
     // Hapus overflow hidden agar form bisa scroll
@@ -388,87 +390,87 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
 
   const fieldMargin = {
     marginBottom: 4, // lebih rapat
-    width: '90%', // samakan lebar
-    marginLeft: 'auto',
-    marginRight: 'auto',
+    width: "90%", // samakan lebar
+    marginLeft: "auto",
+    marginRight: "auto",
     marginTop: 8, // jarak dari judul
   };
 
   const labelStyle = {
     fontWeight: 600,
-    color: '#222',
+    color: "#222",
     marginBottom: 2,
-    display: 'block',
+    display: "block",
     fontSize: 14, // besarkan lagi
   };
 
   const inputStyle = {
-    width: '100%',
+    width: "100%",
     borderRadius: 8,
     padding: 4, // lebih kecil
     fontSize: 13, // besarkan lagi
-    border: '1px solid #d1d5db',
+    border: "1px solid #d1d5db",
   };
 
   const questionBtnGroupStyle = {
-    display: 'flex',
+    display: "flex",
     gap: 4, // lebih rapat
     marginTop: 2,
-    justifyContent: 'center',
+    justifyContent: "center",
   };
 
   const radioBtnStyle = (active, color, readOnly) => ({
     flex: 1,
     minWidth: 60, // lebih kecil
     maxWidth: 90, // lebih kecil
-    padding: '6px 4px', // lebih kecil
+    padding: "6px 4px", // lebih kecil
     borderRadius: 8,
-    border: '2px solid',
+    border: "2px solid",
     fontSize: 12, // lebih kecil
     fontWeight: 600,
-    cursor: readOnly ? 'not-allowed' : 'pointer',
-    background: active ? color : '#fff',
-    color: active ? '#fff' : color,
+    cursor: readOnly ? "not-allowed" : "pointer",
+    background: active ? color : "#fff",
+    color: active ? "#fff" : color,
     borderColor: color,
     opacity: readOnly ? 0.7 : 1,
-    transition: 'background 0.2s, color 0.2s',
+    transition: "background 0.2s, color 0.2s",
   });
 
   const amanBtnGroupStyle = {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     gap: 4, // lebih rapat
     marginTop: 2,
   };
 
   const amanBtnStyle = (active, color) => ({
-    width: '100%',
-    padding: '8px 12px', // lebih kecil
+    width: "100%",
+    padding: "8px 12px", // lebih kecil
     borderRadius: 8,
-    border: '2px solid',
+    border: "2px solid",
     fontSize: 12, // lebih kecil
     fontWeight: 600,
-    cursor: 'pointer',
-    background: active ? color : '#fff',
-    color: active ? '#fff' : color,
+    cursor: "pointer",
+    background: active ? color : "#fff",
+    color: active ? "#fff" : color,
     borderColor: color,
-    transition: 'background 0.2s, color 0.2s',
-    textAlign: 'left',
+    transition: "background 0.2s, color 0.2s",
+    textAlign: "left",
     lineHeight: 1.3, // lebih rapat
   });
 
   const submitButtonStyle = {
-    background: '#2563eb',
-    color: '#fff',
-    border: 'none',
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
     borderRadius: 8,
-    padding: '8px 0', // lebih kecil
+    padding: "8px 0", // lebih kecil
     fontSize: 13, // lebih kecil
     fontWeight: 600,
-    cursor: 'pointer',
+    cursor: "pointer",
     marginTop: 8,
-    width: '60%', // tidak full width
-    alignSelf: 'center',
+    width: "60%", // tidak full width
+    alignSelf: "center",
   };
 
   // Crop modal
@@ -476,41 +478,41 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
     return (
       <div
         style={{
-          position: 'fixed',
+          position: "fixed",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
+          background: "rgba(0,0,0,0.8)",
           zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           padding: 20,
         }}
       >
         <div
           style={{
-            position: 'relative',
+            position: "relative",
             width: 280,
             height: 280,
-            background: '#fff',
+            background: "#fff",
             borderRadius: 12,
-            overflow: 'hidden',
+            overflow: "hidden",
           }}
         >
           <div
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: 10,
               left: 10,
               right: 10,
-              background: 'rgba(0,0,0,0.7)',
-              color: '#fff',
-              padding: '8px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              textAlign: 'center',
+              background: "rgba(0,0,0,0.7)",
+              color: "#fff",
+              padding: "8px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              textAlign: "center",
               zIndex: 10,
             }}
           >
@@ -518,62 +520,62 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
           </div>
           <div
             style={{
-              position: 'relative',
-              width: '100%',
-              height: '100%',
-              overflow: 'hidden',
+              position: "relative",
+              width: "100%",
+              height: "100%",
+              overflow: "hidden",
             }}
           >
             <img
               src={cropImageSrc}
               alt="Crop"
               style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
               }}
             />
             {/* Crop overlay */}
             <div
               style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '80%',
-                height: '80%',
-                border: '2px solid #fff',
-                boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)',
-                cursor: 'move',
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "80%",
+                height: "80%",
+                border: "2px solid #fff",
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
+                cursor: "move",
               }}
             />
           </div>
           <div
             style={{
-              position: 'absolute',
+              position: "absolute",
               bottom: 20,
               left: 0,
               right: 0,
-              display: 'flex',
-              justifyContent: 'center',
+              display: "flex",
+              justifyContent: "center",
               gap: 20,
             }}
           >
             <button
               onClick={handleCropCancel}
               style={{
-                background: '#ef4444',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '50%',
+                background: "#ef4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
               }}
             >
               ✕
@@ -583,33 +585,33 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                 try {
                   const response = await fetch(cropImageSrc);
                   const blob = await response.blob();
-                  const file = new File([blob], 'bukti-perbaikan.jpg', {
-                    type: 'image/jpeg',
+                  const file = new File([blob], "bukti-perbaikan.jpg", {
+                    type: "image/jpeg",
                   });
                   setBuktiPerbaikan(file);
                   setBuktiPreview(cropImageSrc);
                   setShowCropper(false);
                   setCropImageSrc(null);
                 } catch (error) {
-                  console.error('Error using original image:', error);
-                  setError('Gagal memproses gambar. Silakan coba lagi.');
+                  console.error("Error using original image:", error);
+                  setError("Gagal memproses gambar. Silakan coba lagi.");
                   setShowCropper(false);
                   setCropImageSrc(null);
                 }
               }}
               style={{
-                background: '#6b7280',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '50%',
+                background: "#6b7280",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
                 width: 40,
                 height: 40,
                 fontSize: 12,
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
               }}
               title="Gunakan gambar asli"
             >
@@ -618,18 +620,18 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
             <button
               onClick={handleCropConfirm}
               style={{
-                background: '#22c55e',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '50%',
+                background: "#22c55e",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
                 width: 40,
                 height: 40,
                 fontSize: 18,
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
               }}
             >
               ✓
@@ -642,6 +644,83 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
 
   return (
     <div style={contentAreaStyle}>
+      {/* Header - Orange seperti TasklistMobile */}
+      <div
+        style={{
+          background: "#f97316", // Orange
+          padding: "16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "relative",
+          width: "100%",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 600,
+              color: "white",
+              textAlign: "center",
+              flex: 1,
+            }}
+          >
+            Take 5
+          </h2>
+        </div>
+        {/* User Avatar */}
+        <div
+          style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "14px",
+            fontWeight: "600",
+            color: "#f97316",
+          }}
+        >
+          {user?.nama?.charAt(0).toUpperCase() || "U"}
+        </div>
+      </div>
+
+      {/* Back Button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            position: "absolute",
+            top: "16px",
+            left: "16px",
+            background: "none",
+            border: "none",
+            color: "white",
+            cursor: "pointer",
+            padding: "8px",
+            borderRadius: "8px",
+            zIndex: 20,
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+      )}
+
       <div
         style={{
           ...mobileCardStyle,
@@ -650,65 +729,6 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
           // Hapus paddingBottom dan marginBottom yang memaksa height
         }}
       >
-        <div style={cardHeaderMobileStyle}>
-          {/* Back Button */}
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="back-button-no-hover"
-              style={{
-                position: 'absolute',
-                left: '16px',
-                top: '8px',
-                background: 'none',
-                border: 'none',
-                color: '#3b82f6',
-                cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                zIndex: 20,
-                transition: 'none',
-                transform: 'none',
-                boxShadow: 'none',
-              }}
-              onMouseEnter={e => {
-                e.target.style.transform = 'none';
-                e.target.style.boxShadow = 'none';
-              }}
-              onMouseLeave={e => {
-                e.target.style.transform = 'none';
-                e.target.style.boxShadow = 'none';
-              }}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
-          )}
-          <h2
-            style={{
-              margin: 0,
-              fontWeight: 800,
-              fontSize: 18, // besarkan lagi
-              color: '#2563eb',
-              letterSpacing: 1,
-              textAlign: 'center',
-              lineHeight: 1.1, // lebih rapat
-            }}
-          >
-            Take 5
-          </h2>
-        </div>
-
         <form onSubmit={handleSubmit} style={formStyle}>
           {/* Tanggal */}
           <div style={fieldMargin}>
@@ -716,7 +736,11 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
             <input
               value={getToday()}
               readOnly
-              style={{ ...inputStyle, background: '#e5e7eb', border: 'none' }}
+              style={{
+                ...inputStyle,
+                background: "#0b1220",
+                border: "1px solid #334155",
+              }}
             />
           </div>
 
@@ -725,7 +749,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
             <label style={labelStyle}>Lokasi Kerja</label>
             <MobileSiteSelector
               value={site}
-              onChange={e => setSite(e.target.value)}
+              onChange={(e) => setSite(e.target.value)}
               placeholder="Pilih Lokasi"
               style={inputStyle}
               required
@@ -749,7 +773,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                   <input
                     type="text"
                     value={detailLokasi}
-                    onChange={e => setDetailLokasi(e.target.value)}
+                    onChange={(e) => setDetailLokasi(e.target.value)}
                     required
                     placeholder="Ketik detail lokasi lainnya..."
                     style={{
@@ -763,7 +787,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <input
                 type="text"
                 value={detailLokasi}
-                onChange={e => setDetailLokasi(e.target.value)}
+                onChange={(e) => setDetailLokasi(e.target.value)}
                 required
                 placeholder="Ketik detail lokasi..."
                 style={inputStyle}
@@ -777,7 +801,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
             <input
               type="text"
               value={potensiBahaya}
-              onChange={e => setPotensiBahaya(e.target.value)}
+              onChange={(e) => setPotensiBahaya(e.target.value)}
               required
               placeholder="Contoh: Listrik, Ketinggian, dll"
               style={inputStyle}
@@ -793,7 +817,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <button
                 type="button"
                 onClick={() => setQ1(true)}
-                style={radioBtnStyle(q1 === true, '#22c55e', false)}
+                style={radioBtnStyle(q1 === true, "#22c55e", false)}
               >
                 Ya
               </button>
@@ -801,9 +825,9 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                 type="button"
                 onClick={() => setQ1(false)}
                 style={{
-                  ...radioBtnStyle(q1 === false, '#ef4444', false),
-                  borderWidth: q1 === false ? '3px' : '2px',
-                  boxShadow: q1 === false ? '0 0 0 2px #fef3c7' : 'none',
+                  ...radioBtnStyle(q1 === false, "#ef4444", false),
+                  borderWidth: q1 === false ? "3px" : "2px",
+                  boxShadow: q1 === false ? "0 0 0 2px #fef3c7" : "none",
                 }}
               >
                 Tidak
@@ -820,7 +844,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <button
                 type="button"
                 onClick={() => setQ2(true)}
-                style={radioBtnStyle(q2 === true, '#22c55e', false)}
+                style={radioBtnStyle(q2 === true, "#22c55e", false)}
               >
                 Ya
               </button>
@@ -828,9 +852,9 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                 type="button"
                 onClick={() => setQ2(false)}
                 style={{
-                  ...radioBtnStyle(q2 === false, '#ef4444', false),
-                  borderWidth: q2 === false ? '3px' : '2px',
-                  boxShadow: q2 === false ? '0 0 0 2px #fef3c7' : 'none',
+                  ...radioBtnStyle(q2 === false, "#ef4444", false),
+                  borderWidth: q2 === false ? "3px" : "2px",
+                  boxShadow: q2 === false ? "0 0 0 2px #fef3c7" : "none",
                 }}
               >
                 Tidak
@@ -847,7 +871,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <button
                 type="button"
                 onClick={() => setQ3(true)}
-                style={radioBtnStyle(q3 === true, '#22c55e', false)}
+                style={radioBtnStyle(q3 === true, "#22c55e", false)}
               >
                 Ya
               </button>
@@ -855,9 +879,9 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                 type="button"
                 onClick={() => setQ3(false)}
                 style={{
-                  ...radioBtnStyle(q3 === false, '#ef4444', false),
-                  borderWidth: q3 === false ? '3px' : '2px',
-                  boxShadow: q3 === false ? '0 0 0 2px #fef3c7' : 'none',
+                  ...radioBtnStyle(q3 === false, "#ef4444", false),
+                  borderWidth: q3 === false ? "3px" : "2px",
+                  boxShadow: q3 === false ? "0 0 0 2px #fef3c7" : "none",
                 }}
               >
                 Tidak
@@ -874,7 +898,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <button
                 type="button"
                 onClick={() => setQ4(true)}
-                style={radioBtnStyle(q4 === true, '#22c55e', false)}
+                style={radioBtnStyle(q4 === true, "#22c55e", false)}
               >
                 Ya
               </button>
@@ -882,9 +906,9 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                 type="button"
                 onClick={() => setQ4(false)}
                 style={{
-                  ...radioBtnStyle(q4 === false, '#ef4444', false),
-                  borderWidth: q4 === false ? '3px' : '2px',
-                  boxShadow: q4 === false ? '0 0 0 2px #fef3c7' : 'none',
+                  ...radioBtnStyle(q4 === false, "#ef4444", false),
+                  borderWidth: q4 === false ? "3px" : "2px",
+                  boxShadow: q4 === false ? "0 0 0 2px #fef3c7" : "none",
                 }}
               >
                 Tidak
@@ -901,25 +925,25 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <button
                 type="button"
                 onClick={() => {
-                  console.log('Setting aman to:', 'aman');
-                  setAman('aman');
+                  console.log("Setting aman to:", "aman");
+                  setAman("aman");
                 }}
                 disabled={isAmanButtonDisabled}
                 style={{
-                  ...amanBtnStyle(aman === 'aman', '#22c55e'),
+                  ...amanBtnStyle(aman === "aman", "#22c55e"),
                   opacity: isAmanButtonDisabled ? 0.5 : 1,
-                  cursor: isAmanButtonDisabled ? 'not-allowed' : 'pointer',
+                  cursor: isAmanButtonDisabled ? "not-allowed" : "pointer",
                   background: isAmanButtonDisabled
-                    ? '#f3f4f6'
-                    : aman === 'aman'
-                      ? '#22c55e'
-                      : '#fff',
+                    ? "#f3f4f6"
+                    : aman === "aman"
+                      ? "#22c55e"
+                      : "#fff",
                   color: isAmanButtonDisabled
-                    ? '#9ca3af'
-                    : aman === 'aman'
-                      ? '#fff'
-                      : '#22c55e',
-                  borderColor: isAmanButtonDisabled ? '#d1d5db' : '#22c55e',
+                    ? "#9ca3af"
+                    : aman === "aman"
+                      ? "#fff"
+                      : "#22c55e",
+                  borderColor: isAmanButtonDisabled ? "#d1d5db" : "#22c55e",
                 }}
               >
                 Ya
@@ -927,10 +951,10 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <button
                 type="button"
                 onClick={() => {
-                  console.log('Setting aman to:', 'perbaikan');
-                  setAman('perbaikan');
+                  console.log("Setting aman to:", "perbaikan");
+                  setAman("perbaikan");
                 }}
-                style={amanBtnStyle(aman === 'perbaikan', '#f59e0b')}
+                style={amanBtnStyle(aman === "perbaikan", "#f59e0b")}
               >
                 Saya perlu melakukan perbaikan terlebih dahulu, untuk
                 melanjutkan pekerjaan
@@ -938,10 +962,10 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
               <button
                 type="button"
                 onClick={() => {
-                  console.log('Setting aman to:', 'stop');
-                  setAman('stop');
+                  console.log("Setting aman to:", "stop");
+                  setAman("stop");
                 }}
-                style={amanBtnStyle(aman === 'stop', '#ef4444')}
+                style={amanBtnStyle(aman === "stop", "#ef4444")}
               >
                 STOP pekerjaan, lalu minta bantuan untuk perbaikan
               </button>
@@ -949,39 +973,39 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
           </div>
 
           {/* Bukti Perbaikan */}
-          {(aman === 'perbaikan' || aman === 'stop') && (
+          {(aman === "perbaikan" || aman === "stop") && (
             <>
               <div style={fieldMargin}>
                 <label style={labelStyle}>
-                  {aman === 'stop'
-                    ? 'Bukti Kondisi (Foto)'
-                    : 'Bukti Perbaikan (Foto)'}
+                  {aman === "stop"
+                    ? "Bukti Kondisi (Foto)"
+                    : "Bukti Perbaikan (Foto)"}
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   capture="environment"
                   // required (hapus ini)
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                   id="bukti-file-input"
                   name="bukti"
                   onChange={handleBuktiChange}
                 />
                 {buktiPreview ? (
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{ textAlign: "center" }}>
                     <img
                       src={buktiPreview}
                       alt="Preview"
                       onClick={() =>
-                        document.getElementById('bukti-file-input').click()
+                        document.getElementById("bukti-file-input").click()
                       }
                       style={{
-                        maxWidth: '100%',
+                        maxWidth: "100%",
                         maxHeight: 200,
                         borderRadius: 8,
                         marginTop: 8,
-                        border: '2px solid #e5e7eb',
-                        cursor: 'pointer',
+                        border: "2px solid #e5e7eb",
+                        cursor: "pointer",
                       }}
                       title="Klik untuk ganti foto"
                     />
@@ -990,21 +1014,21 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
                   <button
                     type="button"
                     onClick={() =>
-                      document.getElementById('bukti-file-input').click()
+                      document.getElementById("bukti-file-input").click()
                     }
                     style={{
-                      width: '100%',
-                      background: '#f3f4f6',
-                      border: '2px dashed #d1d5db',
+                      width: "100%",
+                      background: "#f3f4f6",
+                      border: "2px dashed #d1d5db",
                       borderRadius: 8,
-                      padding: '12px',
+                      padding: "12px",
                       fontSize: 13,
-                      color: '#6b7280',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
+                      color: "#6b7280",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
                     }}
                   >
                     <svg
@@ -1027,29 +1051,29 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
 
               <div style={fieldMargin}>
                 <label style={labelStyle}>
-                  {aman === 'stop'
-                    ? 'Deskripsi Kondisi'
-                    : 'Deskripsi Perbaikan'}
+                  {aman === "stop"
+                    ? "Deskripsi Kondisi"
+                    : "Deskripsi Perbaikan"}
                 </label>
                 <textarea
                   value={
-                    aman === 'stop' ? deskripsiKondisi : deskripsiPerbaikan
+                    aman === "stop" ? deskripsiKondisi : deskripsiPerbaikan
                   }
-                  onChange={e =>
-                    aman === 'stop'
+                  onChange={(e) =>
+                    aman === "stop"
                       ? setDeskripsiKondisi(e.target.value)
                       : setDeskripsiPerbaikan(e.target.value)
                   }
                   // required (hapus ini untuk menghindari error)
                   placeholder={
-                    aman === 'stop'
-                      ? 'Jelaskan kondisi yang tidak aman dan mengapa perlu bantuan'
-                      : 'Jelaskan perbaikan yang telah dilakukan'
+                    aman === "stop"
+                      ? "Jelaskan kondisi yang tidak aman dan mengapa perlu bantuan"
+                      : "Jelaskan perbaikan yang telah dilakukan"
                   }
                   style={{
                     ...inputStyle,
                     minHeight: 80,
-                    resize: 'vertical',
+                    resize: "vertical",
                   }}
                 />
               </div>
@@ -1060,12 +1084,12 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
           {error && (
             <div
               style={{
-                color: '#b91c1c',
+                color: "#b91c1c",
                 fontWeight: 700,
-                background: '#fee2e2',
+                background: "#fee2e2",
                 borderRadius: 8,
                 padding: 6,
-                border: '1.5px solid #b91c1c',
+                border: "1.5px solid #b91c1c",
                 fontSize: 13,
               }}
             >
@@ -1077,57 +1101,72 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack }) => {
           {success && (
             <div
               style={{
-                color: '#16a34a',
+                color: "#16a34a",
                 fontWeight: 700,
-                background: '#dcfce7',
+                background: "#dcfce7",
                 borderRadius: 8,
                 padding: 6,
-                border: '1.5px solid #22c55e',
+                border: "1.5px solid #22c55e",
                 fontSize: 13,
               }}
             >
-              {aman === 'stop'
-                ? 'Data Take 5 berhasil disimpan! Akan dialihkan ke Hazard Report...'
-                : 'Data Take 5 berhasil disimpan! Status: Closed'}
+              {aman === "stop"
+                ? "Data Take 5 berhasil disimpan! Akan dialihkan ke Hazard Report..."
+                : "Data Take 5 berhasil disimpan! Status: Closed"}
             </div>
           )}
 
           {/* Submit Button fixed di bawah card */}
           <div
             style={{
-              position: 'fixed',
+              position: "fixed",
               left: 0,
               right: 0,
               bottom: 56,
               zIndex: 100,
               maxWidth: 425,
-              margin: '0 auto',
+              margin: "0 auto",
             }}
           >
             <button
               type="submit"
               disabled={!isFormValid || loading}
               style={{
-                background: '#2563eb',
-                color: '#fff',
-                border: 'none',
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
                 borderTopLeftRadius: 12,
                 borderTopRightRadius: 12,
                 borderBottomLeftRadius: 0,
                 borderBottomRightRadius: 0,
-                padding: '12px 0',
+                padding: "12px 0",
                 fontSize: 14,
                 fontWeight: 600,
-                cursor: 'pointer',
-                width: '100%',
-                boxShadow: '0 -2px 8px #0001',
+                cursor: "pointer",
+                width: "100%",
+                boxShadow: "0 -2px 8px #0001",
               }}
             >
-              {loading ? 'Menyimpan...' : 'Simpan Take 5'}
+              {loading ? "Menyimpan..." : "Simpan Take 5"}
             </button>
           </div>
         </form>
       </div>
+
+      {/* Bottom Navigation */}
+      <MobileBottomNavigation
+        activeTab="take5"
+        onNavigate={(tab) => {
+          if (tab === "home") {
+            onBack && onBack();
+          } else if (tab === "profile") {
+            onNavigate && onNavigate("profile");
+          } else if (tab === "tasklist") {
+            onNavigate && onNavigate("tasklist");
+          }
+          // take5 tab tidak perlu handling karena sudah di halaman take5
+        }}
+      />
     </div>
   );
 };

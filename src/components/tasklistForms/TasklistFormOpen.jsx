@@ -1,43 +1,43 @@
-import React, { useState } from 'react';
-import { supabase } from '../../supabaseClient';
+import React, { useState } from "react";
+import { supabase } from "../../supabaseClient";
 
 function TasklistFormOpen({ hazard, onProgress, onReject, readOnly, onClose }) {
-  const [selected, setSelected] = useState(null); // 'ya' atau 'tidak'
-  const [alasan, setAlasan] = useState('');
+  const [selected, setSelected] = useState(null); // 'terima' atau 'tolak'
+  const [alasan, setAlasan] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   if (!hazard) {
     return (
-      <div style={{ color: '#ef4444', padding: 32 }}>
+      <div style={{ color: "#ef4444", padding: 32 }}>
         Data hazard tidak ditemukan.
       </div>
     );
   }
 
   const handleSubmit = async () => {
-    setError('');
-    if (selected === 'ya') {
+    setError("");
+    if (selected === "terima") {
       setLoading(true);
       const { error } = await supabase
-        .from('hazard_report')
-        .update({ status: 'Progress' })
-        .eq('id', hazard.id);
+        .from("hazard_report")
+        .update({ status: "Progress" })
+        .eq("id", hazard.id);
       setLoading(false);
       if (!error) {
         if (onProgress) onProgress();
         if (onClose) onClose(); // Tutup card setelah berhasil
       }
-    } else if (selected === 'tidak') {
+    } else if (selected === "tolak") {
       if (!alasan) {
-        setError('Alasan penolakan wajib diisi.');
+        setError("Alasan penolakan wajib diisi.");
         return;
       }
       setLoading(true);
       const { error } = await supabase
-        .from('hazard_report')
-        .update({ status: 'Reject at Open', alasan_penolakan_open: alasan })
-        .eq('id', hazard.id);
+        .from("hazard_report")
+        .update({ status: "Reject at Open", alasan_penolakan_open: alasan })
+        .eq("id", hazard.id);
       setLoading(false);
       if (!error) {
         if (onReject) onReject();
@@ -49,246 +49,441 @@ function TasklistFormOpen({ hazard, onProgress, onReject, readOnly, onClose }) {
   return (
     <div
       style={{
-        display: 'flex',
-        gap: 32,
-        background: '#fff',
-        borderRadius: 16,
-        boxShadow: '0 4px 24px #2563eb33',
-        padding: 32,
-        maxWidth: 1100,
-        margin: '40px auto',
-        color: '#232946',
-        position: 'relative',
+        width: "100%",
+        height: "100vh",
+        background: "transparent",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "flex-start",
+        padding: "0 0 0 120px",
+        overflow: "hidden",
       }}
     >
-      {/* Tombol close kanan atas */}
-      {onClose && (
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            background: 'transparent',
-            border: 'none',
-            fontSize: 24,
-            color: '#888',
-            cursor: 'pointer',
-            zIndex: 10,
-          }}
-          title="Tutup"
-        >
-          ×
-        </button>
-      )}
-      {/* Kiri: Detail hazard report */}
-      <div
-        style={{ flex: 1, borderRight: '1px solid #e5e7eb', paddingRight: 32 }}
-      >
-        <h3 style={{ marginBottom: 24 }}>Detail Hazard Report</h3>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '160px 1fr',
-            rowGap: 12,
-            columnGap: 12,
-            alignItems: 'center',
-          }}
-        >
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>Site:</div>
-          <div>{hazard.lokasi}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Nama Pelapor:
-          </div>
-          <div>{hazard.pelapor_nama}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            NRP Pelapor:
-          </div>
-          <div>{hazard.pelapor_nrp}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>PIC:</div>
-          <div>{hazard.pic}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Deskripsi Temuan:
-          </div>
-          <div>{hazard.deskripsi_temuan}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Quick Action:
-          </div>
-          <div>{hazard.quick_action}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Ketidaksesuaian:
-          </div>
-          <div>{hazard.ketidaksesuaian}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Sub Ketidaksesuaian:
-          </div>
-          <div>{hazard.sub_ketidaksesuaian}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Keterangan Lokasi:
-          </div>
-          <div>{hazard.keterangan_lokasi}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Detail Lokasi:
-          </div>
-          <div>{hazard.detail_lokasi}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>
-            Action Plan:
-          </div>
-          <div>{hazard.action_plan}</div>
-          <div style={{ fontWeight: 700, textAlign: 'right' }}>Due Date:</div>
-          <div>{hazard.due_date}</div>
-        </div>
-        {/* Evidence temuan hazard di bawah grid */}
-        {hazard.evidence && (
-          <div
-            style={{
-              marginTop: 24,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-            }}
-          >
-            <div
-              style={{ fontWeight: 700, textAlign: 'right', marginBottom: 4 }}
-            >
-              Evidence Temuan:
-            </div>
-            <img
-              src={hazard.evidence}
-              alt="evidence temuan"
-              style={{ maxWidth: 180, borderRadius: 8, marginTop: 4 }}
-            />
-          </div>
-        )}
-      </div>
-      {/* Kanan: Pilihan aksi */}
       <div
         style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          gap: 24,
+          background: "transparent",
+          borderRadius: 18,
+          boxShadow: "none",
+          padding: 16,
+          maxWidth: 1400,
+          width: "100%",
+          margin: "0",
+          height: "100vh",
         }}
       >
-        <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 24 }}>
-          Apakah Anda setuju untuk memproses hazard ini?
-        </div>
-        {readOnly && (
-          <div style={{ color: '#888', marginBottom: 8, fontStyle: 'italic' }}>
-            Anda tidak memiliki akses untuk aksi pada status ini.
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 24 }}>
-          <button
-            type="button"
-            onClick={() => setSelected('ya')}
-            disabled={loading || readOnly}
-            style={{
-              background: selected === 'ya' ? '#10b981' : '#fff',
-              color: selected === 'ya' ? '#fff' : '#232946',
-              border: '2px solid #10b981',
-              borderRadius: 8,
-              padding: '12px 32px',
-              fontWeight: 600,
-              fontSize: 16,
-              cursor: readOnly ? 'not-allowed' : 'pointer',
-              boxShadow: selected === 'ya' ? '0 2px 8px #10b98133' : 'none',
-              transition: 'all 0.2s',
-              opacity: readOnly ? 0.7 : 1,
-            }}
-            onMouseEnter={e => {
-              if (!readOnly && selected !== 'ya')
-                e.currentTarget.style.background = '#e6f9f3';
-            }}
-            onMouseLeave={e => {
-              if (!readOnly && selected !== 'ya')
-                e.currentTarget.style.background = '#fff';
-            }}
-          >
-            Ya
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelected('tidak')}
-            disabled={loading || readOnly}
-            style={{
-              background: selected === 'tidak' ? '#ef4444' : '#fff',
-              color: selected === 'tidak' ? '#fff' : '#232946',
-              border: '2px solid #ef4444',
-              borderRadius: 8,
-              padding: '12px 32px',
-              fontWeight: 600,
-              fontSize: 16,
-              cursor: readOnly ? 'not-allowed' : 'pointer',
-              boxShadow: selected === 'tidak' ? '0 2px 8px #ef444433' : 'none',
-              transition: 'all 0.2s',
-              opacity: readOnly ? 0.7 : 1,
-            }}
-            onMouseEnter={e => {
-              if (!readOnly && selected !== 'tidak')
-                e.currentTarget.style.background = '#fde8e8';
-            }}
-            onMouseLeave={e => {
-              if (!readOnly && selected !== 'tidak')
-                e.currentTarget.style.background = '#fff';
-            }}
-          >
-            Tidak
-          </button>
-        </div>
-        {selected === 'tidak' && (
-          <div style={{ width: '100%', marginTop: 16 }}>
-            <label>
-              Alasan Penolakan <span style={{ color: '#ef4444' }}>*</span>
-            </label>
-            <textarea
-              value={alasan}
-              onChange={e => setAlasan(e.target.value)}
-              required
-              rows={3}
-              style={{
-                width: '100%',
-                padding: 8,
-                borderRadius: 6,
-                border: '1px solid #ccc',
-                background: readOnly ? '#f3f4f6' : '#fff',
-                color: readOnly ? '#888' : '#232946',
-              }}
-              disabled={readOnly}
-            />
-          </div>
-        )}
-        {error && <div style={{ color: '#ef4444', marginTop: 8 }}>{error}</div>}
-        <button
-          onClick={handleSubmit}
-          disabled={
-            loading ||
-            !selected ||
-            (selected === 'tidak' && !alasan) ||
-            readOnly
-          }
+        <div
           style={{
-            marginTop: 32,
-            background: readOnly ? '#888' : '#232946',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            padding: '12px 0',
-            fontWeight: 600,
-            fontSize: 16,
-            cursor: readOnly
-              ? 'not-allowed'
-              : selected
-                ? 'pointer'
-                : 'not-allowed',
-            width: 180,
-            opacity: readOnly ? 0.7 : selected ? 1 : 0.6,
+            display: "flex",
+            gap: 24,
+            background: "transparent",
+            border: "none",
+            borderRadius: 16,
+            padding: 24,
+            color: "#e5e7eb",
+            position: "relative",
+            height: "100vh",
+            alignItems: "flex-start",
           }}
         >
-          {loading ? 'Menyimpan...' : 'Submit'}
-        </button>
+          {/* Tombol close kanan atas */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                fontSize: 24,
+                color: "#9ca3af",
+                cursor: "pointer",
+                zIndex: 10,
+                padding: 0,
+                width: "auto",
+                height: "auto",
+              }}
+              title="Tutup"
+            >
+              ×
+            </button>
+          )}
+
+          {/* Kiri: Detail hazard report */}
+          <div
+            style={{
+              flex: 1,
+              borderRight: "1px solid #334155",
+              paddingRight: 24,
+              color: "#e5e7eb",
+              height: "100vh",
+              overflow: "hidden",
+            }}
+          >
+            <h3 style={{ marginBottom: 24, color: "#60a5fa", fontWeight: 600 }}>
+              Detail Hazard Report
+            </h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "160px 1fr",
+                rowGap: 12,
+                columnGap: 12,
+                alignItems: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Site:
+              </div>
+              <div>{hazard.lokasi || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Nama Pelapor:
+              </div>
+              <div>{hazard.pelapor_nama || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                NRP Pelapor:
+              </div>
+              <div>{hazard.pelapor_nrp || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                PIC:
+              </div>
+              <div>{hazard.pic || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Deskripsi Temuan:
+              </div>
+              <div>{hazard.deskripsi_temuan || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Quick Action:
+              </div>
+              <div>{hazard.quick_action || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Ketidaksesuaian:
+              </div>
+              <div>{hazard.ketidaksesuaian || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Sub Ketidaksesuaian:
+              </div>
+              <div>{hazard.sub_ketidaksesuaian || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Keterangan Lokasi:
+              </div>
+              <div>{hazard.keterangan_lokasi || "-"}</div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  textAlign: "right",
+                  color: "#9ca3af",
+                }}
+              >
+                Detail Lokasi:
+              </div>
+              <div>{hazard.detail_lokasi || "-"}</div>
+            </div>
+            {/* Evidence temuan hazard di bawah grid */}
+            {hazard.evidence && (
+              <div
+                style={{
+                  marginTop: 24,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    textAlign: "right",
+                    marginBottom: 4,
+                    color: "#9ca3af",
+                  }}
+                >
+                  Evidence:
+                </div>
+                <img
+                  src={hazard.evidence}
+                  alt="evidence temuan"
+                  style={{ maxWidth: 180, borderRadius: 8, marginTop: 4 }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Kanan: Rencana Perbaikan (Read Only) + Form Aksi */}
+          <div
+            style={{
+              flex: 0.8,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              color: "#e5e7eb",
+              height: "100vh",
+              overflow: "hidden",
+            }}
+          >
+            <h3 style={{ marginBottom: 16, color: "#60a5fa", fontWeight: 600 }}>
+              Rencana Perbaikan
+            </h3>
+
+            {/* Action Plan (Read Only) */}
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  marginBottom: 8,
+                  color: "#9ca3af",
+                }}
+              >
+                Action Plan:
+              </div>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                  minHeight: 100,
+                }}
+              >
+                {hazard.action_plan || "Tidak ada action plan"}
+              </div>
+            </div>
+
+            {/* Due Date (Read Only) */}
+            <div style={{ marginBottom: 24 }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  marginBottom: 8,
+                  color: "#9ca3af",
+                }}
+              >
+                Due Date:
+              </div>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                }}
+              >
+                {hazard.due_date || "Tidak ada due date"}
+              </div>
+            </div>
+
+            {/* Form Aksi - Hanya untuk Submitter/Pelapor */}
+            {!readOnly && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  gap: 24,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 8,
+                    color: "#e5e7eb",
+                    textAlign: "center",
+                  }}
+                >
+                  Pilih Aksi:
+                </div>
+                <div style={{ display: "flex", gap: 24 }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected("terima")}
+                    disabled={loading}
+                    style={{
+                      background:
+                        selected === "terima" ? "#10b981" : "transparent",
+                      color: selected === "terima" ? "#fff" : "#10b981",
+                      border: "2px solid #10b981",
+                      borderRadius: 8,
+                      padding: "12px 32px",
+                      fontWeight: 600,
+                      fontSize: 16,
+                      cursor: "pointer",
+                      boxShadow:
+                        selected === "terima" ? "0 2px 8px #10b98133" : "none",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selected !== "terima")
+                        e.currentTarget.style.background = "#10b981";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selected !== "terima")
+                        e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    Terima
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelected("tolak")}
+                    disabled={loading}
+                    style={{
+                      background:
+                        selected === "tolak" ? "#ef4444" : "transparent",
+                      color: selected === "tolak" ? "#fff" : "#ef4444",
+                      border: "2px solid #ef4444",
+                      borderRadius: 8,
+                      padding: "12px 32px",
+                      fontWeight: 600,
+                      fontSize: 16,
+                      cursor: "pointer",
+                      boxShadow:
+                        selected === "tolak" ? "0 2px 8px #ef444433" : "none",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selected !== "tolak")
+                        e.currentTarget.style.background = "#ef4444";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selected !== "tolak")
+                        e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    Tolak
+                  </button>
+                </div>
+                {selected === "tolak" && (
+                  <div style={{ width: "100%", marginTop: 16 }}>
+                    <label
+                      style={{
+                        color: "#e5e7eb",
+                        marginBottom: 8,
+                        display: "block",
+                      }}
+                    >
+                      Alasan Penolakan{" "}
+                      <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <textarea
+                      value={alasan}
+                      onChange={(e) => setAlasan(e.target.value)}
+                      required
+                      rows={3}
+                      style={{
+                        width: "100%",
+                        padding: 12,
+                        borderRadius: 6,
+                        border: "1px solid #374151",
+                        background: "#1f2937",
+                        color: "#e5e7eb",
+                      }}
+                      placeholder="Masukkan alasan penolakan..."
+                    />
+                  </div>
+                )}
+                {error && (
+                  <div
+                    style={{
+                      color: "#ef4444",
+                      marginTop: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={
+                    loading || !selected || (selected === "tolak" && !alasan)
+                  }
+                  style={{
+                    marginTop: 16,
+                    background: "#60a5fa",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "12px 0",
+                    fontWeight: 600,
+                    fontSize: 16,
+                    cursor: selected ? "pointer" : "not-allowed",
+                    width: 180,
+                    opacity: selected ? 1 : 0.6,
+                  }}
+                >
+                  {loading ? "Menyimpan..." : "Submit"}
+                </button>
+              </div>
+            )}
+
+            {/* Pesan untuk non-Submitter */}
+            {readOnly && (
+              <div
+                style={{
+                  color: "#9ca3af",
+                  marginTop: 16,
+                  fontStyle: "italic",
+                  textAlign: "center",
+                  padding: "20px",
+                  background: "#1f2937",
+                  borderRadius: 8,
+                  border: "1px solid #374151",
+                }}
+              >
+                Anda tidak memiliki akses untuk melakukan aksi pada status ini.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
