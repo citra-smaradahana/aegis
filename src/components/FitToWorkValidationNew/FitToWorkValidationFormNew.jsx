@@ -58,14 +58,16 @@ function FitToWorkValidationFormNew({
       ].includes(validation.jabatan);
     } else if (userJabatan === "Field Leading Hand") {
       // Field Leading Hand hanya bisa validasi Operator MMU, Crew, Quality Control, dan Blaster
-      return [
+      const jabatanYangBisaDivalidasiFLH = [
         "Operator MMU",
         "Crew",
+        "crew",
         "Quality Controller",
-        "Quality Control", // Jika ada variasi nama
-        "Blaster", // Crew Blasting
-        "Crew Blasting", // Jika ada variasi nama
-      ].includes(validation.jabatan);
+        "Quality Control",
+        "Blaster",
+        "Crew Blasting",
+      ];
+      return jabatanYangBisaDivalidasiFLH.includes(validation.jabatan);
     } else if (userJabatan === "Asst. Penanggung Jawab Operasional") {
       return ["Blaster", "Field Leading Hand", "Plant Leading Hand"].includes(validation.jabatan);
     }

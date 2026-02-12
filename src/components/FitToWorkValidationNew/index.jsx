@@ -71,10 +71,11 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
           .in("jabatan", [
             "Operator MMU",
             "Crew",
+            "crew", // variasi casing di DB
             "Quality Controller",
-            "Quality Control", // Jika ada variasi nama
-            "Blaster", // Crew Blasting
-            "Crew Blasting", // Jika ada variasi nama
+            "Quality Control",
+            "Blaster",
+            "Crew Blasting",
           ])
           .eq("workflow_status", "Pending");
         console.log("fetchValidations - Field Leading Hand filter applied");

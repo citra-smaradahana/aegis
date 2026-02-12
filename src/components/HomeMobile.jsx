@@ -1,8 +1,24 @@
 import React from "react";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 
+// Hanya jabatan validator yang boleh melihat menu Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
+function canAccessFitToWorkValidation(user) {
+  if (!user) return false;
+  if (user?.role === "admin" || user?.jabatan === "Admin") return true;
+  const jabatan = (user?.jabatan || "").trim();
+  const validatorJabatan = [
+    "Field Leading Hand",
+    "Plant Leading Hand",
+    "Asst. Penanggung Jawab Operasional",
+    "Penanggung Jawab Operasional",
+    "SHE",
+    "SHERQ Officer",
+  ];
+  return validatorJabatan.includes(jabatan);
+}
+
 function HomeMobile({ user, onNavigate }) {
-  const menuItems = [
+  const allMenuItems = [
     {
       key: "fit-to-work",
       label: "Fit To Work",
@@ -39,6 +55,12 @@ function HomeMobile({ user, onNavigate }) {
       description: "Planned Task Observation",
     },
   ];
+
+  const menuItems = allMenuItems.filter(
+    (item) =>
+      item.key !== "fit-to-work-validation" ||
+      canAccessFitToWorkValidation(user)
+  );
 
   return (
     <div

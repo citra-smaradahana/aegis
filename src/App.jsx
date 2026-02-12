@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
+import { sessionManager, setupSessionAutoExtend } from "./utils/sessionManager";
 import Login from "./components/Login";
 import MonitoringPage from "./components/MonitoringPage";
 import SiteSelectionPage from "./components/SiteSelectionPage";
@@ -25,6 +26,7 @@ function App() {
   const [isMonitoringOpen, setIsMonitoringOpen] = useState(false);
   const [monitoringAnimationKey, setMonitoringAnimationKey] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const sessionAutoExtendSetup = useRef(false);
 
   // Handle online/offline status
   useEffect(() => {
@@ -50,20 +52,42 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Restore session on load (tetap login di web/PWA)
+  useEffect(() => {
+    const savedUser = sessionManager.getSession();
+    if (savedUser) {
+      setUser(savedUser);
+      setCurrentPage("main-app");
+      if (!sessionAutoExtendSetup.current) {
+        setupSessionAutoExtend();
+        sessionAutoExtendSetup.current = true;
+      }
+    }
+  }, []);
+
   const handleLogin = (userData) => {
     setUser(userData);
-    // Langsung masuk ke main app setelah login
+    sessionManager.saveSession(userData);
     setCurrentPage("main-app");
+    if (!sessionAutoExtendSetup.current) {
+      setupSessionAutoExtend();
+      sessionAutoExtendSetup.current = true;
+    }
   };
 
   const handleLogout = () => {
+    sessionManager.clearSession();
     setUser(null);
     setCurrentPage("login");
     setActiveMenu("dashboard");
   };
 
   const handleSiteSelection = (selectedSite) => {
-    setUser((prev) => ({ ...prev, site: selectedSite }));
+    setUser((prev) => {
+      const updated = { ...prev, site: selectedSite };
+      sessionManager.saveSession(updated);
+      return updated;
+    });
     setCurrentPage("main-app");
   };
 
@@ -93,6 +117,21 @@ function App() {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const canAccessMonitoring =
       user?.role === "evaluator" || user?.role === "admin";
+    // Hanya jabatan validator yang boleh melihat dan mengakses Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
+    const canAccessFitToWorkValidation = () => {
+      if (!user) return false;
+      if (user?.role === "admin" || user?.jabatan === "Admin") return true;
+      const jabatan = (user?.jabatan || "").trim();
+      const validatorJabatan = [
+        "Field Leading Hand",
+        "Plant Leading Hand",
+        "Asst. Penanggung Jawab Operasional",
+        "Penanggung Jawab Operasional",
+        "SHE",
+        "SHERQ Officer",
+      ];
+      return validatorJabatan.includes(jabatan);
+    };
     const renderContent = () => {
       switch (activeMenu) {
         case "dashboard":
@@ -106,6 +145,9 @@ function App() {
             />
           );
         case "fit-to-work-validation":
+          if (!canAccessFitToWorkValidation()) {
+            return <Home user={user} onNavigate={handleMenuChange} />;
+          }
           return (
             <FitToWorkValidationNew
               user={user}
@@ -375,10 +417,9 @@ function App() {
               {[
                 { key: "dashboard", label: "Home" },
                 { key: "fit-to-work", label: "Fit To Work" },
-                {
-                  key: "fit-to-work-validation",
-                  label: "Validasi Fit To Work",
-                },
+                ...(canAccessFitToWorkValidation()
+                  ? [{ key: "fit-to-work-validation", label: "Validasi Fit To Work" }]
+                  : []),
                 { key: "take-5", label: "Take 5" },
                 { key: "hazard", label: "Hazard Report" },
                 { key: "tasklist", label: "Tasklist" },
