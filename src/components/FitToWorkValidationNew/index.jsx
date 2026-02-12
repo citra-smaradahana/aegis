@@ -5,7 +5,7 @@ import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 
-function FitToWorkValidationNew({ user, onBack }) {
+function FitToWorkValidationNew({ user, onBack, onNavigate }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [validations, setValidations] = useState([]);
   const [selectedValidation, setSelectedValidation] = useState(null);
@@ -309,8 +309,9 @@ function FitToWorkValidationNew({ user, onBack }) {
           onNavigate={(tab) => {
             if (tab === "home") {
               onBack && onBack();
+            } else if (tab === "tasklist" || tab === "profile") {
+              onNavigate && onNavigate(tab);
             }
-            // Handle other navigation if needed
           }}
         />
       )}

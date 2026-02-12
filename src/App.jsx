@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import MonitoringPage from "./components/MonitoringPage";
@@ -96,10 +96,20 @@ function App() {
         case "dashboard":
           return <Home user={user} onNavigate={handleMenuChange} />;
         case "fit-to-work":
-          return <FitToWorkForm user={user} onBack={handleBackToMain} />;
+          return (
+            <FitToWorkForm
+              user={user}
+              onBack={handleBackToMain}
+              onNavigate={handleMenuChange}
+            />
+          );
         case "fit-to-work-validation":
           return (
-            <FitToWorkValidationNew user={user} onBack={handleBackToMain} />
+            <FitToWorkValidationNew
+              user={user}
+              onBack={handleBackToMain}
+              onNavigate={handleMenuChange}
+            />
           );
         case "take-5":
           return (

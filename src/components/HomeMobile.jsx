@@ -44,24 +44,24 @@ function HomeMobile({ user, onNavigate }) {
     <div
       style={{
         width: "100%",
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100dvh",
         background: "#f8fafc",
-        paddingBottom: 80, // Space untuk bottom nav
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        paddingBottom: 70, // Space untuk bottom nav
+        boxSizing: "border-box",
       }}
     >
-      {/* Header dengan foto profil - sticky di mobile */}
+      {/* Header dengan foto profil - fixed layout, tidak scroll */}
       <div
         className="mobile-home-header"
         style={{
-          position: "sticky",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
+          flexShrink: 0,
           background: "linear-gradient(135deg, #ea580c 0%, #dc2626 100%)",
           padding: "16px 20px",
           color: "white",
-          marginBottom: 24,
           boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
         }}
       >
@@ -189,13 +189,20 @@ function HomeMobile({ user, onNavigate }) {
         </div>
       </div>
 
-      {/* Menu Buttons */}
+      {/* Menu Buttons - area mengisi sisa layar, scroll hanya di menu jika perlu */}
       <div
         className="mobile-home-menu"
         style={{
-          padding: "0 20px",
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+          padding: "16px 20px 0",
           maxWidth: 1200,
           margin: "0 auto",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          boxSizing: "border-box",
         }}
       >
         <h2
@@ -205,6 +212,7 @@ function HomeMobile({ user, onNavigate }) {
             color: "#1f2937",
             marginBottom: 16,
             textAlign: "center",
+            flexShrink: 0,
           }}
         >
           Menu Utama
@@ -214,9 +222,15 @@ function HomeMobile({ user, onNavigate }) {
           className="mobile-home-menu-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 16,
-            marginBottom: 32,
+            gridTemplateColumns: "1fr",
+            gap: 14,
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            alignContent: "start",
+            paddingBottom: 16,
+            paddingRight: 14,
+            boxSizing: "border-box",
           }}
         >
           {menuItems.map((item) => (
@@ -228,23 +242,23 @@ function HomeMobile({ user, onNavigate }) {
                 background: "white",
                 border: "none",
                 borderRadius: 16,
-                padding: "20px",
+                padding: "18px 20px",
                 cursor: "pointer",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                transition: "all 0.3s ease",
+                transition: "all 0.2s ease",
                 textAlign: "left",
                 display: "flex",
                 alignItems: "center",
                 gap: 16,
-                minHeight: 80,
+                minHeight: 76,
               }}
               onMouseEnter={(e) => {
-                e.target.style.transform = "translateY(-2px)";
-                e.target.style.boxShadow = "0 8px 24px rgba(0,0,0,0.15)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.15)";
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
               }}
             >
               <div
@@ -263,7 +277,7 @@ function HomeMobile({ user, onNavigate }) {
               >
                 {item.icon}
               </div>
-              <div className="mobile-home-menu-text" style={{ flex: 1 }}>
+              <div className="mobile-home-menu-text" style={{ flex: 1, minWidth: 0 }}>
                 <h3
                   style={{
                     margin: 0,
@@ -291,6 +305,7 @@ function HomeMobile({ user, onNavigate }) {
                   color: item.color,
                   fontSize: 20,
                   opacity: 0.7,
+                  flexShrink: 0,
                 }}
               >
                 →
