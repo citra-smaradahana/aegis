@@ -205,7 +205,7 @@ function FitToWorkValidationListNew({
               width: isMobile ? "100%" : "auto",
             }}
           >
-            <option value="">Semua Status</option>
+            <option value="all">Semua Status</option>
             <option value="Pending">Pending</option>
             <option value="Level1_Review">Level 1 Review</option>
             <option value="Level2_Review">Level 2 Review</option>

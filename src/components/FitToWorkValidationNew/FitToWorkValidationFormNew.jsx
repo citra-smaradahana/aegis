@@ -100,13 +100,15 @@ function FitToWorkValidationFormNew({
       console.log("SHE validation check:", canValidate);
       return canValidate;
     } else if (userJabatan === "Penanggung Jawab Operasional") {
-      // PJO can validate Asst. PJO, SHERQ Officer, Technical Service directly from Pending
+      // PJO can validate Asst. PJO, SHERQ Officer, Technical Service, Field/Plant Leading Hand (Not Fit To Work)
       const validJabatan = [
         "Asst. Penanggung Jawab Operasional",
         "SHERQ Officer",
         "Technical Service",
+        "Field Leading Hand",
+        "Plant Leading Hand",
       ];
-      const validWorkflow = ["Pending", "Level1_Review"];
+      const validWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
 
       const canValidate =
         validJabatan.includes(validation.jabatan) &&
@@ -832,6 +834,10 @@ function FitToWorkValidationFormNew({
   const renderLevel2Form = () => {
     if (!canEditLevel2()) return null;
 
+    const isDirectPJOValidation =
+      user?.jabatan === "Penanggung Jawab Operasional" &&
+      validation?.workflow_status === "Pending";
+
     return (
       <div
         style={{
@@ -842,6 +848,21 @@ function FitToWorkValidationFormNew({
           marginBottom: "24px",
         }}
       >
+        {isDirectPJOValidation && (
+          <div
+            style={{
+              marginBottom: "16px",
+              padding: "12px",
+              backgroundColor: "rgba(34, 197, 94, 0.1)",
+              border: "1px solid #22c55e",
+              borderRadius: "8px",
+              color: "#86efac",
+              fontSize: "13px",
+            }}
+          >
+            Validasi langsung oleh PJO (tanpa Tahap 1) — jabatan ini tidak melalui validasi tingkat satu.
+          </div>
+        )}
         {/* Laporan Validasi Tahap 1 */}
         {validation.workflow_status === "Level1_Review" && (
           <div style={{ marginBottom: "24px" }}>

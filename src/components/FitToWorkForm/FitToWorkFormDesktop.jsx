@@ -187,7 +187,7 @@ const FitToWorkFormDesktop = ({ user }) => {
       const computedStatus =
         status === "Fit To Work" ? "Fit To Work" : "Not Fit To Work";
 
-      // Deteksi jabatan yang memerlukan validasi workflow
+      // Deteksi jabatan yang memerlukan validasi workflow (Not Fit To Work → divalidasi PJO atau Leading Hand)
       const role = (user?.jabatan || "").toLowerCase();
       const rolesNeedValidation = [
         "mekanik",
@@ -197,6 +197,12 @@ const FitToWorkFormDesktop = ({ user }) => {
         "operator mmu",
         "quality control",
         "quality controller", // alternatif penulisan
+        // Jabatan yang Not Fit To Work-nya divalidasi oleh Penanggung Jawab Operasional
+        "asst. penanggung jawab operasional",
+        "sherq officer",
+        "technical service",
+        "field leading hand",
+        "plant leading hand",
       ];
 
       const requiresValidation =

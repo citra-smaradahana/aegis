@@ -46,8 +46,8 @@ function FitToWorkValidationNew({ user, onBack }) {
         .eq("site", userSite) // Site-based filtering
         .eq("status_fatigue", "Not Fit To Work"); // Only show Not Fit To Work entries
 
-      // Apply workflow status filter if not "all"
-      if (filterStatus !== "all") {
+      // Apply workflow status filter if not "all" (termasuk value "" dari dropdown Semua Status)
+      if (filterStatus && filterStatus !== "all") {
         query = query.eq("workflow_status", filterStatus);
         console.log(
           "fetchValidations - Applied workflow status filter:",
@@ -84,12 +84,14 @@ function FitToWorkValidationNew({ user, onBack }) {
           .eq("workflow_status", "Pending");
         console.log("fetchValidations - Asst. PJO filter applied");
       } else if (userJabatan === "Penanggung Jawab Operasional") {
-        // PJO bisa melihat status Level1_Review dan Pending untuk jabatan tertentu
+        // PJO bisa melihat status Level1_Review dan Pending untuk jabatan yang divalidasi PJO
         query = query
           .in("jabatan", [
             "Asst. Penanggung Jawab Operasional",
             "SHERQ Officer",
             "Technical Service",
+            "Field Leading Hand",
+            "Plant Leading Hand",
           ])
           .in("workflow_status", ["Pending", "Level1_Review", "Level1 Review"]);
         console.log("fetchValidations - PJO filter applied");
