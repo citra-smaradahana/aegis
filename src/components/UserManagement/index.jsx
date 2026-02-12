@@ -14,7 +14,7 @@ function UserManagement() {
   const [siteFilter, setSiteFilter] = useState("");
   const [jabatanFilter, setJabatanFilter] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0); // Force re-render
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch users dari Supabase
@@ -329,13 +329,15 @@ function UserManagement() {
     <div
       style={{
         width: "100%",
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100vh",
         background: "transparent",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: "0 0 0 120px",
-        overflowY: "auto",
+        padding: "0 24px",
+        overflow: "hidden",
+        boxSizing: "border-box",
       }}
       key={`user-management-${forceUpdate}`}
     >
@@ -344,28 +346,33 @@ function UserManagement() {
           background: "transparent",
           borderRadius: 18,
           boxShadow: "none",
-          padding: 16,
-          maxWidth: 1400,
+          padding: "16px 20px",
+          maxWidth: 1200,
           width: "100%",
+          height: "100%",
           margin: "0 auto",
-          minHeight: "100%",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
         }}
       >
-        <div
-          style={{
-            background: "transparent",
-            border: "none",
-            borderRadius: 16,
-            padding: 24,
-            color: "#e5e7eb",
-            position: "relative",
-            width: "100%",
-            alignItems: "flex-start",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-start",
-          }}
-        >
+<div
+            style={{
+              background: "transparent",
+              border: "none",
+              borderRadius: 16,
+              padding: 24,
+              color: "#e5e7eb",
+              position: "relative",
+              width: "100%",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
           <div
             style={{
               display: "flex",
@@ -373,6 +380,7 @@ function UserManagement() {
               alignItems: "center",
               marginBottom: "24px",
               width: "100%",
+              flexShrink: 0,
             }}
           >
             <h2
@@ -407,6 +415,7 @@ function UserManagement() {
               gap: "16px",
               marginBottom: "24px",
               flexWrap: "wrap",
+              flexShrink: 0,
             }}
           >
             <input
@@ -489,7 +498,15 @@ function UserManagement() {
               {error}
             </div>
           ) : (
-            <div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                minHeight: 0,
+                overflow: "hidden",
+              }}
+            >
               <div
                 style={{
                   display: "flex",
@@ -497,6 +514,7 @@ function UserManagement() {
                   alignItems: "center",
                   gap: "16px",
                   marginBottom: "16px",
+                  flexShrink: 0,
                 }}
               >
                 <p
@@ -533,6 +551,7 @@ function UserManagement() {
                       outline: "none",
                     }}
                   >
+                    <option value={5}>5</option>
                     <option value={10}>10</option>
                     <option value={25}>25</option>
                     <option value={50}>50</option>
@@ -550,6 +569,7 @@ function UserManagement() {
                   alignItems: "center",
                   gap: "8px",
                   marginBottom: "12px",
+                  flexShrink: 0,
                 }}
               >
                 <button
@@ -601,10 +621,9 @@ function UserManagement() {
                   backgroundColor: "#1f2937",
                   borderRadius: "12px",
                   border: "1px solid #374151",
-                  overflow: "hidden",
-                  minHeight: 400,
-                  maxHeight: "65vh",
-                  overflowY: "auto",
+                  overflow: "auto",
+                  flex: 1,
+                  minHeight: 0,
                 }}
               >
                 <table
