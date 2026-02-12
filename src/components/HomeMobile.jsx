@@ -49,14 +49,20 @@ function HomeMobile({ user, onNavigate }) {
         paddingBottom: 80, // Space untuk bottom nav
       }}
     >
-      {/* Header dengan foto profil */}
+      {/* Header dengan foto profil - sticky di mobile */}
       <div
         className="mobile-home-header"
         style={{
+          position: "sticky",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
           background: "linear-gradient(135deg, #ea580c 0%, #dc2626 100%)",
-          padding: "24px 20px",
+          padding: "16px 20px",
           color: "white",
           marginBottom: 24,
+          boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
         }}
       >
         <div
@@ -64,23 +70,24 @@ function HomeMobile({ user, onNavigate }) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 16,
+            gap: 12,
             maxWidth: 1200,
             margin: "0 auto",
+            minHeight: 56,
           }}
         >
           {/* Foto Profil */}
           <div
             className="mobile-home-avatar"
             style={{
-              width: 80,
-              height: 80,
+              width: 56,
+              height: 56,
               borderRadius: "50%",
               background: "rgba(255,255,255,0.2)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "3px solid rgba(255,255,255,0.3)",
+              border: "2px solid rgba(255,255,255,0.3)",
               flexShrink: 0,
             }}
           >
@@ -114,7 +121,7 @@ function HomeMobile({ user, onNavigate }) {
               ) : (
                 <div
                   style={{
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: 700,
                     color: "white",
                   }}
@@ -125,14 +132,26 @@ function HomeMobile({ user, onNavigate }) {
             })()}
           </div>
 
-          {/* Nama dan Jabatan */}
-          <div style={{ flex: 1 }}>
+          {/* Nama dan Jabatan - dibatasi lebar dan baris agar height konsisten */}
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+          >
             <h1
               style={{
                 margin: 0,
-                fontSize: 24,
+                fontSize: 18,
                 fontWeight: 700,
-                marginBottom: 4,
+                marginBottom: 2,
+                lineHeight: 1.3,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
               }}
             >
               {user?.nama || user?.user || "Pengguna"}
@@ -140,9 +159,15 @@ function HomeMobile({ user, onNavigate }) {
             <p
               style={{
                 margin: 0,
-                fontSize: 16,
-                opacity: 0.9,
+                fontSize: 13,
+                opacity: 0.95,
                 fontWeight: 500,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                lineHeight: 1.3,
               }}
             >
               {user?.jabatan || "Karyawan"}
@@ -150,9 +175,12 @@ function HomeMobile({ user, onNavigate }) {
             <p
               style={{
                 margin: 0,
-                fontSize: 14,
-                opacity: 0.8,
-                marginTop: 4,
+                fontSize: 12,
+                opacity: 0.85,
+                marginTop: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
               Selamat datang di AEGIS KMB
