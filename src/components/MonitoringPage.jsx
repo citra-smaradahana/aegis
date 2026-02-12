@@ -32,6 +32,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     fitToWork: 0,
     notFitToWork: 0,
     fitToWorkPercentage: 0,
+    initialNotFitToWork: 0,
+    improvedToFit: 0,
     improvementCount: 0,
     totalImprovements: 0,
     siteStats: {},
@@ -451,11 +453,22 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     }
 
     const totalSubmissions = filteredData.length;
+    // Status saat ini (setelah validasi)
     const fitToWork = filteredData.filter(
       (item) => item.status_fatigue === "Fit To Work"
     ).length;
     const notFitToWork = filteredData.filter(
       (item) => item.status_fatigue === "Not Fit To Work"
+    ).length;
+    // Berdasarkan initial_status_fatigue (saat pengisian pertama, sebelum validasi)
+    const initialNotFitToWork = filteredData.filter(
+      (item) =>
+        (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work"
+    ).length;
+    const improvedToFit = filteredData.filter(
+      (item) =>
+        (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
+        item.status_fatigue === "Fit To Work"
     ).length;
 
     // Calculate percentage of Fit To Work employees
@@ -472,6 +485,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           total: 0,
           fitToWork: 0,
           notFitToWork: 0,
+          initialNotFit: 0,
+          improvedToFit: 0,
         };
       }
       siteStats[item.site].total++;
@@ -479,6 +494,15 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         siteStats[item.site].fitToWork++;
       } else if (item.status_fatigue === "Not Fit To Work") {
         siteStats[item.site].notFitToWork++;
+      }
+      if ((item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work") {
+        siteStats[item.site].initialNotFit++;
+      }
+      if (
+        (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
+        item.status_fatigue === "Fit To Work"
+      ) {
+        siteStats[item.site].improvedToFit++;
       }
     });
 
@@ -505,6 +529,15 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           notFitToWork: dayData.filter(
             (item) => item.status_fatigue === "Not Fit To Work"
           ).length,
+          initialNotFit: dayData.filter(
+            (item) =>
+              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work"
+          ).length,
+          improvedToFit: dayData.filter(
+            (item) =>
+              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
+              item.status_fatigue === "Fit To Work"
+          ).length,
         });
       }
     } else {
@@ -523,13 +556,22 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           notFitToWork: dayData.filter(
             (item) => item.status_fatigue === "Not Fit To Work"
           ).length,
+          initialNotFit: dayData.filter(
+            (item) =>
+              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work"
+          ).length,
+          improvedToFit: dayData.filter(
+            (item) =>
+              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
+              item.status_fatigue === "Fit To Work"
+          ).length,
         });
 
         currentDate.setDate(currentDate.getDate() + 1);
       }
     }
 
-    // Status changes tracking
+    // Status changes tracking (termasuk initial → saat ini)
     const statusChanges = filteredData
       .filter((item) => item.workflow_status === "Closed")
       .map((item) => ({
@@ -537,6 +579,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         site: item.site,
         tanggal: item.tanggal,
         finalStatus: item.status_fatigue,
+        initialStatus: item.initial_status_fatigue || item.status_fatigue,
         status:
           item.status_fatigue === "Fit To Work"
             ? "Fit To Work"
@@ -550,6 +593,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       fitToWork,
       notFitToWork,
       fitToWorkPercentage,
+      initialNotFitToWork,
+      improvedToFit,
       improvementCount: 0, // Keep for backward compatibility
       totalImprovements: 0, // Keep for backward compatibility
       siteStats,
@@ -1081,7 +1126,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     const summaryData = [
       { Metric: "Total Submissions", Value: fitToWorkStats.totalSubmissions },
       { Metric: "Fit To Work", Value: fitToWorkStats.fitToWork },
-      { Metric: "Not Fit To Work", Value: fitToWorkStats.notFitToWork },
+      { Metric: "Not Fit To Work (saat ini)", Value: fitToWorkStats.notFitToWork },
+      { Metric: "Awalnya Not Fit To Work", Value: fitToWorkStats.initialNotFitToWork ?? 0 },
+      { Metric: "Berubah jadi Fit To Work", Value: fitToWorkStats.improvedToFit ?? 0 },
       {
         Metric: "Persentase Karyawan Fit",
         Value: `${fitToWorkStats.fitToWorkPercentage}%`,
@@ -1111,8 +1158,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         Nama: change.nama,
         Site: change.site,
         Tanggal: new Date(change.tanggal).toLocaleDateString("id-ID"),
-        "Status Akhir": change.finalStatus,
-        Status: change.status,
+        "Status Awal": change.initialStatus || change.finalStatus,
+        "Status Saat ini": change.finalStatus,
       }));
       const changesSheet = XLSX.utils.json_to_sheet(changesData);
       XLSX.utils.book_append_sheet(workbook, changesSheet, "Status Changes");
@@ -1149,7 +1196,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     yPos += 8;
     doc.text(`Fit To Work: ${fitToWorkStats.fitToWork}`, 20, yPos);
     yPos += 8;
-    doc.text(`Not Fit To Work: ${fitToWorkStats.notFitToWork}`, 20, yPos);
+    doc.text(`Not Fit To Work (saat ini): ${fitToWorkStats.notFitToWork}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Awalnya Not Fit To Work: ${fitToWorkStats.initialNotFitToWork ?? 0}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Berubah jadi Fit To Work: ${fitToWorkStats.improvedToFit ?? 0}`, 20, yPos);
     yPos += 8;
     doc.text(
       `Persentase Karyawan Fit: ${fitToWorkStats.fitToWorkPercentage}%`,
@@ -1237,13 +1288,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         change.nama,
         change.site,
         new Date(change.tanggal).toLocaleDateString("id-ID"),
-        change.finalStatus,
-        change.status,
+        change.initialStatus && change.initialStatus !== change.finalStatus
+          ? `${change.initialStatus} → ${change.finalStatus}`
+          : change.finalStatus,
       ]);
 
       autoTable(doc, {
         startY: yPos,
-        head: [["Nama", "Site", "Tanggal", "Status Akhir", "Status"]],
+        head: [["Nama", "Site", "Tanggal", "Status (Awal → Saat ini)"]],
         body: statusData,
         theme: "grid",
         headStyles: { fillColor: [59, 130, 246] },
@@ -2085,7 +2137,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               </div>
             </div>
 
-            {/* Not Fit To Work */}
+            {/* Not Fit To Work (saat ini masih) */}
             <div
               style={{
                 background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
@@ -2096,7 +2148,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               }}
             >
               <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Not Fit To Work
+                Not Fit To Work (saat ini)
               </div>
               <div
                 style={{
@@ -2106,6 +2158,54 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 }}
               >
                 {fitToWorkStats.notFitToWork}
+              </div>
+            </div>
+
+            {/* Awalnya Not Fit To Work */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Awalnya Not Fit To Work
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {fitToWorkStats.initialNotFitToWork ?? 0}
+              </div>
+            </div>
+
+            {/* Berubah jadi Fit To Work */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(6, 182, 212, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Berubah jadi Fit To Work
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {fitToWorkStats.improvedToFit ?? 0}
               </div>
             </div>
 
@@ -2202,7 +2302,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                       </div>
                       <div>
                         <div style={{ fontSize: "12px", color: "#333" }}>
-                          Not Fit To Work
+                          Not Fit (saat ini)
                         </div>
                         <div
                           style={{
@@ -2212,6 +2312,34 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           }}
                         >
                           {stats.notFitToWork}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#333" }}>
+                          Awal Not Fit
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#f59e0b",
+                          }}
+                        >
+                          {stats.initialNotFit ?? 0}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#333" }}>
+                          Jadi Fit
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#06b6d4",
+                          }}
+                        >
+                          {stats.improvedToFit ?? 0}
                         </div>
                       </div>
                       <div>
@@ -2296,7 +2424,27 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      Not Fit To Work
+                      Not Fit (saat ini)
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#f59e0b",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Awal Not Fit
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#06b6d4",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Jadi Fit
                     </th>
                     <th
                       style={{
@@ -2352,6 +2500,26 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         }}
                       >
                         {day.notFitToWork}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#f59e0b",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.initialNotFit ?? 0}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#06b6d4",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.improvedToFit ?? 0}
                       </td>
                       <td
                         style={{
@@ -2439,17 +2607,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           fontWeight: "bold",
                         }}
                       >
-                        Status Akhir
-                      </th>
-                      <th
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#1a1a1a",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        Status
+                        Status (Awal → Saat ini)
                       </th>
                     </tr>
                   </thead>
@@ -2472,22 +2630,33 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           style={{
                             textAlign: "center",
                             padding: "12px",
-                            color: getStatusColor(change.finalStatus),
                             fontWeight: "bold",
                           }}
                         >
-                          {change.finalStatus}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color:
-                              change.status === "Fit" ? "#22c55e" : "#ef4444",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {change.status}
+                          {change.initialStatus &&
+                          change.initialStatus !== change.finalStatus ? (
+                            <span>
+                              <span style={{ color: "#f59e0b" }}>
+                                {change.initialStatus}
+                              </span>
+                              {" → "}
+                              <span
+                                style={{
+                                  color: getStatusColor(change.finalStatus),
+                                }}
+                              >
+                                {change.finalStatus}
+                              </span>
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                color: getStatusColor(change.finalStatus),
+                              }}
+                            >
+                              {change.finalStatus}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -91,6 +91,8 @@ function App() {
   // Main App Component with Navigation
   const MainApp = () => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const canAccessMonitoring =
+      user?.role === "evaluator" || user?.role === "admin";
     const renderContent = () => {
       switch (activeMenu) {
         case "dashboard":
@@ -132,28 +134,44 @@ function App() {
         case "pto":
           return <PTOForm user={user} onBack={handleBackToMain} />;
         case "monitoring-fit-to-work":
-          return (
+          return canAccessMonitoring ? (
             <MonitoringPage
               user={user}
               onLogout={handleLogout}
               subMenu="Statistik Fit To Work"
             />
+          ) : (
+            <Home user={user} onNavigate={handleMenuChange} />
           );
         case "monitoring-take-5":
-          return (
+          return canAccessMonitoring ? (
             <MonitoringPage
               user={user}
               onLogout={handleLogout}
               subMenu="Take 5"
             />
+          ) : (
+            <Home user={user} onNavigate={handleMenuChange} />
           );
         case "monitoring-hazard":
-          return (
+          return canAccessMonitoring ? (
             <MonitoringPage
               user={user}
               onLogout={handleLogout}
               subMenu="Hazard"
             />
+          ) : (
+            <Home user={user} onNavigate={handleMenuChange} />
+          );
+        case "monitoring-pto":
+          return canAccessMonitoring ? (
+            <MonitoringPage
+              user={user}
+              onLogout={handleLogout}
+              subMenu="PTO"
+            />
+          ) : (
+            <Home user={user} onNavigate={handleMenuChange} />
           );
         case "user-management":
           return <UserManagement user={user} onBack={handleBackToMain} />;
@@ -167,7 +185,11 @@ function App() {
             />
           );
         default:
-          return <MonitoringPage user={user} onLogout={handleLogout} />;
+          return canAccessMonitoring ? (
+            <MonitoringPage user={user} onLogout={handleLogout} />
+          ) : (
+            <Home user={user} onNavigate={handleMenuChange} />
+          );
       }
     };
 
@@ -384,6 +406,9 @@ function App() {
                 </button>
               ))}
 
+              {/* Menu Monitoring hanya untuk role evaluator dan admin */}
+              {(user?.role === "evaluator" || user?.role === "admin") && (
+                <>
               <button
                 onClick={() => {
                   toggleMonitoring();
@@ -552,6 +577,8 @@ function App() {
                   PTO Monitoring
                 </button>
               </div>
+                </>
+              )}
 
               {/* Menu Management User hanya untuk admin */}
               {(user?.role === "admin" || user?.jabatan === "Admin") && (

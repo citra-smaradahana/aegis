@@ -229,6 +229,7 @@ const FitToWorkFormDesktop = ({ user }) => {
         catatan_obat: jenisObat,
         status: computedStatus,
         status_fatigue: computedStatus, // Gunakan status_fatigue juga
+        initial_status_fatigue: computedStatus, // Status saat pengisian pertama (tidak diubah saat validasi)
         workflow_status: workflowStatus, // Set workflow_status untuk validasi
       };
 
@@ -489,25 +490,39 @@ const FitToWorkFormDesktop = ({ user }) => {
 
               {/* Status bila sudah isi hari ini */}
               {sudahIsiHariIni && status && (
-                <div
-                  style={{
-                    margin: "8px 0 0 0",
-                    color: status === "Fit To Work" ? "#22c55e" : "#ef4444",
-                    background:
-                      status === "Fit To Work" ? "#dcfce7" : "#fee2e2",
-                    border:
-                      status === "Fit To Work"
-                        ? "2px solid #22c55e"
-                        : "2px solid #ef4444",
-                    borderRadius: 10,
-                    fontWeight: 900,
-                    fontSize: 16,
-                    textAlign: "center",
-                    padding: 8,
-                    letterSpacing: 1,
-                  }}
-                >
-                  Status: {status}
+                <div style={{ margin: "8px 0 0 0" }}>
+                  <div
+                    style={{
+                      color: status === "Fit To Work" ? "#22c55e" : "#ef4444",
+                      background:
+                        status === "Fit To Work" ? "#dcfce7" : "#fee2e2",
+                      border:
+                        status === "Fit To Work"
+                          ? "2px solid #22c55e"
+                          : "2px solid #ef4444",
+                      borderRadius: 10,
+                      fontWeight: 900,
+                      fontSize: 16,
+                      textAlign: "center",
+                      padding: 8,
+                      letterSpacing: 1,
+                    }}
+                  >
+                    Status: {status}
+                  </div>
+                  {dataHariIni?.initial_status_fatigue &&
+                    dataHariIni.initial_status_fatigue !== (dataHariIni?.status_fatigue || status) && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 13,
+                          color: "#64748b",
+                          textAlign: "center",
+                        }}
+                      >
+                        Status awal: {dataHariIni.initial_status_fatigue} → Saat ini: {dataHariIni?.status_fatigue || status}
+                      </div>
+                    )}
                 </div>
               )}
             </div>
