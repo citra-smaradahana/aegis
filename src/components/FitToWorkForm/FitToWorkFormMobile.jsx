@@ -215,6 +215,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate }) => {
       const role = (user?.jabatan || "").toLowerCase();
       const rolesNeedValidation = [
         "mekanik",
+        "crew",
         "crew blasting",
         "crew blaster", // alternatif penulisan
         "operator plant",

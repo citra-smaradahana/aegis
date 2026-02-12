@@ -66,14 +66,15 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
           .eq("workflow_status", "Pending");
         console.log("fetchValidations - Plant Leading Hand filter applied");
       } else if (userJabatan === "Field Leading Hand") {
-        // Field Leading Hand hanya bisa melihat status Pending untuk Crew Blasting, Operator MMU, Quality Control
+        // Field Leading Hand hanya bisa melihat status Pending untuk Operator MMU, Crew, Quality Control, dan Blaster
         query = query
           .in("jabatan", [
-            "Blaster", // Crew Blasting
-            "Crew Blasting", // Jika ada variasi nama
             "Operator MMU",
+            "Crew",
             "Quality Controller",
             "Quality Control", // Jika ada variasi nama
+            "Blaster", // Crew Blasting
+            "Crew Blasting", // Jika ada variasi nama
           ])
           .eq("workflow_status", "Pending");
         console.log("fetchValidations - Field Leading Hand filter applied");
