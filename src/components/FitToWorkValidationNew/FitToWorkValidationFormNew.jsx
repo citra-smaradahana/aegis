@@ -521,6 +521,129 @@ function FitToWorkValidationFormNew({
           </div>
         </div>
 
+        {/* Catatan Validator - tahap 1 dan tahap 2 untuk semua level jabatan */}
+        <div style={{ marginTop: "20px" }}>
+          <h4
+            style={{
+              margin: "0 0 16px 0",
+              color: "#e5e7eb",
+              fontWeight: 600,
+              fontSize: "16px",
+            }}
+          >
+            Catatan Validator
+          </h4>
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "#111827",
+              borderRadius: "8px",
+              border: "1px solid #374151",
+            }}
+          >
+            <div style={{ marginBottom: "16px" }}>
+              <div
+                style={{
+                  color: "#9ca3af",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
+                Catatan Tahap 1
+              </div>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                  marginBottom: "4px",
+                }}
+              >
+                {validation.catatan_tahap1 || "Tidak ada catatan"}
+              </div>
+              {(validation.reviewer_tahap1_nama || validation.reviewed_tahap1_at) && (
+                <div
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "12px",
+                    marginTop: "4px",
+                  }}
+                >
+                  {validation.reviewer_tahap1_nama &&
+                    `${validation.reviewer_tahap1_nama}${validation.reviewer_tahap1_jabatan ? ` (${validation.reviewer_tahap1_jabatan})` : ""}`}
+                  {validation.reviewed_tahap1_at && (
+                    <span>
+                      {" · "}
+                      {new Date(validation.reviewed_tahap1_at).toLocaleString(
+                        "id-ID",
+                        {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <div
+                style={{
+                  color: "#9ca3af",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
+                Catatan Tahap 2
+              </div>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                  marginBottom: "4px",
+                }}
+              >
+                {validation.catatan_tahap2 || "Tidak ada catatan"}
+              </div>
+              {(validation.reviewer_tahap2_nama || validation.reviewed_tahap2_at) && (
+                <div
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "12px",
+                    marginTop: "4px",
+                  }}
+                >
+                  {validation.reviewer_tahap2_nama &&
+                    `${validation.reviewer_tahap2_nama}${validation.reviewer_tahap2_jabatan ? ` (${validation.reviewer_tahap2_jabatan})` : ""}`}
+                  {validation.reviewed_tahap2_at && (
+                    <span>
+                      {" · "}
+                      {new Date(validation.reviewed_tahap2_at).toLocaleString(
+                        "id-ID",
+                        {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Detail Status Fatigue */}
         {validation.status_fatigue === "Not Fit To Work" && (
           <div style={{ marginTop: "20px" }}>

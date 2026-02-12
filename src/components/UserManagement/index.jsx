@@ -14,6 +14,8 @@ function UserManagement() {
   const [siteFilter, setSiteFilter] = useState("");
   const [jabatanFilter, setJabatanFilter] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0); // Force re-render
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch users dari Supabase
   const fetchUsers = async () => {
@@ -76,6 +78,18 @@ function UserManagement() {
   // console.log("Site filter:", siteFilter);
   // console.log("Jabatan filter:", jabatanFilter);
   // console.log("Search term:", searchTerm);
+
+  // Reset ke halaman 1 saat filter/search atau rowsPerPage berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, siteFilter, jabatanFilter, rowsPerPage]);
+
+  // Pagination: data yang ditampilkan di halaman saat ini
+  const totalFiltered = filteredUsers.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / rowsPerPage));
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = Math.min(startIndex + rowsPerPage, totalFiltered);
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   // Unique site & jabatan untuk filter dengan null check yang lebih ketat
   const siteOptions = [
@@ -315,13 +329,13 @@ function UserManagement() {
     <div
       style={{
         width: "100%",
-        height: "100vh",
+        minHeight: "100vh",
         background: "transparent",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
         padding: "0 0 0 120px",
-        overflow: "hidden",
+        overflowY: "auto",
       }}
       key={`user-management-${forceUpdate}`}
     >
@@ -334,7 +348,7 @@ function UserManagement() {
           maxWidth: 1400,
           width: "100%",
           margin: "0 auto",
-          height: "100vh",
+          minHeight: "100%",
         }}
       >
         <div
@@ -345,7 +359,6 @@ function UserManagement() {
             padding: 24,
             color: "#e5e7eb",
             position: "relative",
-            height: "100vh",
             width: "100%",
             alignItems: "flex-start",
             display: "flex",
@@ -477,22 +490,121 @@ function UserManagement() {
             </div>
           ) : (
             <div>
-              <p
+              <div
                 style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "16px",
                   marginBottom: "16px",
-                  color: "#9ca3af",
-                  fontSize: "14px",
                 }}
               >
-                Total users: {users.length} | Filtered users:{" "}
-                {filteredUsers.length}
-              </p>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#9ca3af",
+                    fontSize: "14px",
+                  }}
+                >
+                  Total users: {users.length} | Filtered: {totalFiltered}
+                </p>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    color: "#9ca3af",
+                    fontSize: "14px",
+                  }}
+                >
+                  Tampilkan:
+                  <select
+                    value={rowsPerPage}
+                    onChange={(e) =>
+                      setRowsPerPage(Number(e.target.value))
+                    }
+                    style={{
+                      padding: "6px 10px",
+                      border: "1px solid #374151",
+                      borderRadius: "6px",
+                      backgroundColor: "#1f2937",
+                      color: "#e5e7eb",
+                      fontSize: "14px",
+                      outline: "none",
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+                <span style={{ color: "#9ca3af", fontSize: "14px" }}>
+                  Menampilkan {totalFiltered === 0 ? 0 : startIndex + 1}–
+                  {endIndex} dari {totalFiltered}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "12px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.max(1, p - 1))
+                  }
+                  disabled={currentPage <= 1}
+                  style={{
+                    padding: "6px 12px",
+                    border: "1px solid #374151",
+                    borderRadius: "6px",
+                    backgroundColor: "#1f2937",
+                    color: currentPage <= 1 ? "#6b7280" : "#e5e7eb",
+                    cursor: currentPage <= 1 ? "not-allowed" : "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  Sebelumnya
+                </button>
+                <span style={{ color: "#9ca3af", fontSize: "14px" }}>
+                  Halaman {currentPage} dari {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage >= totalPages}
+                  style={{
+                    padding: "6px 12px",
+                    border: "1px solid #374151",
+                    borderRadius: "6px",
+                    backgroundColor: "#1f2937",
+                    color:
+                      currentPage >= totalPages ? "#6b7280" : "#e5e7eb",
+                    cursor:
+                      currentPage >= totalPages
+                        ? "not-allowed"
+                        : "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  Selanjutnya
+                </button>
+              </div>
               <div
                 style={{
                   backgroundColor: "#1f2937",
                   borderRadius: "12px",
                   border: "1px solid #374151",
                   overflow: "hidden",
+                  minHeight: 400,
+                  maxHeight: "65vh",
+                  overflowY: "auto",
                 }}
               >
                 <table
@@ -500,6 +612,7 @@ function UserManagement() {
                     width: "100%",
                     borderCollapse: "collapse",
                     color: "#e5e7eb",
+                    tableLayout: "fixed",
                   }}
                 >
                   <thead>
@@ -516,6 +629,8 @@ function UserManagement() {
                           fontWeight: "600",
                           color: "#e5e7eb",
                           fontSize: "14px",
+                          width: "20%",
+                          minWidth: 120,
                         }}
                       >
                         Nama
@@ -527,6 +642,8 @@ function UserManagement() {
                           fontWeight: "600",
                           color: "#e5e7eb",
                           fontSize: "14px",
+                          width: "10%",
+                          minWidth: 100,
                         }}
                       >
                         NRP
@@ -538,6 +655,8 @@ function UserManagement() {
                           fontWeight: "600",
                           color: "#e5e7eb",
                           fontSize: "14px",
+                          width: "22%",
+                          minWidth: 140,
                         }}
                       >
                         Email
@@ -549,6 +668,8 @@ function UserManagement() {
                           fontWeight: "600",
                           color: "#e5e7eb",
                           fontSize: "14px",
+                          width: "18%",
+                          minWidth: 120,
                         }}
                       >
                         Jabatan
@@ -560,6 +681,8 @@ function UserManagement() {
                           fontWeight: "600",
                           color: "#e5e7eb",
                           fontSize: "14px",
+                          width: "8%",
+                          minWidth: 80,
                         }}
                       >
                         Site
@@ -571,6 +694,8 @@ function UserManagement() {
                           fontWeight: "600",
                           color: "#e5e7eb",
                           fontSize: "14px",
+                          width: "8%",
+                          minWidth: 70,
                         }}
                       >
                         Role
@@ -582,6 +707,8 @@ function UserManagement() {
                           fontWeight: "600",
                           color: "#e5e7eb",
                           fontSize: "14px",
+                          width: "14%",
+                          minWidth: 150,
                         }}
                       >
                         Aksi
@@ -589,7 +716,7 @@ function UserManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredUsers.length === 0 ? (
+                    {paginatedUsers.length === 0 ? (
                       <tr>
                         <td
                           colSpan="7"
@@ -606,7 +733,7 @@ function UserManagement() {
                         </td>
                       </tr>
                     ) : (
-                      filteredUsers.map((u) => (
+                      paginatedUsers.map((u) => (
                         <tr
                           key={u.id}
                           style={{
@@ -622,6 +749,8 @@ function UserManagement() {
                               padding: "12px 16px",
                               color: "#e5e7eb",
                               fontSize: "14px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
                             {u.nama || "-"}
@@ -631,6 +760,8 @@ function UserManagement() {
                               padding: "12px 16px",
                               color: "#e5e7eb",
                               fontSize: "14px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
                             {u.nrp || "-"}
@@ -640,6 +771,8 @@ function UserManagement() {
                               padding: "12px 16px",
                               color: "#e5e7eb",
                               fontSize: "14px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
                             {u.email || "-"}
@@ -649,6 +782,8 @@ function UserManagement() {
                               padding: "12px 16px",
                               color: "#e5e7eb",
                               fontSize: "14px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
                             {u.jabatan || "-"}
@@ -658,6 +793,8 @@ function UserManagement() {
                               padding: "12px 16px",
                               color: "#e5e7eb",
                               fontSize: "14px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
                             {u.site || "-"}
@@ -667,6 +804,8 @@ function UserManagement() {
                               padding: "12px 16px",
                               color: "#e5e7eb",
                               fontSize: "14px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
                             {u.role || "-"}
