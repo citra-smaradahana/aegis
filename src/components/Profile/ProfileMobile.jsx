@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+import MandatSection from "./MandatSection";
 
 function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate }) {
   const [profileData, setProfileData] = useState(null);
@@ -340,6 +341,9 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate }) {
             </div>
           </div>
         </div>
+
+        {/* Mandat Validasi Section */}
+        <MandatSection user={user} isMobile={true} />
       </div>
 
       {/* Fixed Buttons Container */}

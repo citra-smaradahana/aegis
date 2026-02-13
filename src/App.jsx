@@ -123,7 +123,7 @@ function App() {
     // Hanya jabatan validator yang boleh melihat dan mengakses Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
     const canAccessFitToWorkValidation = () => {
       if (!user) return false;
-      if (user?.role === "admin" || user?.jabatan === "Admin") return true;
+      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
       const jabatan = (user?.jabatan || "").trim();
       const validatorJabatan = [
         "Field Leading Hand",
@@ -238,6 +238,9 @@ function App() {
             <Home user={user} onNavigate={handleMenuChange} />
           );
         case "user-management":
+          if (user?.jabatan !== "Administrator") {
+            return <Home user={user} onNavigate={handleMenuChange} />;
+          }
           return <UserManagement user={user} onBack={handleBackToMain} />;
         case "profile":
           return (
@@ -760,8 +763,8 @@ function App() {
                 </>
               )}
 
-              {/* Menu Management User hanya untuk admin */}
-              {(user?.role === "admin" || user?.jabatan === "Admin") && (
+              {/* Menu Management User hanya untuk Administrator (bukan Admin Site Project) */}
+              {user?.jabatan === "Administrator" && (
                 <button
                   onClick={() => handleMenuChange("user-management")}
                   style={{

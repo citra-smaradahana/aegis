@@ -31,7 +31,8 @@ const jabatanOptions = [
   { value: 'Operator Plant', label: 'Operator Plant' },
   { value: 'Mekanik', label: 'Mekanik' },
   { value: 'Crew', label: 'Crew' },
-  { value: 'Admin', label: 'Admin' },
+  { value: 'Administrator', label: 'Administrator' },
+  { value: 'Admin Site Project', label: 'Admin Site Project' },
   { value: 'Blaster', label: 'Blaster' },
   { value: 'Quality Controller', label: 'Quality Controller' },
 ];

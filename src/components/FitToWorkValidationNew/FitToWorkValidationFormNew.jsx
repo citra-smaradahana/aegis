@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+import { fetchActiveMandatesForUser, isDelegatorOnsite } from "../../utils/mandateHelpers";
 
 function FitToWorkValidationFormNew({
   validation,
@@ -13,6 +14,9 @@ function FitToWorkValidationFormNew({
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [mandateCanEditL1, setMandateCanEditL1] = useState(false);
+  const [mandateCanEditL2, setMandateCanEditL2] = useState(false);
+  const [permissionLoading, setPermissionLoading] = useState(true);
 
   // Options for validasi_tahap1
   const validasiTahap1Options = [
@@ -37,6 +41,58 @@ function FitToWorkValidationFormNew({
     }
   }, [validation]);
 
+  // Cek mandat: FLH bisa validasi Mekanik/Operator Plant jika PLH beri mandat dan PLH tidak onsite
+  // Asst.PJO/PJO bisa validasi Level2 (SHERQ/PJO cases) jika dapat mandat dan pemberi tidak onsite
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id || !validation || user.site !== validation.site) {
+      setMandateCanEditL1(false);
+      setMandateCanEditL2(false);
+      setPermissionLoading(false);
+      return;
+    }
+    setPermissionLoading(true);
+    const run = async () => {
+      const mandates = await fetchActiveMandatesForUser(user.id, user.site);
+      let ml1 = false;
+      let ml2 = false;
+      for (const m of mandates) {
+        const delegatorId = m.delegated_by_user_id;
+        if (!delegatorId) continue;
+        const onsite = await isDelegatorOnsite(delegatorId, user.site);
+        if (onsite) continue; // Pemberi onsite -> mandat tidak berlaku
+        if (m.mandate_type === "PLH_TO_FLH" && user.jabatan === "Field Leading Hand") {
+          if (validation.workflow_status === "Pending" && ["Mekanik", "Operator Plant"].includes(validation.jabatan)) {
+            ml1 = true;
+            break;
+          }
+        }
+        if (m.mandate_type === "SHERQ_TO_ASST_PJO_OR_PJO") {
+          if ((user.jabatan === "Asst. Penanggung Jawab Operasional" || user.jabatan === "Penanggung Jawab Operasional") &&
+            (validation.workflow_status === "Level1_Review" || validation.workflow_status === "Level1 Review" || validation.jabatan === "Administrator" || validation.jabatan === "Admin Site Project")) {
+            ml2 = true;
+            break;
+          }
+        }
+        if (m.mandate_type === "PJO_TO_ASST_PJO" && user.jabatan === "Asst. Penanggung Jawab Operasional") {
+          const pjoJabatan = ["Asst. Penanggung Jawab Operasional", "SHERQ Officer", "Technical Service", "Field Leading Hand", "Plant Leading Hand"];
+          const pjoWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
+          if (pjoJabatan.includes(validation.jabatan) && pjoWorkflow.includes(validation.workflow_status)) {
+            ml2 = true;
+            break;
+          }
+        }
+      }
+      if (!cancelled) {
+        setMandateCanEditL1(ml1);
+        setMandateCanEditL2(ml2);
+      }
+      setPermissionLoading(false);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [user?.id, user?.site, user?.jabatan, validation?.id, validation?.jabatan, validation?.workflow_status]);
+
   const canEditLevel1 = () => {
     if (!user || !validation) return false;
 
@@ -48,6 +104,9 @@ function FitToWorkValidationFormNew({
 
     // Level 1 can only edit if status is Pending
     if (validation.workflow_status !== "Pending") return false;
+
+    // Mandat: FLH bisa validasi Mekanik/Operator Plant jika PLH beri mandat dan PLH tidak onsite
+    if (mandateCanEditL1) return true;
 
     // Check if user can validate this person based on jabatan hierarchy
     if (userJabatan === "Plant Leading Hand") {
@@ -81,6 +140,9 @@ function FitToWorkValidationFormNew({
     const userJabatan = user.jabatan;
     const userSite = user.site;
 
+    // Mandat: Asst.PJO/PJO bisa validasi Level2 (SHERQ/PJO cases) jika dapat mandat dan pemberi tidak onsite
+    if (mandateCanEditL2) return true;
+
     console.log("=== canEditLevel2 DEBUG ===");
     console.log("User jabatan:", userJabatan);
     console.log("User site:", userSite);
@@ -96,10 +158,11 @@ function FitToWorkValidationFormNew({
 
     // Check if user can validate this person based on jabatan hierarchy
     if (userJabatan === "SHE") {
-      // SHE can validate anyone who has completed Level 1 or is Admin
+      // SHE can validate anyone who has completed Level 1 or is Administrator/Admin Site Project
       const canValidate =
         validation.workflow_status === "Level1_Review" ||
-        validation.jabatan === "Admin";
+        validation.jabatan === "Administrator" ||
+        validation.jabatan === "Admin Site Project";
       console.log("SHE validation check:", canValidate);
       return canValidate;
     } else if (userJabatan === "Penanggung Jawab Operasional") {
@@ -130,10 +193,11 @@ function FitToWorkValidationFormNew({
 
       return canValidate;
     } else if (userJabatan === "SHERQ Officer") {
-      // SHERQ Officer can validate anyone who has completed Level 1 or is Admin
+      // SHERQ Officer can validate anyone who has completed Level 1 or is Administrator/Admin Site Project
       const canValidate =
         validation.workflow_status === "Level1_Review" ||
-        validation.jabatan === "Admin";
+        validation.jabatan === "Administrator" ||
+        validation.jabatan === "Admin Site Project";
       console.log("SHERQ Officer validation check:", canValidate);
       return canValidate;
     }
@@ -1484,7 +1548,21 @@ function FitToWorkValidationFormNew({
           )}
 
           {/* Read-only message */}
-          {!canEditLevel1() && !canEditLevel2() && (
+          {permissionLoading ? (
+            <div
+              style={{
+                backgroundColor: "#374151",
+                color: "#9ca3af",
+                padding: "16px",
+                borderRadius: "8px",
+                textAlign: "center",
+                border: "1px solid #4b5563",
+                marginTop: "24px",
+              }}
+            >
+              Memeriksa izin validasi...
+            </div>
+          ) : !canEditLevel1() && !canEditLevel2() ? (
             <div
               style={{
                 backgroundColor: "#374151",
@@ -1498,7 +1576,7 @@ function FitToWorkValidationFormNew({
             >
               Anda tidak memiliki akses untuk melakukan validasi pada data ini.
             </div>
-          )}
+          ) : null}
         </form>
       </div>
 

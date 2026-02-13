@@ -4,7 +4,7 @@ import MobileBottomNavigation from "./MobileBottomNavigation";
 // Hanya jabatan validator yang boleh melihat menu Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
 function canAccessFitToWorkValidation(user) {
   if (!user) return false;
-  if (user?.role === "admin" || user?.jabatan === "Admin") return true;
+  if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
   const jabatan = (user?.jabatan || "").trim();
   const validatorJabatan = [
     "Field Leading Hand",
