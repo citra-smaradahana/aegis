@@ -187,7 +187,13 @@ function App() {
             />
           );
         case "hazard":
-          return <HazardForm user={user} onBack={handleBackToMain} />;
+          return (
+            <HazardForm
+              user={user}
+              onBack={handleBackToMain}
+              onNavigate={handleMenuChange}
+            />
+          );
         case "tasklist":
           return (
             <TasklistPage

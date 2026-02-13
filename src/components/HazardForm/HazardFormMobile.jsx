@@ -18,6 +18,7 @@ import MobileSiteSelector from "../MobileSiteSelector";
 import LocationDetailSelector from "../LocationDetailSelector";
 import PICSelector from "../PICSelector";
 import MobileHeader from "../MobileHeader";
+import MobileBottomNavigation from "../MobileBottomNavigation";
 
 const _lokasiOptions = [
   "Head Office",
@@ -38,7 +39,7 @@ const _lokasiOptions = [
   "PMTU",
 ];
 
-function HazardFormMobile({ user, onBack }) {
+function HazardFormMobile({ user, onBack, onNavigate }) {
   // Pemetaan sub ketidaksesuaian per kategori (disortir alfabetis)
   const SUB_OPTIONS = useMemo(
     () => ({
@@ -463,22 +464,12 @@ function HazardFormMobile({ user, onBack }) {
     return isPage1Valid() && isPage2Valid() && isPage3Valid();
   };
 
-  // Fungsi untuk menampilkan pesan error field
-  const getFieldError = (fieldName) => {
-    if (!form[fieldName] || form[fieldName].trim() === "") {
-      return "Field ini wajib diisi";
-    }
-    return null;
-  };
-
-  // Fungsi untuk menampilkan border merah pada field yang kosong
-  const getFieldBorderStyle = (fieldName) => {
-    const hasError = getFieldError(fieldName);
-    return {
-      border: hasError ? "1px solid #ef4444" : "1px solid #d1d5db",
-      backgroundColor: hasError ? "#fef2f2" : "#fff",
-    };
-  };
+  // Kolom tampil normal tanpa border merah / pesan error
+  const getFieldError = () => null;
+  const getFieldBorderStyle = () => ({
+    border: "1px solid #d1d5db",
+    backgroundColor: "#fff",
+  });
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -806,7 +797,7 @@ function HazardFormMobile({ user, onBack }) {
           boxShadow: "0 2px 16px #0001",
           paddingTop: 6,
           paddingRight: 6,
-          paddingBottom: 6,
+          paddingBottom: 100, // space agar content tidak tertutup navbar
           paddingLeft: 6,
           width: "100%",
           maxWidth: 425, // fit untuk mobile 425px
@@ -1667,6 +1658,20 @@ function HazardFormMobile({ user, onBack }) {
           )}
         </form>
       </div>
+
+      {/* Bottom Navigation */}
+      <MobileBottomNavigation
+        activeTab=""
+        onNavigate={(tab) => {
+          if (tab === "home") {
+            onBack && onBack();
+          } else if (tab === "profile") {
+            onNavigate && onNavigate("profile");
+          } else if (tab === "tasklist") {
+            onNavigate && onNavigate("tasklist");
+          }
+        }}
+      />
     </div>
   );
 }

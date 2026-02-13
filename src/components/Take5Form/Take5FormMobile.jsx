@@ -580,6 +580,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
             fontSize: "14px",
             fontWeight: "600",
             color: "#f97316",
+            marginRight: 12,
           }}
         >
           {user?.nama?.charAt(0).toUpperCase() || "U"}
