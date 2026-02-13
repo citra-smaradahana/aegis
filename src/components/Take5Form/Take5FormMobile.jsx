@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
+import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
@@ -56,7 +57,9 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
   const [success, setSuccess] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
-  const [, setCrop] = useState({ x: 0, y: 0, size: 200 });
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   // Validasi form
   const isFormValid =
@@ -124,61 +127,44 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
     console.log("State changed - aman:", aman, "isFormValid:", isFormValid);
   }, [aman, isFormValid]);
 
-  // Handler untuk file input
+  const onCropComplete = useCallback((_, croppedAreaPx) => {
+    setCroppedAreaPixels(croppedAreaPx);
+  }, []);
+
   const handleBuktiChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setCropImageSrc(ev.target.result);
-        setShowCropper(true);
-      };
-      reader.readAsDataURL(file);
+      const url = URL.createObjectURL(file);
+      setCropImageSrc(url);
+      setShowCropper(true);
     }
+    e.target.value = "";
   };
 
   const handleCropConfirm = async () => {
+    if (!cropImageSrc || !croppedAreaPixels) return;
     try {
-      // Gunakan area crop yang tetap (80% dari gambar)
-      const cropArea = {
-        x: 10, // 10% dari kiri
-        y: 10, // 10% dari atas
-        width: 80, // 80% lebar
-        height: 80, // 80% tinggi
-      };
-
-      const croppedImage = await getCroppedImg(cropImageSrc, cropArea);
-      const file = new File([croppedImage], "bukti-perbaikan.jpg", {
+      const croppedBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels);
+      const file = new File([croppedBlob], "bukti-perbaikan.jpg", {
         type: "image/jpeg",
       });
       setBuktiPerbaikan(file);
-      setBuktiPreview(URL.createObjectURL(croppedImage));
+      setBuktiPreview(URL.createObjectURL(croppedBlob));
       setShowCropper(false);
+      URL.revokeObjectURL(cropImageSrc);
       setCropImageSrc(null);
     } catch (e) {
       console.error("Error cropping image:", e);
-      // Fallback: gunakan gambar asli tanpa crop
-      try {
-        const response = await fetch(cropImageSrc);
-        const blob = await response.blob();
-        const file = new File([blob], "bukti-perbaikan.jpg", {
-          type: "image/jpeg",
-        });
-        setBuktiPerbaikan(file);
-        setBuktiPreview(cropImageSrc);
-        setShowCropper(false);
-        setCropImageSrc(null);
-      } catch (fallbackError) {
-        console.error("Fallback error:", fallbackError);
-        setError("Gagal memproses gambar. Silakan coba lagi.");
-        setShowCropper(false);
-        setCropImageSrc(null);
-      }
+      setError("Gagal memproses gambar. Silakan coba lagi.");
+      setShowCropper(false);
+      if (cropImageSrc?.startsWith("blob:")) URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
     }
   };
 
   const handleCropCancel = () => {
     setShowCropper(false);
+    if (cropImageSrc?.startsWith("blob:")) URL.revokeObjectURL(cropImageSrc);
     setCropImageSrc(null);
   };
 
@@ -473,8 +459,8 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
     alignSelf: "center",
   };
 
-  // Crop modal
-  if (showCropper) {
+  // Crop modal - react-easy-crop dengan aspect 1:1
+  if (showCropper && cropImageSrc) {
     return (
       <div
         style={{
@@ -483,160 +469,71 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0,0,0,0.8)",
+          background: "rgba(0,0,0,0.9)",
           zIndex: 1000,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 20,
+          flexDirection: "column",
         }}
       >
         <div
           style={{
             position: "relative",
-            width: 280,
-            height: 280,
-            background: "#fff",
-            borderRadius: 12,
-            overflow: "hidden",
+            flex: 1,
+            minHeight: 0,
           }}
         >
-          <div
+          <Cropper
+            image={cropImageSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            style={{ containerStyle: { width: "100%", height: "100%" } }}
+          />
+        </div>
+        <div
+          style={{
+            padding: 20,
+            background: "#1f2937",
+            display: "flex",
+            justifyContent: "center",
+            gap: 16,
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleCropCancel}
             style={{
-              position: "absolute",
-              top: 10,
-              left: 10,
-              right: 10,
-              background: "rgba(0,0,0,0.7)",
+              background: "#ef4444",
               color: "#fff",
-              padding: "8px",
-              borderRadius: "6px",
-              fontSize: "12px",
-              textAlign: "center",
-              zIndex: 10,
+              border: "none",
+              borderRadius: 8,
+              padding: "12px 24px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
             }}
           >
-            Area putih adalah bagian yang akan disimpan
-          </div>
-          <div
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={handleCropConfirm}
             style={{
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              overflow: "hidden",
+              background: "#22c55e",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "12px 24px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
             }}
           >
-            <img
-              src={cropImageSrc}
-              alt="Crop"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-              }}
-            />
-            {/* Crop overlay */}
-            <div
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "80%",
-                height: "80%",
-                border: "2px solid #fff",
-                boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
-                cursor: "move",
-              }}
-            />
-          </div>
-          <div
-            style={{
-              position: "absolute",
-              bottom: 20,
-              left: 0,
-              right: 0,
-              display: "flex",
-              justifyContent: "center",
-              gap: 20,
-            }}
-          >
-            <button
-              onClick={handleCropCancel}
-              style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
-                width: 40,
-                height: 40,
-                fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              ✕
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch(cropImageSrc);
-                  const blob = await response.blob();
-                  const file = new File([blob], "bukti-perbaikan.jpg", {
-                    type: "image/jpeg",
-                  });
-                  setBuktiPerbaikan(file);
-                  setBuktiPreview(cropImageSrc);
-                  setShowCropper(false);
-                  setCropImageSrc(null);
-                } catch (error) {
-                  console.error("Error using original image:", error);
-                  setError("Gagal memproses gambar. Silakan coba lagi.");
-                  setShowCropper(false);
-                  setCropImageSrc(null);
-                }
-              }}
-              style={{
-                background: "#6b7280",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
-                width: 40,
-                height: 40,
-                fontSize: 12,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-              title="Gunakan gambar asli"
-            >
-              ⭕
-            </button>
-            <button
-              onClick={handleCropConfirm}
-              style={{
-                background: "#22c55e",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
-                width: 40,
-                height: 40,
-                fontSize: 18,
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              ✓
-            </button>
-          </div>
+            Simpan
+          </button>
         </div>
       </div>
     );
@@ -986,8 +883,6 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                 <input
                   type="file"
                   accept="image/*"
-                  capture="environment"
-                  // required (hapus ini)
                   style={{ display: "none" }}
                   id="bukti-file-input"
                   name="bukti"
@@ -1046,7 +941,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                       <circle cx="12" cy="13" r="4" />
                     </svg>
-                    Klik untuk mengambil foto
+                    Ambil foto atau pilih dari galeri
                   </button>
                 )}
               </div>
