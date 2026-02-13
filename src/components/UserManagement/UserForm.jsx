@@ -20,17 +20,20 @@ const jabatanOptions = [
   },
   { value: "SHERQ Officer", label: "SHERQ Officer" },
   { value: "SHERQ Supervisor", label: "SHERQ Supervisor" },
+  { value: "SHERQ System & Compliance Officer", label: "SHERQ System & Compliance Officer" },
   { value: "Technical Service", label: "Technical Service" },
   { value: "Field Leading Hand", label: "Field Leading Hand" },
   { value: "Plant Leading Hand", label: "Plant Leading Hand" },
   { value: "Operator MMU", label: "Operator MMU" },
   { value: "Operator Plant", label: "Operator Plant" },
+  { value: "Operator WOPP", label: "Operator WOPP" },
   { value: "Mekanik", label: "Mekanik" },
   { value: "Crew", label: "Crew" },
   { value: "Administrator", label: "Administrator" },
   { value: "Admin Site Project", label: "Admin Site Project" },
   { value: "Blaster", label: "Blaster" },
   { value: "Quality Controller", label: "Quality Controller" },
+  { value: "Training & Development Specialist", label: "Training & Development Specialist" },
 ];
 
 const siteOptions = [

@@ -91,6 +91,37 @@ function UserManagement() {
   const endIndex = Math.min(startIndex + rowsPerPage, totalFiltered);
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
+  // Download data user ke CSV
+  const handleDownloadCSV = () => {
+    const headers = ["Nama", "NRP", "Email", "Username", "Site", "Jabatan"];
+    const rows = filteredUsers.map((u) => [
+      u.nama || "",
+      u.nrp || "",
+      u.email || "",
+      u.user || "",
+      u.site || "",
+      u.jabatan || "",
+    ]);
+    const escapeCsv = (val) => {
+      const s = String(val ?? "");
+      if (s.includes(",") || s.includes('"') || s.includes("\n"))
+        return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const csvContent =
+      "\uFEFF" +
+      headers.join(",") +
+      "\n" +
+      rows.map((r) => r.map(escapeCsv).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Unique site & jabatan untuk filter dengan null check yang lebih ketat
   const siteOptions = [
     ...new Set(users.filter((u) => u && u.site).map((u) => u.site)),
@@ -393,21 +424,40 @@ function UserManagement() {
             >
               Management User
             </h2>
-            <button
-              onClick={() => setShowForm(true)}
-              style={{
-                background: "#60a5fa",
-                color: "#ffffff",
-                border: "none",
-                padding: "10px 20px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "600",
-                fontSize: "14px",
-              }}
-            >
-              + Tambah User
-            </button>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={handleDownloadCSV}
+                disabled={filteredUsers.length === 0}
+                style={{
+                  background: "#374151",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  cursor: filteredUsers.length === 0 ? "not-allowed" : "pointer",
+                  fontWeight: "600",
+                  fontSize: "14px",
+                  opacity: filteredUsers.length === 0 ? 0.6 : 1,
+                }}
+              >
+                Download CSV
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                style={{
+                  background: "#60a5fa",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                  fontSize: "14px",
+                }}
+              >
+                + Tambah User
+              </button>
+            </div>
           </div>
           <div
             style={{

@@ -353,7 +353,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
     boxShadow: "0 2px 16px #0001",
     paddingTop: 6,
     paddingRight: 6,
-    paddingBottom: 80, // tambahkan padding bottom untuk space tombol submit
+    paddingBottom: 100, // space agar content tidak tertutup navbar saat scroll
     paddingLeft: 6,
     width: "100%",
     maxWidth: 425, // fit untuk mobile 425px
@@ -738,8 +738,10 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
               readOnly
               style={{
                 ...inputStyle,
-                background: "#0b1220",
-                border: "1px solid #334155",
+                background: "#f9fafb",
+                color: "#222",
+                border: "1px solid #d1d5db",
+                cursor: "default",
               }}
             />
           </div>
@@ -1116,16 +1118,14 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
             </div>
           )}
 
-          {/* Submit Button fixed di bawah card */}
+          {/* Submit Button - di bawah stop/perbaikan, mengalir dengan form */}
           <div
             style={{
-              position: "fixed",
-              left: 0,
-              right: 0,
-              bottom: 56,
-              zIndex: 100,
-              maxWidth: 425,
-              margin: "0 auto",
+              width: "90%",
+              marginLeft: "auto",
+              marginRight: "auto",
+              marginTop: 20,
+              marginBottom: 24,
             }}
           >
             <button
@@ -1135,16 +1135,13 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                 background: "#2563eb",
                 color: "#fff",
                 border: "none",
-                borderTopLeftRadius: 12,
-                borderTopRightRadius: 12,
-                borderBottomLeftRadius: 0,
-                borderBottomRightRadius: 0,
-                padding: "12px 0",
+                borderRadius: 12,
+                padding: "14px 0",
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: "pointer",
                 width: "100%",
-                boxShadow: "0 -2px 8px #0001",
+                boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
               }}
             >
               {loading ? "Menyimpan..." : "Simpan Take 5"}
