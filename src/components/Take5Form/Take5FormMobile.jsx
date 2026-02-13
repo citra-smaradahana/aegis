@@ -874,7 +874,13 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
           {/* Bukti Perbaikan - hanya pilih dari galeri (kompatibel PWA) */}
           {(aman === "perbaikan" || aman === "stop") && (
             <>
-              <div style={fieldMargin}>
+              <div
+                style={{
+                  ...fieldMargin,
+                  minWidth: 0,
+                  overflow: "hidden",
+                }}
+              >
                 <label style={labelStyle}>
                   {aman === "stop"
                     ? "Bukti Kondisi (Foto)"
@@ -895,6 +901,9 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                       position: "relative",
                       marginTop: 0,
                       width: "100%",
+                      minWidth: 0,
+                      boxSizing: "border-box",
+                      overflow: "hidden",
                     }}
                   >
                     <img
@@ -907,9 +916,18 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                         border: "1px solid #d1d5db",
                         display: "block",
                         objectFit: "contain",
+                        boxSizing: "border-box",
                       }}
                     />
-                    <div style={{ position: "relative", width: "100%", marginTop: 8 }}>
+                    <div
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        minWidth: 0,
+                        marginTop: 8,
+                        boxSizing: "border-box",
+                      }}
+                    >
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/jpg,image/gif"
@@ -927,14 +945,13 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                       />
                       <div
                         style={{
+                          ...inputStyle,
                           width: "100%",
                           padding: "10px 12px",
                           background: "#f3f4f6",
-                          borderRadius: 8,
-                          fontSize: 13,
-                          color: "#374151",
                           textAlign: "center",
-                          border: "1px solid #d1d5db",
+                          cursor: "pointer",
+                          boxSizing: "border-box",
                         }}
                       >
                         Ganti foto dari galeri
@@ -942,7 +959,16 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ position: "relative", width: "100%", marginTop: 0 }}>
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      minWidth: 0,
+                      marginTop: 0,
+                      boxSizing: "border-box",
+                      overflow: "hidden",
+                    }}
+                  >
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/jpg,image/gif"
@@ -960,18 +986,17 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                     />
                     <div
                       style={{
+                        ...inputStyle,
                         width: "100%",
-                        padding: "14px 12px",
+                        padding: "12px",
                         background: "#f3f4f6",
-                        borderRadius: 8,
-                        fontSize: 13,
-                        color: "#374151",
                         textAlign: "center",
-                        border: "1px solid #d1d5db",
+                        cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: 8,
+                        boxSizing: "border-box",
                       }}
                     >
                       <svg
