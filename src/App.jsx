@@ -11,6 +11,7 @@ import Take5Form from "./components/Take5Form";
 import HazardForm from "./components/HazardForm";
 import TasklistPage from "./components/TasklistPage";
 import UserManagement from "./components/UserManagement";
+import Campaign from "./components/Campaign";
 import Profile from "./components/Profile";
 import Home from "./components/Home";
 import FitToWorkValidationNew from "./components/FitToWorkValidationNew";
@@ -237,6 +238,11 @@ function App() {
           ) : (
             <Home user={user} onNavigate={handleMenuChange} />
           );
+        case "campaign":
+          if (user?.jabatan !== "Administrator") {
+            return <Home user={user} onNavigate={handleMenuChange} />;
+          }
+          return <Campaign user={user} onBack={handleBackToMain} />;
         case "user-management":
           if (user?.jabatan !== "Administrator") {
             return <Home user={user} onNavigate={handleMenuChange} />;
@@ -763,6 +769,28 @@ function App() {
                 </>
               )}
 
+              {/* Menu Campaign hanya untuk Administrator */}
+              {user?.jabatan === "Administrator" && (
+                <button
+                  onClick={() => handleMenuChange("campaign")}
+                  style={{
+                    textAlign: "left",
+                    width: "100%",
+                    padding: "8px 10px",
+                    background:
+                      activeMenu === "campaign"
+                        ? "rgba(0,0,0,0.15)"
+                        : "transparent",
+                    color: "#ffffff",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  Campaign
+                </button>
+              )}
               {/* Menu Management User hanya untuk Administrator (bukan Admin Site Project) */}
               {user?.jabatan === "Administrator" && (
                 <button
