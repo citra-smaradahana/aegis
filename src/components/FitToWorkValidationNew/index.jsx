@@ -46,71 +46,13 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
         .eq("site", userSite) // Site-based filtering
         .eq("status_fatigue", "Not Fit To Work"); // Only show Not Fit To Work entries
 
-      // Apply workflow status filter if not "all" (termasuk value "" dari dropdown Semua Status)
+      // Semua validator melihat seluruh validasi (untuk memantau tahap 1 dan tahap 2).
+      // Filter workflow hanya dari dropdown; tidak filter by jabatan.
       if (filterStatus && filterStatus !== "all") {
         query = query.eq("workflow_status", filterStatus);
         console.log(
           "fetchValidations - Applied workflow status filter:",
           filterStatus
-        );
-      }
-
-      // Filter berdasarkan jabatan validator dan workflow status yang bisa diakses
-      if (userJabatan === "Plant Leading Hand") {
-        // Plant Leading Hand hanya bisa melihat status Pending untuk Mekanik dan Operator Plant
-        query = query
-          .in("jabatan", [
-            "Mekanik",
-            "Operator Plant",
-          ])
-          .eq("workflow_status", "Pending");
-        console.log("fetchValidations - Plant Leading Hand filter applied");
-      } else if (userJabatan === "Field Leading Hand") {
-        // Field Leading Hand hanya bisa melihat status Pending untuk Operator MMU, Crew, Quality Control, dan Blaster
-        query = query
-          .in("jabatan", [
-            "Operator MMU",
-            "Crew",
-            "crew", // variasi casing di DB
-            "Quality Controller",
-            "Quality Control",
-            "Blaster",
-            "Crew Blasting",
-          ])
-          .eq("workflow_status", "Pending");
-        console.log("fetchValidations - Field Leading Hand filter applied");
-      } else if (userJabatan === "Asst. Penanggung Jawab Operasional") {
-        // Asst. PJO hanya bisa melihat status Pending untuk jabatan tertentu
-        query = query
-          .in("jabatan", ["Blaster", "Field Leading Hand", "Plant Leading Hand"])
-          .eq("workflow_status", "Pending");
-        console.log("fetchValidations - Asst. PJO filter applied");
-      } else if (userJabatan === "Penanggung Jawab Operasional") {
-        // PJO bisa melihat status Level1_Review dan Pending untuk jabatan yang divalidasi PJO
-        query = query
-          .in("jabatan", [
-            "Asst. Penanggung Jawab Operasional",
-            "SHERQ Officer",
-            "Technical Service",
-            "Field Leading Hand",
-            "Plant Leading Hand",
-          ])
-          .in("workflow_status", ["Pending", "Level1_Review", "Level1 Review"]);
-        console.log("fetchValidations - PJO filter applied");
-      } else if (userJabatan === "SHE") {
-        // SHE bisa melihat status Level1_Review dan Pending untuk semua jabatan
-        query = query.in("workflow_status", [
-          "Pending",
-          "Level1_Review",
-          "Level1 Review",
-        ]);
-        console.log("fetchValidations - SHE filter applied");
-      } else if (userJabatan === "SHERQ Officer") {
-        // SHERQ Officer bisa melihat status Level1_Review untuk semua jabatan
-        // Debug: Check for both possible values
-        query = query.in("workflow_status", ["Level1_Review", "Level1 Review"]);
-        console.log(
-          "fetchValidations - SHERQ Officer filter applied (checking both Level1_Review and Level1 Review)"
         );
       }
 

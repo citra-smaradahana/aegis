@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import { sessionManager, setupSessionAutoExtend } from "./utils/sessionManager";
+import { fetchValidationCountForUser } from "./utils/fitToWorkValidationCount";
 import Login from "./components/Login";
 import MonitoringPage from "./components/MonitoringPage";
 import SiteSelectionPage from "./components/SiteSelectionPage";
@@ -115,6 +116,8 @@ function App() {
   // Main App Component with Navigation
   const MainApp = () => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+    const [validationCount, setValidationCount] = useState(0);
     const canAccessMonitoring =
       user?.role === "evaluator" || user?.role === "admin";
     // Hanya jabatan validator yang boleh melihat dan mengakses Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
@@ -132,10 +135,29 @@ function App() {
       ];
       return validatorJabatan.includes(jabatan);
     };
+
+    // Tutup panel notifikasi saat pindah menu
+    useEffect(() => {
+      setShowNotificationPanel(false);
+    }, [activeMenu]);
+
+    // Fetch jumlah validasi yang perlu ditindaklanjuti (untuk notifikasi)
+    useEffect(() => {
+      if (!user || !canAccessFitToWorkValidation()) {
+        setValidationCount(0);
+        return;
+      }
+      let cancelled = false;
+      fetchValidationCountForUser(user).then((count) => {
+        if (!cancelled) setValidationCount(count);
+      });
+      return () => { cancelled = true; };
+    }, [user?.id, user?.jabatan, user?.site, activeMenu]);
+
     const renderContent = () => {
       switch (activeMenu) {
         case "dashboard":
-          return <Home user={user} onNavigate={handleMenuChange} />;
+          return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} />;
         case "fit-to-work":
           return (
             <FitToWorkForm
@@ -254,8 +276,10 @@ function App() {
               color: "#fff",
               padding: "8px 12px 12px 12px",
               boxShadow: "2px 0 8px rgba(0,0,0,0.15)",
-              overflowY: "hidden",
+              overflow: "hidden",
               zIndex: 1000,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <div
@@ -263,6 +287,7 @@ function App() {
                 padding: "0 8px 8px 8px",
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
                 textAlign: "center",
+                flexShrink: 0,
               }}
             >
               <div
@@ -357,7 +382,7 @@ function App() {
                   </div>
                 </div>
                 {/* Modern minimal icons */}
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, position: "relative", flexWrap: "wrap" }}>
                   <button
                     title="Profile"
                     onClick={() => setActiveMenu("profile")}
@@ -373,21 +398,47 @@ function App() {
                   >
                     👤
                   </button>
-                  <button
-                    title="Notifikasi"
-                    onClick={() => setActiveMenu("dashboard")}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      border: "1px solid rgba(255,255,255,0.35)",
-                      background: "transparent",
-                      color: "#ffffff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    🔔
-                  </button>
+                  <div style={{ position: "relative" }}>
+                    <button
+                      title="Notifikasi"
+                      type="button"
+                      onClick={() => setShowNotificationPanel((prev) => !prev)}
+                      style={{
+                        position: "relative",
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        border: "1px solid rgba(255,255,255,0.35)",
+                        background: showNotificationPanel ? "rgba(0,0,0,0.2)" : "transparent",
+                        color: "#ffffff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      🔔
+                      {validationCount > 0 && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: -4,
+                            right: -4,
+                            minWidth: 18,
+                            height: 18,
+                            borderRadius: 9,
+                            background: "#ef4444",
+                            color: "#fff",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "0 4px",
+                          }}
+                        >
+                          {validationCount > 99 ? "99+" : validationCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
                   <button
                     title="Logout"
                     onClick={() => setShowLogoutConfirm(true)}
@@ -406,46 +457,134 @@ function App() {
                 </div>
               </div>
             </div>
-            <nav
-              style={{
-                marginTop: 12,
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-              }}
-            >
-              {[
-                { key: "dashboard", label: "Home" },
-                { key: "fit-to-work", label: "Fit To Work" },
-                ...(canAccessFitToWorkValidation()
-                  ? [{ key: "fit-to-work-validation", label: "Validasi Fit To Work" }]
-                  : []),
-                { key: "take-5", label: "Take 5" },
-                { key: "hazard", label: "Hazard Report" },
-                { key: "tasklist", label: "Tasklist" },
-                { key: "pto", label: "PTO" },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => handleMenuChange(item.key)}
+            {showNotificationPanel ? (
+              <div
+                style={{
+                  marginTop: 12,
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 0,
+                  background: "rgba(0,0,0,0.12)",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
                   style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 10px",
-                    background:
-                      activeMenu === item.key
-                        ? "rgba(0,0,0,0.15)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "14px",
+                    padding: "10px 12px",
+                    borderBottom: "1px solid rgba(255,255,255,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                   }}
                 >
-                  {item.label}
-                </button>
-              ))}
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>Notifikasi</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowNotificationPanel(false)}
+                    style={{
+                      padding: "4px 8px",
+                      fontSize: 12,
+                      background: "rgba(255,255,255,0.2)",
+                      border: "none",
+                      borderRadius: 6,
+                      color: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Tutup
+                  </button>
+                </div>
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+                  {validationCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNotificationPanel(false);
+                        handleMenuChange("fit-to-work-validation");
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "12px 12px",
+                        textAlign: "left",
+                        border: "none",
+                        background: "transparent",
+                        color: "#ffffff",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>✅</span>
+                      <div style={{ flex: 1, minWidth: 0, wordWrap: "break-word" }}>
+                        <div style={{ fontWeight: 600 }}>
+                          {validationCount} validasi Fit To Work perlu ditindaklanjuti
+                        </div>
+                        <div style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>
+                          Klik untuk membuka halaman validasi
+                        </div>
+                      </div>
+                    </button>
+                  ) : (
+                    <div
+                      style={{
+                        padding: "16px 12px",
+                        color: "rgba(255,255,255,0.8)",
+                        fontSize: 13,
+                        textAlign: "center",
+                      }}
+                    >
+                      Tidak ada notifikasi baru
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <nav
+                style={{
+                  marginTop: 12,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                {[
+                  { key: "dashboard", label: "Home" },
+                  { key: "fit-to-work", label: "Fit To Work" },
+                  ...(canAccessFitToWorkValidation()
+                    ? [{ key: "fit-to-work-validation", label: "Validasi Fit To Work" }]
+                    : []),
+                  { key: "take-5", label: "Take 5" },
+                  { key: "hazard", label: "Hazard Report" },
+                  { key: "tasklist", label: "Tasklist" },
+                  { key: "pto", label: "PTO" },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => handleMenuChange(item.key)}
+                    style={{
+                      textAlign: "left",
+                      width: "100%",
+                      padding: "8px 10px",
+                      background:
+                        activeMenu === item.key
+                          ? "rgba(0,0,0,0.15)"
+                          : "transparent",
+                      color: "#ffffff",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
 
               {/* Menu Monitoring hanya untuk role evaluator dan admin */}
               {(user?.role === "evaluator" || user?.role === "admin") && (
@@ -644,6 +783,7 @@ function App() {
                 </button>
               )}
             </nav>
+            )}
             {/* Removed bottom logout button */}
           </aside>
         )}

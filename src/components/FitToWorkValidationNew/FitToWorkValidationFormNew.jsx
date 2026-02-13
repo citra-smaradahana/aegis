@@ -859,8 +859,68 @@ function FitToWorkValidationFormNew({
     );
   };
 
+  const renderLevel1ReadOnly = () => (
+    <div
+      style={{
+        backgroundColor: "#1f2937",
+        border: "1px solid #374151",
+        borderRadius: "12px",
+        padding: "24px",
+        marginBottom: "24px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 20px 0",
+          color: "#e5e7eb",
+          fontWeight: 600,
+          fontSize: "18px",
+        }}
+      >
+        Validasi Tahap 1 (hanya melihat)
+      </h3>
+      {validation.reviewer_tahap1_nama || validation.validasi_tahap1 ? (
+        <div
+          style={{
+            backgroundColor: "#111827",
+            border: "1px solid #374151",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Validator</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+              {validation.reviewer_tahap1_nama || "—"} ({validation.reviewer_tahap1_jabatan || "—"})
+            </div>
+          </div>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Tindakan yang Dilakukan</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>{validation.validasi_tahap1 || "—"}</div>
+          </div>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Catatan</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>{validation.catatan_tahap1 || "Tidak ada catatan"}</div>
+          </div>
+          <div>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Tanggal Validasi</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+              {validation.reviewed_tahap1_at
+                ? new Date(validation.reviewed_tahap1_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                : "—"}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ color: "#9ca3af", fontSize: "14px", fontStyle: "italic" }}>
+          Belum divalidasi — menunggu validator yang berwenang.
+        </div>
+      )}
+    </div>
+  );
+
   const renderLevel1Form = () => {
-    if (!canEditLevel1()) return null;
+    if (!canEditLevel1()) return renderLevel1ReadOnly();
 
     return (
       <div
@@ -957,8 +1017,70 @@ function FitToWorkValidationFormNew({
     );
   };
 
+  const renderLevel2ReadOnly = () => (
+    <div
+      style={{
+        backgroundColor: "#1f2937",
+        border: "1px solid #374151",
+        borderRadius: "12px",
+        padding: "24px",
+        marginBottom: "24px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 20px 0",
+          color: "#e5e7eb",
+          fontWeight: 600,
+          fontSize: "18px",
+        }}
+      >
+        Validasi Tahap 2 (hanya melihat)
+      </h3>
+      {validation.reviewer_tahap2_nama || validation.validasi_tahap2 ? (
+        <div
+          style={{
+            backgroundColor: "#111827",
+            border: "1px solid #374151",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Validator</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+              {validation.reviewer_tahap2_nama || "—"} ({validation.reviewer_tahap2_jabatan || "—"})
+            </div>
+          </div>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Rekomendasi Final</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px", fontWeight: "600" }}>
+              {validation.validasi_tahap2 === "Fit" ? "Fit To Work" : validation.validasi_tahap2 === "Not Fit" ? "Not Fit To Work" : validation.validasi_tahap2 || "—"}
+            </div>
+          </div>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Catatan</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>{validation.catatan_tahap2 || "Tidak ada catatan"}</div>
+          </div>
+          <div>
+            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Tanggal Validasi</label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+              {validation.reviewed_tahap2_at
+                ? new Date(validation.reviewed_tahap2_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                : "—"}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ color: "#9ca3af", fontSize: "14px", fontStyle: "italic" }}>
+          Belum divalidasi — menunggu validator yang berwenang.
+        </div>
+      )}
+    </div>
+  );
+
   const renderLevel2Form = () => {
-    if (!canEditLevel2()) return null;
+    if (!canEditLevel2()) return renderLevel2ReadOnly();
 
     const isDirectPJOValidation =
       user?.jabatan === "Penanggung Jawab Operasional" &&

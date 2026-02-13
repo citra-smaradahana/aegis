@@ -17,7 +17,7 @@ function canAccessFitToWorkValidation(user) {
   return validatorJabatan.includes(jabatan);
 }
 
-function HomeMobile({ user, onNavigate }) {
+function HomeMobile({ user, onNavigate, validationCount = 0 }) {
   const allMenuItems = [
     {
       key: "fit-to-work",
@@ -307,9 +307,31 @@ function HomeMobile({ user, onNavigate }) {
                     fontWeight: 600,
                     color: "#1f2937",
                     marginBottom: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
                   }}
                 >
                   {item.label}
+                  {item.key === "fit-to-work-validation" && validationCount > 0 && (
+                    <span
+                      style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        minWidth: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0 6px",
+                      }}
+                    >
+                      {validationCount > 99 ? "99+" : validationCount}
+                    </span>
+                  )}
                 </h3>
                 <p
                   style={{

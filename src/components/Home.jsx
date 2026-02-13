@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import HomeDesktop from "./HomeDesktop";
 import HomeMobile from "./HomeMobile";
 
-function Home({ user, onNavigate }) {
+function Home({ user, onNavigate, validationCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ function Home({ user, onNavigate }) {
   }, []);
 
   return isMobile ? (
-    <HomeMobile user={user} onNavigate={onNavigate} />
+    <HomeMobile user={user} onNavigate={onNavigate} validationCount={validationCount} />
   ) : (
     <HomeDesktop user={user} />
   );
