@@ -880,70 +880,79 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                     ? "Bukti Kondisi (Foto)"
                     : "Bukti Perbaikan (Foto)"}
                 </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  id="bukti-file-input"
-                  name="bukti"
-                  onChange={handleBuktiChange}
-                />
-                {buktiPreview ? (
-                  <div style={{ textAlign: "center" }}>
+                {/* Overlay input: user tap langsung ke input, bukan programmatic click (fix mobile) */}
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    marginTop: 8,
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="image/*,image/jpeg,image/png,image/gif,android/force-camera-workaround"
+                    id="bukti-file-input"
+                    name="bukti"
+                    onChange={handleBuktiChange}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      opacity: 0,
+                      cursor: "pointer",
+                      zIndex: 2,
+                    }}
+                  />
+                  {buktiPreview ? (
                     <img
                       src={buktiPreview}
                       alt="Preview"
-                      onClick={() =>
-                        document.getElementById("bukti-file-input").click()
-                      }
                       style={{
                         maxWidth: "100%",
                         maxHeight: 200,
                         borderRadius: 8,
-                        marginTop: 8,
                         border: "2px solid #e5e7eb",
-                        cursor: "pointer",
+                        display: "block",
+                        width: "100%",
+                        objectFit: "contain",
                       }}
-                      title="Klik untuk ganti foto"
                     />
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      document.getElementById("bukti-file-input").click()
-                    }
-                    style={{
-                      width: "100%",
-                      background: "#f3f4f6",
-                      border: "2px dashed #d1d5db",
-                      borderRadius: 8,
-                      padding: "12px",
-                      fontSize: 13,
-                      color: "#6b7280",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        background: "#f3f4f6",
+                        border: "2px dashed #d1d5db",
+                        borderRadius: 8,
+                        padding: "12px",
+                        fontSize: 13,
+                        color: "#6b7280",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        minHeight: 80,
+                      }}
                     >
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
-                    Ambil foto atau pilih dari galeri
-                  </button>
-                )}
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      Ambil foto atau pilih dari galeri
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div style={fieldMargin}>
