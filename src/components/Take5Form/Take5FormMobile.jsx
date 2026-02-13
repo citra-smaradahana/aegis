@@ -880,32 +880,8 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                     ? "Bukti Kondisi (Foto)"
                     : "Bukti Perbaikan (Foto)"}
                 </label>
-                {/* Overlay input: user tap langsung ke input, bukan programmatic click (fix mobile) */}
-                <div
-                  style={{
-                    position: "relative",
-                    width: "100%",
-                    marginTop: 8,
-                  }}
-                >
-                  <input
-                    type="file"
-                    accept="image/*,image/jpeg,image/png,image/gif,android/force-camera-workaround"
-                    id="bukti-file-input"
-                    name="bukti"
-                    onChange={handleBuktiChange}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      opacity: 0,
-                      cursor: "pointer",
-                      zIndex: 2,
-                    }}
-                  />
-                  {buktiPreview ? (
+                {buktiPreview ? (
+                  <div style={{ position: "relative", marginTop: 8 }}>
                     <img
                       src={buktiPreview}
                       alt="Preview"
@@ -919,40 +895,193 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
                         objectFit: "contain",
                       }}
                     />
-                  ) : (
                     <div
                       style={{
-                        width: "100%",
-                        background: "#f3f4f6",
-                        border: "2px dashed #d1d5db",
-                        borderRadius: 8,
-                        padding: "12px",
-                        fontSize: 13,
-                        color: "#6b7280",
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        minHeight: 80,
+                        gap: 8,
+                        marginTop: 8,
+                        flexWrap: "wrap",
                       }}
                     >
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                      </svg>
-                      Ambil foto atau pilih dari galeri
+                      <div style={{ position: "relative", flex: 1, minWidth: 120 }}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleBuktiChange}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            opacity: 0,
+                            cursor: "pointer",
+                            zIndex: 2,
+                          }}
+                        />
+                        <div
+                          style={{
+                            padding: "10px 12px",
+                            background: "#f3f4f6",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            color: "#374151",
+                            textAlign: "center",
+                            border: "1px solid #d1d5db",
+                          }}
+                        >
+                          📷 Ambil foto baru
+                        </div>
+                      </div>
+                      <div style={{ position: "relative", flex: 1, minWidth: 120 }}>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/gif"
+                          onChange={handleBuktiChange}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            opacity: 0,
+                            cursor: "pointer",
+                            zIndex: 2,
+                          }}
+                        />
+                        <div
+                          style={{
+                            padding: "10px 12px",
+                            background: "#f3f4f6",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            color: "#374151",
+                            textAlign: "center",
+                            border: "1px solid #d1d5db",
+                          }}
+                        >
+                          🖼️ Ganti dari galeri
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginTop: 8,
+                      flexDirection: "column",
+                    }}
+                  >
+                    {/* Tombol Kamera - capture langsung trigger permission + buka kamera */}
+                    <div style={{ position: "relative", width: "100%" }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleBuktiChange}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          opacity: 0,
+                          cursor: "pointer",
+                          zIndex: 2,
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "100%",
+                          background: "#22c55e",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "14px",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                          <circle cx="12" cy="13" r="4" />
+                        </svg>
+                        Ambil foto dengan kamera
+                      </div>
+                    </div>
+                    {/* Tombol Galeri - tanpa capture, buka picker foto */}
+                    <div style={{ position: "relative", width: "100%" }}>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/gif"
+                        onChange={handleBuktiChange}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          opacity: 0,
+                          cursor: "pointer",
+                          zIndex: 2,
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "100%",
+                          background: "#f3f4f6",
+                          color: "#374151",
+                          border: "2px solid #d1d5db",
+                          borderRadius: 8,
+                          padding: "14px",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                        Pilih dari galeri
+                      </div>
+                    </div>
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#6b7280",
+                        margin: "4px 0 0 0",
+                      }}
+                    >
+                      Jika kamera tidak terbuka, pastikan izin kamera diizinkan di pengaturan browser/perangkat.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div style={fieldMargin}>
