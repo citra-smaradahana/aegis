@@ -43,10 +43,19 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [readMoreCampaign, setReadMoreCampaign] = useState(null);
+  const [fullScreenImage, setFullScreenImage] = useState(null);
   const [campaignIndex, setCampaignIndex] = useState(0);
   const campaignScrollRef = useRef(null);
   const campaignIndexRef = useRef(0);
   campaignIndexRef.current = campaignIndex;
+
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -68,9 +77,15 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
   useEffect(() => {
     if (campaigns.length <= 1 || !campaignScrollRef.current) return;
     const el = campaignScrollRef.current;
-    const stepWidth = Math.min(320, window.innerWidth - 48) + 12;
-    const scrollDuration = 2500; // 2.5 detik per slide (bergerak perlahan)
-    const pauseBetween = 5000; // jeda 5 detik setelah selesai slide
+    const cardWidth = Math.min(320, window.innerWidth - 48);
+    const gap = 12;
+    const stepWidth = cardWidth + gap;
+    const scrollDuration = 3200; // 3.2 detik - transisi halus seperti mendorong
+    const pauseBetween = 5000;
+
+    // Easing: ease-in-out cubic - halus di awal dan akhir, mirip gerakan mendorong
+    const easeInOutCubic = (t) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
     let timeoutId;
     let rafId;
@@ -84,12 +99,13 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
       const animate = (now) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / scrollDuration, 1);
-        const easeProgress = 1 - Math.pow(1 - progress, 2); // ease-out
-        el.scrollLeft = startLeft + (targetLeft - startLeft) * easeProgress;
+        const eased = easeInOutCubic(progress);
+        el.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
 
         if (progress < 1) {
           rafId = requestAnimationFrame(animate);
         } else {
+          el.scrollLeft = targetLeft; // pastikan posisi tepat
           setCampaignIndex(nextIdx);
           timeoutId = setTimeout(scrollToNext, pauseBetween);
         }
@@ -154,11 +170,14 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
     `}</style>
     <div
       style={{
+        position: "fixed",
+        inset: 0,
         width: "100%",
-        height: "100vh",
+        height: "100%",
         maxHeight: "100dvh",
         background: "#f8fafc",
         overflow: "hidden",
+        overscrollBehavior: "none",
         display: "flex",
         flexDirection: "column",
         paddingBottom: 70, // Space untuk bottom nav
@@ -300,14 +319,13 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
         </div>
       </div>
 
-      {/* Menu + Campaign - scroll bersama */}
+      {/* Menu + Campaign - tanpa scroll vertikal */}
       <div
         className="mobile-home-menu"
         style={{
           flex: 1,
           minHeight: 0,
-          overflowY: "auto",
-          overflowX: "hidden",
+          overflow: "hidden",
           padding: "8px 20px 0",
           maxWidth: 1200,
           margin: "0 auto",
@@ -447,7 +465,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
                 gap: 12,
                 overflowX: "auto",
                 overflowY: "hidden",
-                scrollSnapType: "x mandatory",
+                scrollSnapType: "none",
                 WebkitOverflowScrolling: "touch",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
@@ -477,7 +495,6 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
                     style={{
                       flexShrink: 0,
                       width: cardWidth,
-                      scrollSnapAlign: "start",
                       background: "#1f2937",
                       border: "1px solid #374151",
                       borderRadius: 12,
@@ -539,8 +556,9 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 1000,
-            padding: 20,
+            zIndex: 1100,
+            padding: "20px 20px 90px 20px",
+            boxSizing: "border-box",
           }}
           onClick={() => setReadMoreCampaign(null)}
         >
@@ -549,45 +567,67 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
               background: "#1f2937",
               border: "1px solid #374151",
               borderRadius: 12,
-              padding: 24,
+              padding: 18,
               maxWidth: 500,
               width: "100%",
-              maxHeight: "80vh",
+              maxHeight: "65vh",
               overflow: "auto",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3
               style={{
-                margin: "0 0 16px 0",
+                margin: "0 0 12px 0",
                 color: "#e5e7eb",
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: 700,
               }}
             >
               {readMoreCampaign.judul}
             </h3>
             {readMoreCampaign.image_url && (
-              <img
-                src={readMoreCampaign.image_url}
-                alt={readMoreCampaign.judul}
-                onError={(e) => {
-                  e.target.style.display = "none";
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFullScreenImage(readMoreCampaign.image_url);
                 }}
+                onKeyDown={(e) => e.key === "Enter" && setFullScreenImage(readMoreCampaign.image_url)}
                 style={{
-                  width: "100%",
-                  maxHeight: 240,
-                  objectFit: "cover",
-                  borderRadius: 8,
-                  marginBottom: 16,
+                  cursor: "pointer",
+                  marginBottom: 12,
                 }}
-              />
+              >
+                <img
+                  src={readMoreCampaign.image_url}
+                  alt={readMoreCampaign.judul}
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                  style={{
+                    width: "100%",
+                    maxHeight: 140,
+                    objectFit: "cover",
+                    borderRadius: 8,
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#60a5fa",
+                    marginTop: 4,
+                  }}
+                >
+                  Ketuk untuk lihat ukuran penuh
+                </div>
+              </div>
             )}
             <div
               style={{
                 color: "#9ca3af",
-                fontSize: 14,
-                lineHeight: 1.6,
+                fontSize: 13,
+                lineHeight: 1.5,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
               }}
@@ -598,19 +638,47 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
               type="button"
               onClick={() => setReadMoreCampaign(null)}
               style={{
-                marginTop: 20,
-                padding: "10px 20px",
+                marginTop: 14,
+                padding: "8px 18px",
                 background: "#374151",
                 color: "#e5e7eb",
                 border: "none",
                 borderRadius: 8,
-                fontSize: 14,
+                fontSize: 13,
                 cursor: "pointer",
               }}
             >
               Tutup
             </button>
           </div>
+        </div>
+      )}
+
+      {fullScreenImage && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.95)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1200,
+            padding: 20,
+            boxSizing: "border-box",
+          }}
+          onClick={() => setFullScreenImage(null)}
+        >
+          <img
+            src={fullScreenImage}
+            alt="Full size"
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 
