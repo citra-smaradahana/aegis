@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-const PendingReportsList = ({ user, onSelectReport, selectedReportId }) => {
+const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = "mobile" }) => {
+  const useDropdown = variant === "desktop";
   const [pendingReports, setPendingReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const handleResize = () => {
@@ -228,18 +231,32 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId }) => {
     });
   };
 
+  const handleSelectReport = (report) => {
+    onSelectReport(report);
+    setShowModal(false);
+    setSearchQuery("");
+  };
+
   const handleSelectChange = (e) => {
     const selectedId = e.target.value;
     if (selectedId === "") {
       onSelectReport(null);
     } else {
-      const selectedReport = pendingReports.find(
-        (report) => report.id === selectedId
-      );
-      console.log("Selected Report for Hazard Form:", selectedReport);
-      onSelectReport(selectedReport);
+      const report = pendingReports.find((r) => r.id === selectedId);
+      onSelectReport(report);
     }
   };
+
+  const getReportDisplayText = (report) => {
+    if (!report) return "";
+    return `[${report.sumber_laporan}] ${report.nama_pelapor} - ${formatDate(report.tanggal)} - ${report.detail_lokasi}`;
+  };
+
+  const selectedReport = pendingReports.find((r) => r.id === selectedReportId);
+  const filteredReports = pendingReports.filter((report) => {
+    const text = getReportDisplayText(report).toLowerCase();
+    return text.includes(searchQuery.toLowerCase());
+  });
 
   if (loading) {
     return (
@@ -265,46 +282,207 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId }) => {
     );
   }
 
+  // Desktop: dropdown sederhana seperti Lokasi/PIC
+  if (useDropdown) {
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: 4,
+            color: "#e5e7eb",
+            fontSize: 15,
+            fontWeight: 600,
+            textAlign: "center",
+          }}
+        >
+          Pilih Sumber Laporan (Opsional)
+        </label>
+        <select
+          value={selectedReportId || ""}
+          onChange={handleSelectChange}
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: 12,
+            borderRadius: 8,
+            border: "1px solid #334155",
+            background: "#0b1220",
+            color: "#e5e7eb",
+            fontSize: 15,
+          }}
+        >
+          <option value="">Pilih PTO atau Take 5 pending...</option>
+          {pendingReports.map((report) => (
+            <option key={report.id} value={report.id}>
+              [{report.sumber_laporan}] {report.nama_pelapor} -{" "}
+              {formatDate(report.tanggal)} - {report.detail_lokasi}
+            </option>
+          ))}
+        </select>
+        {selectedReportId && (
+          <div style={{ marginTop: 8, fontSize: "12px", color: "#9ca3af" }}>
+            Deskripsi:{" "}
+            {selectedReport?.deskripsi || "Tidak ada deskripsi"}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Mobile: modal dengan search
   return (
     <div style={{ marginBottom: 24 }}>
       <label
         style={{
           display: "block",
-          marginBottom: 8,
-          color: "#e5e7eb",
-          fontSize: "14px",
-          fontWeight: 500,
+          marginBottom: 2,
+          color: "#222",
+          fontSize: 14,
+          fontWeight: 600,
         }}
       >
         Pilih Sumber Laporan (Opsional)
       </label>
-      <select
-        value={selectedReportId || ""}
-        onChange={handleSelectChange}
+      <div
+        onClick={() => {
+          setSearchQuery("");
+          setShowModal(true);
+        }}
         style={{
           width: "100%",
           boxSizing: "border-box",
+          borderRadius: 8,
           padding: "12px 16px",
-          borderRadius: "8px",
-          border: "1px solid #334155",
-          backgroundColor: "#1f2937",
-          color: "#e5e7eb",
-          fontSize: "14px",
+          fontSize: 14,
+          border: "1px solid #d1d5db",
+          backgroundColor: "#fff",
+          color: selectedReport ? "#000" : "#9ca3af",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <option value="">Pilih PTO atau Take 5 pending...</option>
-        {pendingReports.map((report) => (
-          <option key={report.id} value={report.id}>
-            [{report.sumber_laporan}] {report.nama_pelapor} -{" "}
-            {formatDate(report.tanggal)} - {report.detail_lokasi}
-          </option>
-        ))}
-      </select>
+        <span>
+          {selectedReport
+            ? getReportDisplayText(selectedReport)
+            : "Pilih PTO atau Take 5 pending..."}
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
       {selectedReportId && (
-        <div style={{ marginTop: 8, fontSize: "12px", color: "#9ca3af" }}>
+        <div style={{ marginTop: 8, fontSize: "12px", color: "#6b7280" }}>
           Deskripsi:{" "}
-          {pendingReports.find((r) => r.id === selectedReportId)?.deskripsi ||
-            "Tidak ada deskripsi"}
+          {selectedReport?.deskripsi || "Tidak ada deskripsi"}
+        </div>
+      )}
+
+      {/* Modal dengan search - seperti PIC dan Detail Lokasi */}
+      {showModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 70,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 1100,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              maxHeight: "70vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: "16px",
+                borderBottom: "1px solid #e5e7eb",
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+                Pilih Sumber Laporan
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Ketik untuk mencari..."
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "8px 0",
+              }}
+            >
+              <div
+                onClick={() => handleSelectReport(null)}
+                style={{
+                  padding: "14px 16px",
+                  fontSize: 16,
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  borderBottom: "1px solid #f3f4f6",
+                }}
+              >
+                Tidak ada (Kosongkan)
+              </div>
+              {filteredReports.map((report) => (
+                <div
+                  key={report.id}
+                  onClick={() => handleSelectReport(report)}
+                  style={{
+                    padding: "14px 16px",
+                    fontSize: 16,
+                    color: "#1f2937",
+                    cursor: "pointer",
+                    borderBottom: "1px solid #f3f4f6",
+                  }}
+                >
+                  {getReportDisplayText(report)}
+                </div>
+              ))}
+              {filteredReports.length === 0 && (
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: "#9ca3af",
+                    fontSize: 14,
+                  }}
+                >
+                  Tidak ada yang sesuai
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

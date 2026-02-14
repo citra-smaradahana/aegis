@@ -669,7 +669,7 @@ function HazardFormDesktop({ user }) {
           ))}
         </div>
 
-        {/* Pending Reports List */}
+        {/* Pending Reports List - dropdown untuk desktop */}
         <PendingReportsList
           user={user}
           onSelectReport={(report) => {
@@ -677,6 +677,7 @@ function HazardFormDesktop({ user }) {
             setSelectedReportId(report?.id || null);
           }}
           selectedReportId={selectedReportId}
+          variant="desktop"
         />
 
         {/* Page Title */}
