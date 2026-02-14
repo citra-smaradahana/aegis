@@ -17,108 +17,7 @@ import PendingReportsList from "./PendingReportsList";
 import MobileSiteSelector from "../MobileSiteSelector";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
-
-// Reusable modal bottom-sheet dengan pencarian (untuk mobile)
-const SelectModalWithSearch = ({
-  title,
-  options,
-  value,
-  onSelect,
-  searchQuery,
-  onSearchChange,
-  show,
-  onClose,
-  placeholder = "Ketik untuk mencari...",
-}) => {
-  if (!show) return null;
-  const filtered = options.filter((opt) =>
-    String(opt).toLowerCase().includes((searchQuery || "").toLowerCase())
-  );
-  return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 70,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        zIndex: 1100,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-end",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: "#fff",
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
-          maxHeight: "70vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          style={{
-            padding: "16px",
-            borderBottom: "1px solid #e5e7eb",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>{title}</div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={placeholder}
-            autoComplete="off"
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: "1px solid #d1d5db",
-              fontSize: 16,
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-          {filtered.map((opt) => (
-            <div
-              key={opt}
-              onClick={() => onSelect(opt)}
-              style={{
-                padding: "14px 16px",
-                fontSize: 16,
-                color: "#1f2937",
-                cursor: "pointer",
-                borderBottom: "1px solid #f3f4f6",
-              }}
-            >
-              {opt}
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <div
-              style={{
-                padding: 24,
-                textAlign: "center",
-                color: "#6b7280",
-                fontSize: 14,
-              }}
-            >
-              Tidak ada yang sesuai
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+import SelectModalWithSearch from "../SelectModalWithSearch";
 
 const _lokasiOptions = [
   "Head Office",
@@ -927,33 +826,6 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
           overflow: "auto", // allow scroll dalam card
         }}
       >
-        {/* Card Header - Simplified since we have MobileHeader */}
-        <div
-          style={{
-            background: "#fff",
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            padding: "8px 0 4px 0",
-            marginBottom: 0,
-            textAlign: "center",
-            position: "relative",
-          }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              fontWeight: 800,
-              fontSize: 18,
-              color: "#60a5fa",
-              letterSpacing: 1,
-              textAlign: "center",
-              lineHeight: 1.1,
-            }}
-          >
-            Hazard Report
-          </h2>
-        </div>
-
         {/* Progress indicator */}
         <div
           style={{

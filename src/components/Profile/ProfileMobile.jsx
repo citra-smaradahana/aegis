@@ -91,7 +91,7 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate }) {
       {/* Header - Orange seperti TasklistMobile */}
       <div
         style={{
-          background: "#f97316", // Orange
+          background: "#ea580c", // Orange - seragam dengan menu lain
           padding: "16px",
           display: "flex",
           alignItems: "center",
@@ -125,7 +125,7 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate }) {
             justifyContent: "center",
             fontSize: "14px",
             fontWeight: "600",
-            color: "#f97316",
+            color: "#ea580c",
           }}
         >
           {profileData?.nama

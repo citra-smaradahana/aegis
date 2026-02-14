@@ -203,7 +203,7 @@ function App() {
             />
           );
         case "pto":
-          return <PTOForm user={user} onBack={handleBackToMain} />;
+          return <PTOForm user={user} onBack={handleBackToMain} onNavigate={handleMenuChange} />;
         case "monitoring-fit-to-work":
           return canAccessMonitoring ? (
             <MonitoringPage

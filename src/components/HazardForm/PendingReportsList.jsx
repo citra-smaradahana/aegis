@@ -21,12 +21,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
 
   useEffect(() => {
     fetchPendingReports();
-  }, []);
-
-  // Force refresh when component mounts
-  useEffect(() => {
-    fetchPendingReports();
-  }, []);
+  }, [user?.id, user?.nama, user?.user]);
 
   const fetchPendingReports = async () => {
     try {
@@ -54,20 +49,16 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
         return;
       }
 
-      console.log("PendingReportsList: Setting data:", data);
-      console.log(
-        "PendingReportsList: PTO data with foto_temuan:",
-        data
-          ?.filter((item) => item.sumber_laporan === "PTO")
-          .map((item) => ({
-            id: item.id,
-            foto_temuan: item.foto_temuan,
-            url_length: item.foto_temuan?.length,
-            url_start: item.foto_temuan?.substring(0, 50),
-            url_end: item.foto_temuan?.substring(-20),
-          }))
-      );
-      setPendingReports(data || []);
+      // Filter: hanya tampilkan laporan yang dibuat oleh user login (pelapor)
+      const currentName = (user?.nama || user?.user || "").toString().trim().toLowerCase();
+      const isPelapor = (item) => {
+        const p = (item.nama_pelapor || "").toString().trim().toLowerCase();
+        return !!p && p === currentName;
+      };
+      const filtered = (data || []).filter(isPelapor);
+
+      console.log("PendingReportsList: Setting data (filtered by pelapor):", filtered);
+      setPendingReports(filtered);
     } catch (err) {
       console.error("Error fetching pending reports:", err);
       // Fallback: coba query manual
@@ -81,13 +72,14 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
     try {
       console.log("Trying manual query as fallback...");
 
-      // Query PTO pending - now with separate pic column and foto temuan
+      // Query PTO pending - filter oleh pelapor (nama_observer) via client
       const { data: ptoData, error: ptoError } = await supabase
         .from("planned_task_observation")
         .select(
           `
           id, 
           nama_observer, 
+          nrp_pelapor,
           tanggal, 
           detail_lokasi, 
           tindakan_perbaikan, 
@@ -145,11 +137,11 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
         console.log("PIC Names Map:", picNamesMap);
       }
 
-      // Query Take 5 pending
+      // Query Take 5 pending (nrp/pelapor_nrp untuk NRP pelapor)
       const { data: take5Data, error: take5Error } = await supabase
         .from("take_5")
         .select(
-          "id, nama, pelapor_nama, tanggal, detail_lokasi, deskripsi_kondisi, site"
+          "id, nama, pelapor_nama, nrp, tanggal, detail_lokasi, deskripsi_kondisi, site"
         )
         .eq("status", "pending")
         .is("hazard_id", null);
@@ -160,12 +152,24 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
         return;
       }
 
-      // Combine data
+      // Filter: hanya laporan yang dibuat oleh user login (pelapor)
+      const currentName = (user?.nama || user?.user || "").toString().trim().toLowerCase();
+      const isPelaporPTO = (item) => {
+        const p = (item.nama_observer || "").toString().trim().toLowerCase();
+        return !!p && p === currentName;
+      };
+      const isPelaporTake5 = (item) => {
+        const p = (item.nama || item.pelapor_nama || "").toString().trim().toLowerCase();
+        return !!p && p === currentName;
+      };
+
+      // Combine data - filter by pelapor
       const combinedData = [
-        ...(ptoData || []).map((item) => ({
-          id: item.id, // This is the PTO ID (primary key from planned_task_observation)
+        ...(ptoData || []).filter(isPelaporPTO).map((item) => ({
+          id: item.id,
           sumber_laporan: "PTO",
           nama_pelapor: item.nama_observer || "Unknown",
+          nrp_pelapor: item.nrp_pelapor || "",
           tanggal: item.tanggal,
           detail_lokasi: item.detail_lokasi || "Unknown",
           deskripsi: item.tindakan_perbaikan || "Tidak ada deskripsi",
@@ -175,21 +179,22 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
             item.pic ||
             item.nrp_pic ||
             picNamesMap[item.pic_tindak_lanjut_id] ||
-            "", // Try pic, nrp_pic, then users table
-          foto_temuan: item.foto_temuan || null, // Include foto temuan
+            "",
+          foto_temuan: item.foto_temuan || null,
         })),
-        ...(take5Data || []).map((item) => ({
+        ...(take5Data || []).filter(isPelaporTake5).map((item) => ({
           id: item.id,
           sumber_laporan: "Take5",
           nama_pelapor: item.nama || item.pelapor_nama || "Unknown",
+          nrp_pelapor: item.pelapor_nrp || item.nrp || "",
           tanggal: item.tanggal,
           detail_lokasi: item.detail_lokasi || "Unknown",
           deskripsi: item.deskripsi_kondisi || "Tidak ada deskripsi",
-          site: item.site, // Add site field for Take 5
+          site: item.site,
         })),
       ];
 
-      console.log("Manual query successful:", combinedData);
+      console.log("Manual query successful (filtered by pelapor):", combinedData);
       console.log("=== FINAL PTO DATA WITH PIC ===");
       combinedData
         ?.filter((item) => item.sumber_laporan === "PTO")
@@ -249,7 +254,10 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
 
   const getReportDisplayText = (report) => {
     if (!report) return "";
-    return `[${report.sumber_laporan}] ${report.nama_pelapor} - ${formatDate(report.tanggal)} - ${report.detail_lokasi}`;
+    const namaUnik = report.nrp_pelapor
+      ? `${report.nama_pelapor} (${report.nrp_pelapor})`
+      : report.nama_pelapor;
+    return `[${report.sumber_laporan}] ${namaUnik} - ${formatDate(report.tanggal)} - ${report.detail_lokasi}`;
   };
 
   const selectedReport = pendingReports.find((r) => r.id === selectedReportId);
@@ -315,8 +323,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
           <option value="">Pilih PTO atau Take 5 pending...</option>
           {pendingReports.map((report) => (
             <option key={report.id} value={report.id}>
-              [{report.sumber_laporan}] {report.nama_pelapor} -{" "}
-              {formatDate(report.tanggal)} - {report.detail_lokasi}
+              {getReportDisplayText(report)}
             </option>
           ))}
         </select>

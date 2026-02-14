@@ -14,12 +14,12 @@ function MobileHeader({ user, onBack, title, showBack = true }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 16px",
+        padding: "0 20px 0 16px",
         zIndex: 1001,
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center" }}>
         {showBack && onBack && (
           <button
             onClick={onBack}
@@ -49,19 +49,22 @@ function MobileHeader({ user, onBack, title, showBack = true }) {
             </svg>
           </button>
         )}
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 18,
-            fontWeight: 700,
-            color: "#fff",
-          }}
-        >
-          {title}
-        </h1>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <h1
+        style={{
+          margin: 0,
+          fontSize: 18,
+          fontWeight: 700,
+          color: "#fff",
+          flex: 1,
+          textAlign: "center",
+        }}
+      >
+        {title}
+      </h1>
+
+      <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, paddingRight: 4 }}>
         <div
           style={{
             width: 32,

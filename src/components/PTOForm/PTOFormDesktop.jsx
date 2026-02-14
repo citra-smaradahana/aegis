@@ -120,7 +120,8 @@ function PTOFormDesktop({ user, onBack }) {
         .neq("id", user.id);
 
       if (error) throw error;
-      setObservers(data || []);
+      const sorted = (data || []).sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"));
+      setObservers(sorted);
     } catch (error) {
       console.error("Error fetching observers:", error);
     }
@@ -142,7 +143,8 @@ function PTOFormDesktop({ user, onBack }) {
       const { data, error } = await query;
 
       if (error) throw error;
-      setObservees(data || []);
+      const sorted = (data || []).sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"));
+      setObservees(sorted);
     } catch (error) {
       console.error("Error fetching observees:", error);
     }
@@ -164,7 +166,8 @@ function PTOFormDesktop({ user, onBack }) {
       const { data, error } = await query;
 
       if (error) throw error;
-      setPICs(data || []);
+      const sorted = (data || []).sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"));
+      setPICs(sorted);
     } catch (error) {
       console.error("Error fetching PICs:", error);
     }

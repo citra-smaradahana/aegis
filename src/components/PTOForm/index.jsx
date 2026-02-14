@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import PTOFormDesktop from "./PTOFormDesktop";
 import PTOFormMobile from "./PTOFormMobile";
 
-function PTOForm({ user, onBack }) {
-  const [isMobile, setIsMobile] = useState(false);
+function PTOForm({ user, onBack, onNavigate }) {
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth <= 768 : false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -17,7 +17,7 @@ function PTOForm({ user, onBack }) {
   }, []);
 
   if (isMobile) {
-    return <PTOFormMobile user={user} onBack={onBack} />;
+    return <PTOFormMobile user={user} onBack={onBack} onNavigate={onNavigate} />;
   }
 
   return <PTOFormDesktop user={user} onBack={onBack} />;

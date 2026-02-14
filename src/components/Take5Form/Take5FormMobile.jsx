@@ -6,31 +6,11 @@ import {
   getLocationOptions,
   allowsCustomInput,
   shouldUseLocationSelector,
+  CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
-import MobileSiteSelector from "../MobileSiteSelector";
-import LocationDetailSelector from "../LocationDetailSelector";
+import SelectModalWithSearch from "../SelectModalWithSearch";
 import PICSelector from "../PICSelector";
-import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
-
-const SITE_OPTIONS = [
-  "Head Office",
-  "Balikpapan",
-  "ADRO",
-  "AMMP",
-  "BSIB",
-  "GAMR",
-  "HRSB",
-  "HRSE",
-  "PABB",
-  "PBRB",
-  "PKJA",
-  "PPAB",
-  "PSMM",
-  "REBH",
-  "RMTU",
-  "PMTU",
-];
 
 function getToday() {
   const today = new Date();
@@ -41,7 +21,11 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
   const [site, setSite] = useState(user.site || "");
   const [detailLokasi, setDetailLokasi] = useState("");
   const [, setLocationOptions] = useState([]);
+  const [showSiteModal, setShowSiteModal] = useState(false);
+  const [siteSearchQuery, setSiteSearchQuery] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [showDetailLokasiModal, setShowDetailLokasiModal] = useState(false);
+  const [detailLokasiSearchQuery, setDetailLokasiSearchQuery] = useState("");
   const [potensiBahaya, setPotensiBahaya] = useState("");
   const [q1, setQ1] = useState(null);
   const [q2, setQ2] = useState(null);
@@ -108,19 +92,6 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
     }
   }, [site]);
 
-  // Handle detail lokasi change
-  const handleDetailLokasiChange = (e) => {
-    const value = e.target.value;
-    setDetailLokasi(value);
-
-    // Show custom input if "Lainnya" is selected or if site allows custom input
-    if (value === "Lainnya" || (allowsCustomInput(site) && value === "")) {
-      setShowCustomInput(true);
-      setDetailLokasi("");
-    } else {
-      setShowCustomInput(false);
-    }
-  };
 
   // Debug useEffect untuk monitoring state
   useEffect(() => {
@@ -317,35 +288,43 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
     }
   };
 
-  // Styles untuk mobile
+  // Styles untuk mobile - header tetap di atas, konten yang scroll
   const contentAreaStyle = {
     width: "100vw",
-    minHeight: "100vh", // ubah dari height fixed ke minHeight
+    height: "100vh",
+    maxHeight: "-webkit-fill-available",
     background: "#f3f4f6",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-start",
-    padding: "0px",
-    overflow: "auto", // ubah dari hidden ke auto untuk allow scroll
+    overflow: "hidden",
+  };
+
+  const scrollContentStyle = {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
   };
 
   const mobileCardStyle = {
     background: "#fff",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    borderBottomLeftRadius: 16, // tambahkan border radius bottom
-    borderBottomRightRadius: 16, // tambahkan border radius bottom
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
     boxShadow: "0 2px 16px #0001",
     paddingTop: 6,
     paddingRight: 6,
     paddingBottom: 100, // space agar content tidak tertutup navbar saat scroll
     paddingLeft: 6,
     width: "100%",
-    maxWidth: 425, // fit untuk mobile 425px
+    maxWidth: 425,
     marginBottom: 0,
-    minHeight: "100vh", // ubah dari height fixed ke minHeight
-    // Hapus height fixed agar card bisa expand
   };
 
   // Tambahkan style khusus untuk card header mobile agar lebih rapat
@@ -393,8 +372,10 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
   const inputStyle = {
     width: "100%",
     borderRadius: 8,
-    padding: 4, // lebih kecil
-    fontSize: 13, // besarkan lagi
+    padding: "12px 16px",
+    fontSize: 14,
+    minHeight: 44,
+    boxSizing: "border-box",
     border: "1px solid #d1d5db",
   };
 
@@ -542,91 +523,89 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
   return (
     <div style={contentAreaStyle}>
       {/* Header - Orange seperti TasklistMobile */}
+      {/* Header - tulisan Take 5 putih di tengah (sama Hazard Report) */}
       <div
         style={{
-          background: "#f97316", // Orange
-          padding: "16px",
+          flexShrink: 0,
+          background: "#ea580c",
+          padding: "16px 20px 16px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          position: "relative",
           width: "100%",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 18,
-              fontWeight: 600,
-              color: "white",
-              textAlign: "center",
-              flex: 1,
-            }}
-          >
-            Take 5
-          </h2>
+        <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center" }}>
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                background: "none",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                padding: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+          )}
         </div>
-        {/* User Avatar */}
-        <div
+        <h2
           style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "50%",
-            background: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "14px",
-            fontWeight: "600",
-            color: "#f97316",
-            marginRight: 12,
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 600,
+            color: "white",
+            flex: 1,
+            textAlign: "center",
           }}
         >
-          {user?.nama?.charAt(0).toUpperCase() || "U"}
+          Take 5
+        </h2>
+        <div
+          style={{
+            width: 44,
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            paddingRight: 8,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#ea580c",
+            }}
+          >
+            {user?.nama?.charAt(0).toUpperCase() || "U"}
+          </div>
         </div>
       </div>
 
-      {/* Back Button */}
-      {onBack && (
-        <button
-          onClick={onBack}
+      <div style={scrollContentStyle}>
+        <div
           style={{
-            position: "absolute",
-            top: "16px",
-            left: "16px",
-            background: "none",
-            border: "none",
-            color: "white",
-            cursor: "pointer",
-            padding: "8px",
-            borderRadius: "8px",
-            zIndex: 20,
+            ...mobileCardStyle,
+            marginTop: 0,
+            paddingTop: 0,
+            // Hapus paddingBottom dan marginBottom yang memaksa height
           }}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
-      )}
-
-      <div
-        style={{
-          ...mobileCardStyle,
-          marginTop: 0,
-          paddingTop: 0,
-          // Hapus paddingBottom dan marginBottom yang memaksa height
-        }}
-      >
         <form onSubmit={handleSubmit} style={formStyle}>
           {/* Tanggal */}
           <div style={fieldMargin}>
@@ -644,30 +623,109 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
             />
           </div>
 
-          {/* Lokasi Kerja */}
+          {/* Lokasi (Site) - popup dari bawah, navbar tetap terlihat (sama Hazard Report) */}
           <div style={fieldMargin}>
-            <label style={labelStyle}>Lokasi Kerja</label>
-            <MobileSiteSelector
-              value={site}
-              onChange={(e) => setSite(e.target.value)}
-              placeholder="Pilih Lokasi"
-              style={inputStyle}
-              required
+            <label style={labelStyle}>Lokasi (Site)</label>
+            <div
+              onClick={() => {
+                setSiteSearchQuery("");
+                setShowSiteModal(true);
+              }}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                borderRadius: 8,
+                padding: "12px 16px",
+                fontSize: 14,
+                border: "1px solid #d1d5db",
+                backgroundColor: "#fff",
+                color: site ? "#000" : "#6b7280",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>{site || "Pilih Lokasi"}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
+            <SelectModalWithSearch
+              title="Pilih Lokasi"
+              options={CUSTOM_INPUT_SITES}
+              onSelect={(val) => {
+                setSite(val);
+                setShowSiteModal(false);
+                setSiteSearchQuery("");
+              }}
+              searchQuery={siteSearchQuery}
+              onSearchChange={setSiteSearchQuery}
+              show={showSiteModal}
+              onClose={() => setShowSiteModal(false)}
             />
           </div>
 
-          {/* Detail Lokasi */}
+          {/* Detail Lokasi - popup dari bawah, navbar tetap terlihat (sama Hazard Report) */}
           <div style={fieldMargin}>
             <label style={labelStyle}>Detail Lokasi</label>
             {shouldUseLocationSelector(site) ? (
               <>
-                <LocationDetailSelector
-                  site={site}
-                  value={detailLokasi}
-                  onChange={handleDetailLokasiChange}
-                  placeholder="Pilih Detail Lokasi"
-                  style={inputStyle}
-                  required
+                <div
+                  onClick={() => {
+                    if (site) {
+                      setDetailLokasiSearchQuery("");
+                      setShowDetailLokasiModal(true);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    borderRadius: 8,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    border: "1px solid #d1d5db",
+                    backgroundColor: !site ? "#f3f4f6" : "#fff",
+                    color: !site ? "#9ca3af" : "#000",
+                    cursor: !site ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>
+                    {detailLokasi ||
+                      (!site
+                        ? "Pilih lokasi terlebih dahulu"
+                        : "Pilih Detail Lokasi")}
+                  </span>
+                  {site && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  )}
+                </div>
+                <SelectModalWithSearch
+                  title="Pilih Detail Lokasi"
+                  options={[
+                    ...(getLocationOptions(site) || []),
+                    ...(allowsCustomInput(site) ? ["Lainnya"] : []),
+                  ]}
+                  onSelect={(val) => {
+                    setShowDetailLokasiModal(false);
+                    setDetailLokasiSearchQuery("");
+                    if (val === "Lainnya") {
+                      setShowCustomInput(true);
+                      setDetailLokasi("");
+                    } else {
+                      setShowCustomInput(false);
+                      setDetailLokasi(val);
+                    }
+                  }}
+                  searchQuery={detailLokasiSearchQuery}
+                  onSearchChange={setDetailLokasiSearchQuery}
+                  show={showDetailLokasiModal}
+                  onClose={() => setShowDetailLokasiModal(false)}
                 />
                 {showCustomInput && (
                   <input
@@ -1115,6 +1173,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
             </button>
           </div>
         </form>
+        </div>
       </div>
 
       {/* Bottom Navigation */}
