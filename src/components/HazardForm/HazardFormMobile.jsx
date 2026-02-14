@@ -251,6 +251,8 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
+  const [showPicModal, setShowPicModal] = useState(false);
+  const [picSearchQuery, setPicSearchQuery] = useState("");
   const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1110,14 +1112,16 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                     </span>
                   )}
                 </label>
-                <select
-                  name="pic"
-                  value={form.pic}
-                  onChange={handleChange}
-                  required
-                  disabled={
-                    !form.lokasi || selectedReport?.sumber_laporan === "PTO"
-                  }
+                <div
+                  onClick={() => {
+                    if (
+                      form.lokasi &&
+                      selectedReport?.sumber_laporan !== "PTO"
+                    ) {
+                      setPicSearchQuery("");
+                      setShowPicModal(true);
+                    }
+                  }}
                   style={{
                     width: "100%",
                     borderRadius: 8,
@@ -1136,20 +1140,123 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                       !form.lokasi || selectedReport?.sumber_laporan === "PTO"
                         ? "not-allowed"
                         : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     ...getFieldBorderStyle("pic"),
                   }}
                 >
-                  <option value="">
-                    {!form.lokasi
-                      ? "Pilih lokasi terlebih dahulu"
-                      : "Pilih PIC"}
-                  </option>
-                  {picOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                  <span>
+                    {form.pic || (!form.lokasi ? "Pilih lokasi terlebih dahulu" : "Pilih PIC")}
+                  </span>
+                  {form.lokasi && selectedReport?.sumber_laporan !== "PTO" && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  )}
+                </div>
+                {showPicModal && (
+                  <div
+                    style={{
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: "rgba(0,0,0,0.5)",
+                      zIndex: 1000,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                    }}
+                    onClick={() => setShowPicModal(false)}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: "#fff",
+                        borderTopLeftRadius: 16,
+                        borderTopRightRadius: 16,
+                        maxHeight: "70vh",
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div
+                        style={{
+                          padding: "16px",
+                          borderBottom: "1px solid #e5e7eb",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>Pilih PIC</div>
+                        <input
+                          type="text"
+                          value={picSearchQuery}
+                          onChange={(e) => setPicSearchQuery(e.target.value)}
+                          placeholder="Ketik nama untuk mencari..."
+                          autoComplete="off"
+                          style={{
+                            width: "100%",
+                            padding: "12px 16px",
+                            borderRadius: 8,
+                            border: "1px solid #d1d5db",
+                            fontSize: 16,
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          overflowY: "auto",
+                          padding: "8px 0",
+                        }}
+                      >
+                        {picOptions
+                          .filter((opt) =>
+                            opt
+                              .toLowerCase()
+                              .includes(picSearchQuery.toLowerCase())
+                          )
+                          .map((opt) => (
+                            <div
+                              key={opt}
+                              onClick={() => {
+                                setForm((prev) => ({ ...prev, pic: opt }));
+                                setShowPicModal(false);
+                                setPicSearchQuery("");
+                              }}
+                              style={{
+                                padding: "14px 16px",
+                                fontSize: 16,
+                                color: "#1f2937",
+                                cursor: "pointer",
+                                borderBottom: "1px solid #f3f4f6",
+                              }}
+                            >
+                              {opt}
+                            </div>
+                          ))}
+                        {picOptions.filter((opt) =>
+                          opt.toLowerCase().includes(picSearchQuery.toLowerCase())
+                        ).length === 0 && (
+                          <div
+                            style={{
+                              padding: 24,
+                              textAlign: "center",
+                              color: "#6b7280",
+                              fontSize: 14,
+                            }}
+                          >
+                            Tidak ada nama yang sesuai
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {picOptions.length === 0 && form.lokasi && (
                   <div
                     style={{
