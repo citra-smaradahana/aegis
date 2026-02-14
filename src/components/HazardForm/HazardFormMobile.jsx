@@ -15,9 +15,110 @@ import {
 } from "../../config/siteLocations";
 import PendingReportsList from "./PendingReportsList";
 import MobileSiteSelector from "../MobileSiteSelector";
-import LocationDetailSelector from "../LocationDetailSelector";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+
+// Reusable modal bottom-sheet dengan pencarian (untuk mobile)
+const SelectModalWithSearch = ({
+  title,
+  options,
+  value,
+  onSelect,
+  searchQuery,
+  onSearchChange,
+  show,
+  onClose,
+  placeholder = "Ketik untuk mencari...",
+}) => {
+  if (!show) return null;
+  const filtered = options.filter((opt) =>
+    String(opt).toLowerCase().includes((searchQuery || "").toLowerCase())
+  );
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 70,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        zIndex: 1100,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: "#fff",
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          maxHeight: "70vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            padding: "16px",
+            borderBottom: "1px solid #e5e7eb",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>{title}</div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={placeholder}
+            autoComplete="off"
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: 8,
+              border: "1px solid #d1d5db",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+          {filtered.map((opt) => (
+            <div
+              key={opt}
+              onClick={() => onSelect(opt)}
+              style={{
+                padding: "14px 16px",
+                fontSize: 16,
+                color: "#1f2937",
+                cursor: "pointer",
+                borderBottom: "1px solid #f3f4f6",
+              }}
+            >
+              {opt}
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div
+              style={{
+                padding: 24,
+                textAlign: "center",
+                color: "#6b7280",
+                fontSize: 14,
+              }}
+            >
+              Tidak ada yang sesuai
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const _lokasiOptions = [
   "Head Office",
@@ -253,6 +354,14 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
   const [picOptions, setPicOptions] = useState([]);
   const [showPicModal, setShowPicModal] = useState(false);
   const [picSearchQuery, setPicSearchQuery] = useState("");
+  const [showDetailLokasiModal, setShowDetailLokasiModal] = useState(false);
+  const [detailLokasiSearchQuery, setDetailLokasiSearchQuery] = useState("");
+  const [showKetidaksesuaianModal, setShowKetidaksesuaianModal] = useState(false);
+  const [ketidaksesuaianSearchQuery, setKetidaksesuaianSearchQuery] = useState("");
+  const [showSubKetidaksesuaianModal, setShowSubKetidaksesuaianModal] = useState(false);
+  const [subKetidaksesuaianSearchQuery, setSubKetidaksesuaianSearchQuery] = useState("");
+  const [showQuickActionModal, setShowQuickActionModal] = useState(false);
+  const [quickActionSearchQuery, setQuickActionSearchQuery] = useState("");
   const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -883,9 +992,11 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
           <div
             style={{
               width: "90%",
+              maxWidth: 320,
               marginLeft: "auto",
               marginRight: "auto",
               marginTop: 8,
+              boxSizing: "border-box",
             }}
           >
             <PendingReportsList
@@ -905,6 +1016,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
                   marginTop: 8,
@@ -947,6 +1059,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
                 }}
@@ -964,21 +1077,62 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 </label>
                 {shouldUseLocationSelector(form.lokasi) ? (
                   <>
-                    <LocationDetailSelector
-                      site={form.lokasi}
+                    <div
+                      onClick={() => {
+                        if (form.lokasi && !selectedReport) {
+                          setDetailLokasiSearchQuery("");
+                          setShowDetailLokasiModal(true);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                        fontSize: 14,
+                        border: "1px solid #d1d5db",
+                        backgroundColor: !!selectedReport || !form.lokasi ? "#f3f4f6" : "#fff",
+                        color: !!selectedReport || !form.lokasi ? "#9ca3af" : "#000",
+                        cursor: !!selectedReport || !form.lokasi ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        ...getFieldBorderStyle("detailLokasi"),
+                      }}
+                    >
+                      <span>
+                        {form.detailLokasi ||
+                          (!form.lokasi
+                            ? "Pilih lokasi terlebih dahulu"
+                            : !!selectedReport
+                              ? "Diisi otomatis dari report"
+                              : "Pilih Detail Lokasi")}
+                      </span>
+                      {form.lokasi && !selectedReport && (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      )}
+                    </div>
+                    <SelectModalWithSearch
+                      title="Pilih Detail Lokasi"
+                      options={getLocationOptions(form.lokasi) || []}
                       value={form.detailLokasi}
-                      onChange={handleDetailLokasiChange}
-                      placeholder={
-                        !form.lokasi
-                          ? "Pilih lokasi terlebih dahulu"
-                          : !!selectedReport
-                            ? "Diisi otomatis dari report"
-                            : "Pilih Detail Lokasi"
-                      }
-                      disabled={!!selectedReport || !form.lokasi}
-                      style={getFieldBorderStyle("detailLokasi")}
-                      required
-                      useNativeDropdown
+                      onSelect={(val) => {
+                        setShowDetailLokasiModal(false);
+                        setDetailLokasiSearchQuery("");
+                        if (val === "Lainnya") {
+                          setShowCustomInput(true);
+                          setForm((prev) => ({ ...prev, detailLokasi: "" }));
+                        } else {
+                          setShowCustomInput(false);
+                          setForm((prev) => ({ ...prev, detailLokasi: val }));
+                        }
+                      }}
+                      searchQuery={detailLokasiSearchQuery}
+                      onSearchChange={setDetailLokasiSearchQuery}
+                      show={showDetailLokasiModal}
+                      onClose={() => setShowDetailLokasiModal(false)}
                     />
                     {showCustomInput && (
                       <input
@@ -990,8 +1144,9 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                         placeholder="Ketik detail lokasi lainnya..."
                         style={{
                           width: "100%",
+                          boxSizing: "border-box",
                           borderRadius: 8,
-                          padding: 4,
+                          padding: "12px 16px",
                           fontSize: 13,
                           marginTop: 8,
                           ...getFieldBorderStyle("detailLokasi"),
@@ -1010,8 +1165,9 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                     placeholder="Ketik detail lokasi..."
                     style={{
                       width: "100%",
+                      boxSizing: "border-box",
                       borderRadius: 8,
-                      padding: 4,
+                      padding: "12px 16px",
                       fontSize: 13,
                       backgroundColor: !!selectedReport ? "#f3f4f6" : "#fff",
                       color: !!selectedReport ? "#9ca3af" : "#000",
@@ -1037,8 +1193,10 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
+                  boxSizing: "border-box",
                 }}
               >
                 <label
@@ -1060,8 +1218,9 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                   placeholder="Jelaskan detail lokasi temuan hazard"
                   style={{
                     width: "100%",
+                    boxSizing: "border-box",
                     borderRadius: 8,
-                    padding: 4,
+                    padding: "12px 16px",
                     fontSize: 13,
                     resize: "vertical",
                     minHeight: 60,
@@ -1086,6 +1245,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
                 }}
@@ -1124,6 +1284,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                   }}
                   style={{
                     width: "100%",
+                    boxSizing: "border-box",
                     borderRadius: 8,
                     padding: "12px 16px",
                     fontSize: 14,
@@ -1162,9 +1323,9 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                       top: 0,
                       left: 0,
                       right: 0,
-                      bottom: 0,
+                      bottom: 70,
                       backgroundColor: "rgba(0,0,0,0.5)",
-                      zIndex: 1000,
+                      zIndex: 1100,
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "flex-end",
@@ -1297,8 +1458,11 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                   fontWeight: 600,
                   cursor: isPage1Valid() ? "pointer" : "not-allowed",
                   marginTop: 8,
-                  width: "60%",
-                  alignSelf: "center",
+                  width: "90%",
+                  maxWidth: 320,
+                  marginLeft: "auto",
+                  marginRight: "auto",
+                  display: "block",
                   opacity: isPage1Valid() ? 1 : 0.6,
                 }}
               >
@@ -1314,6 +1478,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
                   marginTop: 8,
@@ -1330,48 +1495,53 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 >
                   Ketidaksesuaian
                 </label>
-                <select
-                  name="ketidaksesuaian"
-                  value={form.ketidaksesuaian}
-                  onChange={handleChange}
-                  required
+                <div
+                  onClick={() => {
+                    setKetidaksesuaianSearchQuery("");
+                    setShowKetidaksesuaianModal(true);
+                  }}
                   style={{
                     width: "100%",
+                    boxSizing: "border-box",
                     borderRadius: 8,
-                    padding: 4,
-                    fontSize: 13,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    border: "1px solid #d1d5db",
+                    backgroundColor: "#fff",
+                    color: form.ketidaksesuaian ? "#000" : "#9ca3af",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     ...getFieldBorderStyle("ketidaksesuaian"),
                   }}
                 >
-                  <option value="">Pilih Ketidaksesuaian</option>
-                  <option value="APD">APD</option>
-                  <option value="Area Parkir">Area Parkir</option>
-                  <option value="Bahaya Peledakan">Bahaya Peledakan</option>
-                  <option value="Bahaya Biologi">Bahaya Biologi</option>
-                  <option value="Bahaya Elektrikal">Bahaya Elektrikal</option>
-                  <option value="External Issue">External Issue</option>
-                  <option value="Fasilitas Mixing Plant">
-                    Fasilitas Mixing Plant
-                  </option>
-                  <option value="Fasilitas Office">Fasilitas Office</option>
-                  <option value="Fasilitas Workshop">Fasilitas Workshop</option>
-                  <option value="Izin Kerja">Izin Kerja</option>
-                  <option value="Kelayakan Bangunan">Kelayakan Bangunan</option>
-                  <option value="Kelayakan Tools">Kelayakan Tools</option>
-                  <option value="Kelengkapan Tanggap Darurat">
-                    Kelengkapan Tanggap Darurat
-                  </option>
-                  <option value="Kondisi Fisik Pekerja">
-                    Kondisi Fisik Pekerja
-                  </option>
-                  <option value="Kondisi Kendaraan/Unit">
-                    Kondisi Kendaraan/Unit
-                  </option>
-                  <option value="Lingkungan Kerja">Lingkungan Kerja</option>
-                  <option value="Penandaan">Penandaan</option>
-                  <option value="Rambu">Rambu</option>
-                  <option value="Tools Inspection">Tools Inspection</option>
-                </select>
+                  <span>{form.ketidaksesuaian || "Pilih Ketidaksesuaian"}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </div>
+                <SelectModalWithSearch
+                  title="Pilih Ketidaksesuaian"
+                  options={[
+                    "APD", "Area Parkir", "Bahaya Peledakan", "Bahaya Biologi",
+                    "Bahaya Elektrikal", "External Issue", "Fasilitas Mixing Plant",
+                    "Fasilitas Office", "Fasilitas Workshop", "Izin Kerja",
+                    "Kelayakan Bangunan", "Kelayakan Tools", "Kelengkapan Tanggap Darurat",
+                    "Kondisi Fisik Pekerja", "Kondisi Kendaraan/Unit", "Lingkungan Kerja",
+                    "Penandaan", "Rambu", "Tools Inspection",
+                  ]}
+                  value={form.ketidaksesuaian}
+                  onSelect={(val) => {
+                    setForm((prev) => ({ ...prev, ketidaksesuaian: val, subKetidaksesuaian: "" }));
+                    setShowKetidaksesuaianModal(false);
+                    setKetidaksesuaianSearchQuery("");
+                  }}
+                  searchQuery={ketidaksesuaianSearchQuery}
+                  onSearchChange={setKetidaksesuaianSearchQuery}
+                  show={showKetidaksesuaianModal}
+                  onClose={() => setShowKetidaksesuaianModal(false)}
+                />
                 {getFieldError("ketidaksesuaian") && (
                   <div
                     style={{
@@ -1390,6 +1560,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
                 }}
@@ -1407,26 +1578,48 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 </label>
                 {/* Sub Ketidaksesuaian Dinamis */}
                 {getSubOptions(form.ketidaksesuaian).length > 0 ? (
-                  <select
-                    name="subKetidaksesuaian"
-                    value={form.subKetidaksesuaian}
-                    onChange={handleChange}
-                    required
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      padding: 4,
-                      fontSize: 13,
-                      ...getFieldBorderStyle("subKetidaksesuaian"),
-                    }}
-                  >
-                    <option value="">Pilih Sub Ketidaksesuaian</option>
-                    {getSubOptions(form.ketidaksesuaian).map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <div
+                      onClick={() => {
+                        setSubKetidaksesuaianSearchQuery("");
+                        setShowSubKetidaksesuaianModal(true);
+                      }}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                        fontSize: 14,
+                        border: "1px solid #d1d5db",
+                        backgroundColor: "#fff",
+                        color: form.subKetidaksesuaian ? "#000" : "#9ca3af",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        ...getFieldBorderStyle("subKetidaksesuaian"),
+                      }}
+                    >
+                      <span>{form.subKetidaksesuaian || "Pilih Sub Ketidaksesuaian"}</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </div>
+                    <SelectModalWithSearch
+                      title="Pilih Sub Ketidaksesuaian"
+                      options={getSubOptions(form.ketidaksesuaian)}
+                      value={form.subKetidaksesuaian}
+                      onSelect={(val) => {
+                        setForm((prev) => ({ ...prev, subKetidaksesuaian: val }));
+                        setShowSubKetidaksesuaianModal(false);
+                        setSubKetidaksesuaianSearchQuery("");
+                      }}
+                      searchQuery={subKetidaksesuaianSearchQuery}
+                      onSearchChange={setSubKetidaksesuaianSearchQuery}
+                      show={showSubKetidaksesuaianModal}
+                      onClose={() => setShowSubKetidaksesuaianModal(false)}
+                    />
+                  </>
                 ) : (
                   <input
                     type="text"
@@ -1437,8 +1630,9 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                     placeholder="Isi sub ketidaksesuaian"
                     style={{
                       width: "100%",
+                      boxSizing: "border-box",
                       borderRadius: 8,
-                      padding: 4,
+                      padding: "12px 16px",
                       fontSize: 13,
                       ...getFieldBorderStyle("subKetidaksesuaian"),
                     }}
@@ -1462,6 +1656,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
                 }}
@@ -1477,28 +1672,50 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 >
                   Quick Action
                 </label>
-                <select
-                  name="quickAction"
-                  value={form.quickAction}
-                  onChange={handleChange}
-                  required
+                <div
+                  onClick={() => {
+                    setQuickActionSearchQuery("");
+                    setShowQuickActionModal(true);
+                  }}
                   style={{
                     width: "100%",
+                    boxSizing: "border-box",
                     borderRadius: 8,
-                    padding: 4,
-                    fontSize: 13,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    border: "1px solid #d1d5db",
+                    backgroundColor: "#fff",
+                    color: form.quickAction ? "#000" : "#9ca3af",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     ...getFieldBorderStyle("quickAction"),
                   }}
                 >
-                  <option value="">Pilih Quick Action</option>
-                  <option value="Pekerjaan Dilakukan setelah Perbaikan Langsung">
-                    Pekerjaan Dilakukan setelah Perbaikan Langsung
-                  </option>
-                  <option value="Stop Pekerjaan">Stop Pekerjaan</option>
-                  <option value="Stop Pekerjaan Sampai Temuan Diperbaiki">
-                    Stop Pekerjaan Sampai Temuan Diperbaiki
-                  </option>
-                </select>
+                  <span>{form.quickAction || "Pilih Quick Action"}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </div>
+                <SelectModalWithSearch
+                  title="Pilih Quick Action"
+                  options={[
+                    "Pekerjaan Dilakukan setelah Perbaikan Langsung",
+                    "Stop Pekerjaan",
+                    "Stop Pekerjaan Sampai Temuan Diperbaiki",
+                  ]}
+                  value={form.quickAction}
+                  onSelect={(val) => {
+                    setForm((prev) => ({ ...prev, quickAction: val }));
+                    setShowQuickActionModal(false);
+                    setQuickActionSearchQuery("");
+                  }}
+                  searchQuery={quickActionSearchQuery}
+                  onSearchChange={setQuickActionSearchQuery}
+                  show={showQuickActionModal}
+                  onClose={() => setShowQuickActionModal(false)}
+                />
                 {getFieldError("quickAction") && (
                   <div
                     style={{
@@ -1518,7 +1735,8 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                   display: "flex",
                   gap: 8,
                   width: "90%",
-                  margin: "0 auto",
+                  maxWidth: 320,
+                  margin: "8px auto 0 auto",
                 }}
               >
                 <button
@@ -1568,9 +1786,11 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
                   marginTop: 8,
+                  boxSizing: "border-box",
                 }}
               >
                 <label
@@ -1592,8 +1812,9 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                   placeholder="Jelaskan detail temuan hazard"
                   style={{
                     width: "100%",
+                    boxSizing: "border-box",
                     borderRadius: 8,
-                    padding: 4,
+                    padding: "12px 16px",
                     fontSize: 13,
                     resize: "vertical",
                     minHeight: 60,
@@ -1618,8 +1839,10 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 style={{
                   marginBottom: 4,
                   width: "90%",
+                  maxWidth: 320,
                   marginLeft: "auto",
                   marginRight: "auto",
+                  boxSizing: "border-box",
                 }}
               >
                 <label
@@ -1760,7 +1983,8 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                   display: "flex",
                   gap: 8,
                   width: "90%",
-                  margin: "0 auto",
+                  maxWidth: 320,
+                  margin: "8px auto 0 auto",
                 }}
               >
                 <button

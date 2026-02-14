@@ -283,6 +283,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId }) => {
         onChange={handleSelectChange}
         style={{
           width: "100%",
+          boxSizing: "border-box",
           padding: "12px 16px",
           borderRadius: "8px",
           border: "1px solid #334155",
