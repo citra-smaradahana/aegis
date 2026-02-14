@@ -53,13 +53,16 @@ const SelectModalWithSearch = ({
             flexShrink: 0,
           }}
         >
-          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>{title}</div>
+          <div className="mobile-popup-title" style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+            {title}
+          </div>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={placeholder}
             autoComplete="off"
+            className="mobile-popup-search-input"
             style={{
               width: "100%",
               padding: "12px 16px",
@@ -67,6 +70,7 @@ const SelectModalWithSearch = ({
               border: "1px solid #d1d5db",
               fontSize: 16,
               boxSizing: "border-box",
+              color: "#111827",
             }}
           />
         </div>

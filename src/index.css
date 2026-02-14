@@ -184,6 +184,17 @@ textarea {
   color: #cbd5e1;
 }
 
+/* Popup/modal mobile - kontras judul & search pada background putih */
+.mobile-popup-title {
+  color: #111827 !important;
+}
+.mobile-popup-search-input {
+  color: #111827 !important;
+}
+.mobile-popup-search-input::placeholder {
+  color: #4b5563 !important;
+}
+
 /* PTO Navigation Button Override - Global */
 button.pto-nav-button {
   border-radius: 8px !important;

@@ -12,221 +12,15 @@ import {
   getLocationOptions,
   allowsCustomInput,
   shouldUseLocationSelector,
+  CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
+import { SUB_OPTIONS, matchPotensiBahayaToKetidaksesuaian } from "../../config/hazardKetidaksesuaianOptions";
 import PendingReportsList from "./PendingReportsList";
-import MobileSiteSelector from "../MobileSiteSelector";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import SelectModalWithSearch from "../SelectModalWithSearch";
 
-const _lokasiOptions = [
-  "Head Office",
-  "Balikpapan",
-  "ADRO",
-  "AMMP",
-  "BSIB",
-  "GAMR",
-  "HRSB",
-  "HRSE",
-  "PABB",
-  "PBRB",
-  "PKJA",
-  "PPAB",
-  "PSMM",
-  "REBH",
-  "RMTU",
-  "PMTU",
-];
-
 function HazardFormMobile({ user, onBack, onNavigate }) {
-  // Pemetaan sub ketidaksesuaian per kategori (disortir alfabetis)
-  const SUB_OPTIONS = useMemo(
-    () => ({
-      APD: [
-        "Cara Penggunaan APD",
-        "Kesesuaian dan Kelayakan APD",
-        "Pengawas Tidak Memastikan Kesesuaian dan Kelayakan APD Pekerja Saat Aktivitas Telah Berlangsung",
-        "Tidak Menggunakan APD",
-      ],
-      "Area Parkir": [
-        "Area Parkir tidak aman dari radius unit hauler",
-        "Jarak parkir unit tidak standar",
-        "Kendaraan/Unit Parkir di Area yang Tidak Rata",
-        "Pengawas Tidak Memasang Rambu Parkir saat Aktivitas Telah Berlangsung",
-        "Tidak Ada Area Parkir",
-        "Tidak ada Perbaikan Area Parkir yang Tidak Rata",
-        "Tidak ada Rambu Parkir",
-        "Tidak ada Stopper",
-        "Tidak tersedia pembatas antar unit",
-      ],
-      "Bahaya Peledakan": [
-        "Akses Menuju lokasi peledakan/gudang handak tidak layak",
-        "Area manuver MMU / Anfo Truck tidak memadai",
-        "Area penyimpanan bahan peledak pada lokasi peledakan tidak di atur dengan baik",
-        "Box unit pengangkut bahan peledak tidak digembok",
-        "High/Low wall & crest area peledakan tidak aman",
-        "Jarak lubang ledak terhadap jalan aktif terlalu dekat",
-        "Jarak unit drilling terlalu dekat dengan MMU/ Anfo Truck",
-        "Jumlah unit yang dikawal melebihi batas jumlah yang diperbolehkan",
-        "Kemiringan jalan akses masuk area peledakan > 10%",
-        "Kondisi permukaan jalan akses peledakan tidak Keras/Kering/bergelombang/rata",
-        "Lebar jalan akses masuk area peledakan <8 meter",
-        "Lokasi peledakan dan pengeboran tidak diberi jarak/batas",
-        "Lokasi Teras Area Peledakan tidak memadai",
-        "Lubang tidak di sounding sebelum melakukan pengisian",
-        "Man Power yang bekerja pada area peledakan tidak memiliki lisensi/ lisensi expired",
-        "Melakukan pemuatan dan pengangkutan bahan peledak tanpa Juru Ledak",
-        "Melakukan pemuatan dan pengangkutan bahan peledak tanpa pengawalan",
-        "Melakukan pemuatan dan pengangkutan bahan peledak tanpa pengamanan",
-        "Pengisian Bahan peledak overcharge",
-        "Tanggul lokasi peledakan tidak sesuai standar",
-        "Terdapat lubang collapse/Lumpur/Miring",
-        "Terdapat Lubang Panas/Reaktif pada Area Peledakan",
-        "Terdapat Material Menggantung",
-      ],
-      "Bahaya Biologi": [
-        "Bahaya hewan buas",
-        "Pengawas gagal mengidentifikasi bahaya biologis",
-        "Pohon kering",
-        "Serangga",
-        "Terdapat tanamanan merambat yang lebat diarea kerja yang berpotensi menjadi sarang ular",
-        "Tidak melakukan pemeliharaan rumput liar di area kerja",
-      ],
-      "Bahaya Elektrikal": [
-        "Instalasi listrik tidak layak",
-        "Kabel tidak layak",
-        "Pengamanan peralatan listrik",
-        "Pengawas tidak melakukan pengamanan peralatan listrik",
-        "Pengawas tidak memastikan kelayakan instalasi listrik saat aktivitas telah berlangsung",
-        "Pengawas tidak mengidentifikasi potensi arus pendek saat aktivitas telah berlangsung",
-        "Potensi arus pendek",
-      ],
-      "External Issue": ["External Issue"],
-      "Fasilitas Mixing Plant": [
-        "Filter rusak",
-        "Generator Rusak",
-        "Penerangan Tidak Standar",
-        "Peralatan belum dilakukan kalibrasi",
-        "Tidak ada penerangan",
-        "Tidak dilakukan perawatan rutin peralatan",
-      ],
-      "Fasilitas Office": [
-        "Area Merokok tidak bersih",
-        "Pantry Tidak Bersih",
-        "Peralatan listrik belum dilakukan inspeksi berkala",
-        "Penerangan Tidak standar",
-        "Tidak ada penerangan",
-        "Toilet Rusak",
-      ],
-      "Fasilitas Workshop": [
-        "Lifting gear tidak ditagging",
-        "Pad workshop kotor",
-        "Penerangan Tidak standar",
-        "Saluran Air / Drainase tidak ada",
-        "Saluran Air / Drainase untuk fasilitas workshop tersumbat",
-        "Tidak ada Penerangan",
-      ],
-      "Izin Kerja": [
-        "Izin Bekerja Ruang Terbatas Expired",
-        "Izin Bekerja Ruang Terbatas Tidak Sesuai",
-        "Izin Bekerja Ruang Terbatas Tidak Tersedia",
-        "Izin Bekerja diketinggian Expired",
-        "Izin Bekerja diketinggian Tidak Tersedia",
-        "Izin Bekerja diketinggian tidak sesuai",
-        "Izin Kerja Panas Expired",
-        "Izin Kerja Panas Tidak Tersedia",
-        "Izin Kerja panas Tidak Sesuai",
-      ],
-      "Kelayakan Bangunan": ["Bangunan Rusak", "Kelayakan Bangunan"],
-      "Kelayakan Tools": [
-        "Kelayakan Common Tools",
-        "Kelayakan Lifting Gear",
-        "Kelayakan Small Equipment / Power Tools",
-        "Kelayakan Special Tools",
-        "Kelayakan Supporting Tools",
-        "Kesesuaian Penggunaan Common Tools",
-        "Kesesuaian Penggunaan Lifting Gear",
-        "Kesesuaian Penggunaan Small Equipment / Power Tools",
-        "Kesesuaian Penggunaan Special Tools",
-        "Kesesuaian Penggunaan Supporting Tools",
-        "Pelabelan/Penandaan Lifting Gear",
-        "Pelabelan/Penandaan Small Equipment / Power Tools",
-        "Pelabelan/Penandaan Special Tools",
-        "Pelabelan/Penandaan Supporting Tools",
-      ],
-      "Kelengkapan Tanggap Darurat": [
-        "Alat Tanggap Darurat Belum Dilakukan Inspeksi",
-        "Emergency Alarm Tidak Berfungsi",
-        "Eye Wash",
-        "Fire Apparatus",
-        "Fire Suspression",
-        "Jalur Evakuasi",
-        "Kelengkapan P3K",
-        "Pengawas Tidak Melakukan Inspeksi Alat Tanggap Darurat",
-        "Pengawas Tidak Memeriksa Kelayakan Eyewash",
-        "Refill APAR",
-      ],
-      "Kondisi Fisik Pekerja": [
-        "Cidera atau sakit yang dialami sebelumnya",
-        "Kekurangan Gula Darah",
-        "Kelelahan karena Beban Kerja",
-        "Kelelahan Karena Kurang Istirahat",
-        "Sakit Akibat Mengkonsumsi Obat-obatan Terlarang atau minuman keras",
-        "Unjuk Kerja menurun karena tingginya temperatur",
-      ],
-      "Kondisi Kendaraan/Unit": [
-        "Kelayakan Kendaraan/Unit",
-        "Mengoperasikan Kendaraan/Unit Yang Tidak Layak",
-        "Tidak Melakukan P2H",
-      ],
-      "Lingkungan Kerja": [
-        "Bahan Kimia yang Berbahaya",
-        "Ceceran B3",
-        "Getaran",
-        "Kabut",
-        "Kebisingan",
-        "Lingkungan Berdebu",
-        "Pencahayaan",
-        "Pengawas Tidak Memastikan Pencahayaan yang Standard Sebelum Aktivitas Berlangsung",
-        "Radiasi",
-        "Suhu Panas/dingin",
-        "Swabakar",
-        "Ventilasi Tidak Memadai",
-      ],
-      Penandaan: [
-        "Barikade/ Safety line",
-        "Demarkasi",
-        "Ketidaksesuaian LOTO",
-        "Kode Warna",
-        "Labeling Tidak Ada",
-        "Labeling Tidak Standar / Sesuai",
-        "Pengawas Tidak Membuat Demarkasi Saat Aktivitas Telah Berlangsung",
-        "Pengawas Tidak Memasang Barikade / Safety Line saat Aktivitas Telah Berlangsung",
-        "Pengawas Tidak Memberikan Kode Pewarnaan yang standar Saat Aktivitas Telah Berlangsung",
-        "Pita Batas Radius Peledakan/ Sleepblast tidak ada",
-        "Tidak Memasang LOTO",
-      ],
-      Rambu: [
-        "Kelayakan Rambu",
-        "Lampu Flip Flop Area Sleepblast belum Ada",
-        "Pengawas Tidak Melakukan Perawatan rambu Sehingga Rambu Menjadi Tidak Layak",
-        "Pengawas Tidak Memasang Rambu Yang Memadai Saat Aktivitas Telah Berlangsung",
-        "Pengawas Tidak Memasang Rambu Yang Sesuai saat Aktivitas Telah Berlangsung",
-        "Posisi Rambu Tidak Sesuai",
-        "Rambu Aktivitas Peledakan Tidak Terpasang",
-        "Rambu APD",
-        "Tidak Ada Rambu",
-        "Tidak Terdapat Rambu Atau Bendera Radius Aman Manusia",
-        "Unit Breakdown Tanpa Alat Pengaman dan Rambu",
-      ],
-      "Tools Inspection": [
-        "Tidak Ada Penjadwalan Tools Inspection untuk Suatu Area Pekerjaan",
-        "Tools Belum Dilakukan Inspeksi",
-      ],
-    }),
-    []
-  );
-
   const getSubOptions = (kategori) => {
     const arr = SUB_OPTIONS[kategori] || [];
     return [...arr].sort((a, b) => a.localeCompare(b, "id"));
@@ -253,6 +47,8 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
   const [picOptions, setPicOptions] = useState([]);
   const [showPicModal, setShowPicModal] = useState(false);
   const [picSearchQuery, setPicSearchQuery] = useState("");
+  const [showSiteModal, setShowSiteModal] = useState(false);
+  const [siteSearchQuery, setSiteSearchQuery] = useState("");
   const [showDetailLokasiModal, setShowDetailLokasiModal] = useState(false);
   const [detailLokasiSearchQuery, setDetailLokasiSearchQuery] = useState("");
   const [showKetidaksesuaianModal, setShowKetidaksesuaianModal] = useState(false);
@@ -290,11 +86,19 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
       .then(({ data }) => setTake5Pending(data || []));
   }, [user.id]);
 
-  // Prefill lokasi/dll jika report dipilih
+  // Prefill lokasi/dll jika report dipilih (autofill dari Take 5: potensi_bahaya, deskripsi_kondisi)
   useEffect(() => {
     if (selectedReport) {
       console.log("Selected Report Data (Mobile):", selectedReport);
       console.log("Foto Temuan (Mobile):", selectedReport.foto_temuan);
+
+      let ketidaksesuaian = "";
+      let subKetidaksesuaian = "";
+      if (selectedReport.sumber_laporan === "Take5" && selectedReport.potensi_bahaya) {
+        const matched = matchPotensiBahayaToKetidaksesuaian(selectedReport.potensi_bahaya, SUB_OPTIONS);
+        ketidaksesuaian = matched.ketidaksesuaian || "";
+        subKetidaksesuaian = matched.subKetidaksesuaian || "";
+      }
 
       setForm((prev) => ({
         ...prev,
@@ -305,13 +109,13 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
             ? selectedReport.nrp_pic || ""
             : "", // Prefill PIC hanya dari PTO, bukan Take 5
         keteranganLokasi: "", // blank, isi manual
-        ketidaksesuaian: "", // blank, isi manual
-        subKetidaksesuaian: "", // blank, isi manual
+        ketidaksesuaian,
+        subKetidaksesuaian,
         quickAction:
           selectedReport.sumber_laporan === "Take5"
             ? "STOP pekerjaan sesuai Take 5"
             : "Tindak lanjut PTO",
-        deskripsiTemuan: selectedReport.deskripsi || "Temuan dari observasi",
+        deskripsiTemuan: selectedReport.deskripsi || selectedReport.deskripsi_kondisi || "Temuan dari observasi",
       }));
 
       // Auto-fill evidence preview jika ada foto temuan dari sumber (Take 5 atau PTO)
@@ -647,15 +451,22 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
         setSubmittedToMultipleEvaluators(false);
       }
 
-      // Jika ada report yang dipilih, update status menjadi "done" (untuk Take 5)
+      // Jika ada report dari Take 5: update status, potensi_bahaya, deskripsi_kondisi (hazard_id diisi trigger)
       if (selectedReport?.sumber_laporan === "Take5" && selectedReport?.id) {
+        const take5Update = {
+          status: "done",
+          potensi_bahaya: form.ketidaksesuaian
+            ? [form.ketidaksesuaian, form.subKetidaksesuaian].filter(Boolean).join(" - ")
+            : null,
+          deskripsi_kondisi: form.deskripsiTemuan || null,
+        };
         const { error: updateError } = await supabase
           .from("take_5")
-          .update({ status: "done" })
+          .update(take5Update)
           .eq("id", selectedReport.id);
 
         if (updateError) {
-          console.error("Error updating Take 5 status:", updateError);
+          console.error("Error updating Take 5:", updateError);
         }
       }
 
@@ -907,13 +718,48 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                 >
                   Lokasi (Site)
                 </label>
-                <MobileSiteSelector
-                  value={form.lokasi}
-                  onChange={handleChange}
-                  placeholder="Pilih Lokasi"
-                  disabled={!!selectedReport}
-                  style={getFieldBorderStyle("lokasi")}
-                  required
+                <div
+                  onClick={() => {
+                    if (!selectedReport) {
+                      setSiteSearchQuery("");
+                      setShowSiteModal(true);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    borderRadius: 8,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    border: "1px solid #d1d5db",
+                    backgroundColor: selectedReport ? "#f3f4f6" : "#fff",
+                    color: selectedReport ? "#9ca3af" : form.lokasi ? "#000" : "#6b7280",
+                    cursor: selectedReport ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    ...getFieldBorderStyle("lokasi"),
+                  }}
+                >
+                  <span>{form.lokasi || "Pilih Lokasi"}</span>
+                  {!selectedReport && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  )}
+                </div>
+                <SelectModalWithSearch
+                  title="Pilih Lokasi"
+                  options={CUSTOM_INPUT_SITES}
+                  onSelect={(val) => {
+                    setForm((prev) => ({ ...prev, lokasi: val }));
+                    setShowSiteModal(false);
+                    setSiteSearchQuery("");
+                  }}
+                  searchQuery={siteSearchQuery}
+                  onSearchChange={setSiteSearchQuery}
+                  show={showSiteModal}
+                  onClose={() => setShowSiteModal(false)}
                 />
                 {getFieldError("lokasi") && (
                   <div
@@ -1225,13 +1071,16 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                           flexShrink: 0,
                         }}
                       >
-                        <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>Pilih PIC</div>
+                        <div className="mobile-popup-title" style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+                          Pilih PIC
+                        </div>
                         <input
                           type="text"
                           value={picSearchQuery}
                           onChange={(e) => setPicSearchQuery(e.target.value)}
                           placeholder="Ketik nama untuk mencari..."
                           autoComplete="off"
+                          className="mobile-popup-search-input"
                           style={{
                             width: "100%",
                             padding: "12px 16px",
@@ -1239,6 +1088,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                             border: "1px solid #d1d5db",
                             fontSize: 16,
                             boxSizing: "border-box",
+                            color: "#111827",
                           }}
                         />
                       </div>

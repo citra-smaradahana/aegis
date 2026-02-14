@@ -7,6 +7,7 @@ import {
   allowsCustomInput,
   shouldUseLocationSelector,
 } from "../../config/siteLocations";
+import { matchPotensiBahayaToKetidaksesuaian } from "../../config/hazardKetidaksesuaianOptions";
 import PendingReportsList from "./PendingReportsList";
 import LocationDetailSelector from "../LocationDetailSelector";
 
@@ -108,6 +109,20 @@ function HazardFormDesktop({ user }) {
       );
       console.log("=== END PIC AUTOFILL DEBUG ===");
 
+      let ketidaksesuaian = "";
+      let subKetidaksesuaian = "";
+      let deskripsiTemuan = selectedReport.deskripsi || selectedReport.deskripsi_kondisi || "Temuan dari observasi";
+      let quickAction =
+        selectedReport.sumber_laporan === "Take5"
+          ? "STOP pekerjaan sesuai Take 5"
+          : "Tindak lanjut PTO";
+
+      if (selectedReport.sumber_laporan === "Take5" && selectedReport.potensi_bahaya) {
+        const matched = matchPotensiBahayaToKetidaksesuaian(selectedReport.potensi_bahaya);
+        ketidaksesuaian = matched.ketidaksesuaian || "";
+        subKetidaksesuaian = matched.subKetidaksesuaian || "";
+      }
+
       setForm((prev) => ({
         ...prev,
         lokasi: selectedReport.site || selectedReport.lokasi,
@@ -116,9 +131,13 @@ function HazardFormDesktop({ user }) {
           selectedReport.sumber_laporan === "PTO"
             ? selectedReport.nrp_pic || ""
             : "", // Prefill PIC hanya dari PTO, bukan Take 5
+        ketidaksesuaian,
+        subKetidaksesuaian,
+        quickAction,
+        deskripsiTemuan,
       }));
 
-      // Auto-fill evidence preview jika ada foto temuan dari PTO
+      // Auto-fill evidence preview jika ada foto temuan dari PTO/Take5
       console.log("Checking foto_temuan:", selectedReport.foto_temuan);
       console.log("Current evidencePreview:", evidencePreview);
 
@@ -445,8 +464,24 @@ function HazardFormDesktop({ user }) {
 
       if (error) throw error;
 
-      // Take 5 status tetap "pending" sampai workflow Tasklist selesai (status "closed")
-      // Status akan diupdate oleh TasklistStatusUpdater ketika hazard_report status menjadi "closed"
+      // Jika dari Take 5: update status, potensi_bahaya, deskripsi_kondisi (hazard_id diisi trigger)
+      if (selectedReport?.sumber_laporan === "Take5" && selectedReport?.id) {
+        const take5Update = {
+          status: "done",
+          potensi_bahaya: form.ketidaksesuaian
+            ? [form.ketidaksesuaian, form.subKetidaksesuaian].filter(Boolean).join(" - ")
+            : null,
+          deskripsi_kondisi: form.deskripsiTemuan || null,
+        };
+        const { error: updateError } = await supabase
+          .from("take_5")
+          .update(take5Update)
+          .eq("id", selectedReport.id);
+
+        if (updateError) {
+          console.error("Error updating Take 5:", updateError);
+        }
+      }
 
       setSubmitSuccess(true);
       setForm({

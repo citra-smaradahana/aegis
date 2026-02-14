@@ -150,12 +150,13 @@ const PICSelector = ({
         </div>
 
         {/* Search input */}
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", backgroundColor: "#fff" }}>
           <input
             type="text"
             value={picSearchQuery}
             onChange={(e) => setPicSearchQuery(e.target.value)}
             placeholder="Ketik nama untuk mencari..."
+            className="mobile-popup-search-input"
             style={{
               width: "100%",
               padding: "12px 16px",
@@ -163,6 +164,7 @@ const PICSelector = ({
               border: "1px solid #d1d5db",
               fontSize: 16,
               boxSizing: "border-box",
+              color: "#111827",
             }}
           />
         </div>

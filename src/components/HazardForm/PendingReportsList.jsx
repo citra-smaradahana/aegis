@@ -105,11 +105,11 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
         console.log("PIC Names Map:", picNamesMap);
       }
 
-      // Query Take 5 pending (nrp/pelapor_nrp untuk NRP pelapor, bukti_url untuk foto)
+      // Query Take 5 pending (potensi_bahaya, deskripsi_kondisi untuk autofill hazard form)
       const { data: take5Data, error: take5Error } = await supabase
         .from("take_5")
         .select(
-          "id, nama, pelapor_nama, nrp, tanggal, detail_lokasi, deskripsi_kondisi, site, bukti_url"
+          "id, nama, pelapor_nama, nrp, tanggal, detail_lokasi, deskripsi_kondisi, potensi_bahaya, site, bukti_url"
         )
         .eq("status", "pending")
         .is("hazard_id", null);
@@ -158,6 +158,8 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
           tanggal: item.tanggal,
           detail_lokasi: item.detail_lokasi || "Unknown",
           deskripsi: item.deskripsi_kondisi || "Tidak ada deskripsi",
+          deskripsi_kondisi: item.deskripsi_kondisi || null,
+          potensi_bahaya: item.potensi_bahaya || null,
           site: item.site,
           foto_temuan: item.bukti_url || null,
         })),
@@ -392,7 +394,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
                 flexShrink: 0,
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+              <div className="mobile-popup-title" style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
                 Pilih Sumber Laporan
               </div>
               <input
@@ -401,6 +403,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Ketik untuk mencari..."
                 autoComplete="off"
+                className="mobile-popup-search-input"
                 style={{
                   width: "100%",
                   padding: "12px 16px",
@@ -408,6 +411,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
                   border: "1px solid #d1d5db",
                   fontSize: 16,
                   boxSizing: "border-box",
+                  color: "#111827",
                 }}
               />
             </div>
