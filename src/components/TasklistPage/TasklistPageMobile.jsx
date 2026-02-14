@@ -349,41 +349,6 @@ function TasklistPageMobile({ user, onBack, onNavigate }) {
           </button>
         </div>
 
-        <div
-          style={{
-            marginBottom: 20,
-            textAlign: "center",
-          }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              marginBottom: 8,
-              color: "#1f2937",
-              fontSize: 20,
-              fontWeight: 700,
-            }}
-          >
-            {activeTab === "todo" && "Daftar Tugas"}
-            {activeTab === "monitoring" && "Monitoring Tugas"}
-            {activeTab === "riwayat" && "Riwayat Tugas"}
-          </h2>
-          <p
-            style={{
-              margin: 0,
-              color: "#6b7280",
-              fontSize: 14,
-            }}
-          >
-            {activeTab === "todo" &&
-              `${tasks.length} tugas yang perlu ditangani`}
-            {activeTab === "monitoring" &&
-              `${tasks.length} tugas dalam monitoring`}
-            {activeTab === "riwayat" &&
-              `${tasks.length} tugas yang telah selesai`}
-          </p>
-        </div>
-
         {tasks.length === 0 ? (
           <div
             style={{
