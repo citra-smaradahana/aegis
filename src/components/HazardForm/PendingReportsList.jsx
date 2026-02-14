@@ -26,43 +26,11 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
   const fetchPendingReports = async () => {
     try {
       setLoading(true);
-      console.log(
-        "PendingReportsList: Fetching pending reports for user:",
-        user.id
-      );
-
-      // Coba panggil function untuk mendapatkan pending reports
-      const { data, error } = await supabase.rpc(
-        "get_pending_reports_for_hazard"
-      );
-
-      console.log("PendingReportsList: Query result:", {
-        data,
-        error,
-        count: data?.length,
-      });
-
-      if (error) {
-        console.error("Function error:", error);
-        // Fallback: coba query manual
-        await fetchPendingReportsManual();
-        return;
-      }
-
-      // Filter: hanya tampilkan laporan yang dibuat oleh user login (pelapor)
-      const currentName = (user?.nama || user?.user || "").toString().trim().toLowerCase();
-      const isPelapor = (item) => {
-        const p = (item.nama_pelapor || "").toString().trim().toLowerCase();
-        return !!p && p === currentName;
-      };
-      const filtered = (data || []).filter(isPelapor);
-
-      console.log("PendingReportsList: Setting data (filtered by pelapor):", filtered);
-      setPendingReports(filtered);
+      // Selalu gunakan query manual agar bukti_url (foto) dari Take 5 ikut terbawa
+      await fetchPendingReportsManual();
     } catch (err) {
       console.error("Error fetching pending reports:", err);
-      // Fallback: coba query manual
-      await fetchPendingReportsManual();
+      setError("Gagal memuat data pending reports");
     } finally {
       setLoading(false);
     }
@@ -137,11 +105,11 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
         console.log("PIC Names Map:", picNamesMap);
       }
 
-      // Query Take 5 pending (nrp/pelapor_nrp untuk NRP pelapor)
+      // Query Take 5 pending (nrp/pelapor_nrp untuk NRP pelapor, bukti_url untuk foto)
       const { data: take5Data, error: take5Error } = await supabase
         .from("take_5")
         .select(
-          "id, nama, pelapor_nama, nrp, tanggal, detail_lokasi, deskripsi_kondisi, site"
+          "id, nama, pelapor_nama, nrp, tanggal, detail_lokasi, deskripsi_kondisi, site, bukti_url"
         )
         .eq("status", "pending")
         .is("hazard_id", null);
@@ -191,6 +159,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
           detail_lokasi: item.detail_lokasi || "Unknown",
           deskripsi: item.deskripsi_kondisi || "Tidak ada deskripsi",
           site: item.site,
+          foto_temuan: item.bukti_url || null,
         })),
       ];
 

@@ -123,36 +123,18 @@ function HazardFormDesktop({ user }) {
       console.log("Current evidencePreview:", evidencePreview);
 
       if (selectedReport.foto_temuan) {
-        // URL should already be correct from database
         const fotoUrl = selectedReport.foto_temuan;
-
-        // Validate URL format
         const isValidUrl =
           fotoUrl &&
-          fotoUrl.includes("supabase.co") &&
-          fotoUrl.includes("pto-evidence");
-
-        console.log("URL validation:", {
-          fotoUrl: fotoUrl,
-          isValid: isValidUrl,
-          hasSupabase: fotoUrl?.includes("supabase.co"),
-          hasBucket: fotoUrl?.includes("pto-evidence"),
-          url_length: fotoUrl?.length,
-          url_start: fotoUrl?.substring(0, 50),
-          url_end: fotoUrl?.substring(-20),
-        });
-
+          (typeof fotoUrl === "string") &&
+          (fotoUrl.startsWith("http") || fotoUrl.includes("supabase.co"));
         if (isValidUrl) {
-          console.log("Setting evidence preview from PTO...");
           setEvidencePreview(fotoUrl);
-          console.log("Evidence preview set from PTO:", fotoUrl);
+          setEvidence(null);
         } else {
-          console.log("Invalid foto_temuan URL, skipping auto-fill");
           setEvidencePreview(null);
         }
       } else {
-        console.log("No foto_temuan found in selectedReport");
-        // Clear evidence preview jika tidak ada foto temuan
         setEvidencePreview(null);
       }
     }
@@ -2100,14 +2082,13 @@ function HazardFormDesktop({ user }) {
                             color: "#9ca3af",
                           }}
                         >
-                          📸 Foto dari {selectedReport.sumber_laporan} tersedia.
-                          Silakan upload foto baru untuk Hazard Report.
+                          📸 Foto dari sumber laporan ({selectedReport.sumber_laporan}) - tidak dapat diganti
                         </div>
                       )}
                       <img
                         src={evidencePreview}
                         alt="Preview"
-                        onClick={handleClickPreview}
+                        onClick={selectedReport?.foto_temuan && !evidence ? undefined : handleClickPreview}
                         onError={(e) => {
                           console.error(
                             "Image failed to load:",
@@ -2122,9 +2103,9 @@ function HazardFormDesktop({ user }) {
                           maxHeight: 150,
                           borderRadius: 8,
                           border: "2px solid #334155",
-                          cursor: "pointer",
+                          cursor: selectedReport?.foto_temuan && !evidence ? "default" : "pointer",
                         }}
-                        title="Klik untuk ganti foto"
+                        title={selectedReport?.foto_temuan && !evidence ? "Foto dari sumber" : "Klik untuk ganti foto"}
                       />
                     </div>
                   ) : (

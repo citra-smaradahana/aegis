@@ -230,9 +230,9 @@ RETURNS TRIGGER AS $$
 BEGIN
     -- Jika hazard report baru dibuat dan ada take_5_id
     IF NEW.take_5_id IS NOT NULL THEN
-        -- Update take_5 dengan hazard_id (konversi ke tipe yang sesuai)
+        -- Update take_5 dengan hazard_id (UUID dari hazard_report.id)
         UPDATE take_5 
-        SET hazard_id = NEW.id::bigint 
+        SET hazard_id = NEW.id
         WHERE id = NEW.take_5_id;
     END IF;
     

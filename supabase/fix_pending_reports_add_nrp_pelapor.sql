@@ -38,7 +38,7 @@ BEGIN
     
     UNION ALL
     
-    -- Take 5 pending
+    -- Take 5 pending (bukti_url = foto dari Take 5)
     SELECT 
         t5.id,
         'Take5'::TEXT,
@@ -50,7 +50,7 @@ BEGIN
         t5.site::TEXT,
         NULL::UUID,
         NULL::TEXT,
-        NULL::TEXT
+        t5.bukti_url::TEXT
     FROM take_5 t5
     WHERE t5.status = 'pending' 
     AND t5.hazard_id IS NULL;

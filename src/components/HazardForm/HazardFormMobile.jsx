@@ -314,12 +314,14 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
         deskripsiTemuan: selectedReport.deskripsi || "Temuan dari observasi",
       }));
 
-      // Auto-fill evidence preview jika ada foto temuan dari PTO
+      // Auto-fill evidence preview jika ada foto temuan dari sumber (Take 5 atau PTO)
       if (selectedReport.foto_temuan) {
-        // URL should already be correct from database
         const fotoUrl = selectedReport.foto_temuan;
         setEvidencePreview(fotoUrl);
-        console.log("Evidence preview set from PTO (Mobile):", fotoUrl);
+        setEvidence(null);
+        setRawImage(null);
+        setShowCrop(false);
+        console.log("Evidence preview set from source (Mobile):", fotoUrl);
       }
     }
   }, [selectedReport]);
@@ -1742,31 +1744,30 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                     {selectedReport?.foto_temuan && !evidence && (
                       <div
                         style={{
-                          background: "#f0f9ff",
-                          border: "1px solid #0ea5e9",
+                          background: "#f0fdf4",
+                          border: "1px solid #22c55e",
                           borderRadius: "8px",
                           padding: "6px",
                           marginBottom: "6px",
                           fontSize: "11px",
-                          color: "#0369a1",
+                          color: "#166534",
                         }}
                       >
-                        📸 Foto dari Take 5 tersedia. Silakan upload foto baru
-                        untuk Hazard Report.
+                        📸 Foto dari sumber laporan ({selectedReport?.sumber_laporan}) - tidak dapat diganti
                       </div>
                     )}
                     <img
                       src={evidencePreview}
                       alt="Preview"
-                      onClick={handleClickPreview}
+                      onClick={selectedReport?.foto_temuan && !evidence ? undefined : handleClickPreview}
                       style={{
                         maxWidth: "100%",
                         maxHeight: 150,
                         borderRadius: 8,
                         border: "2px solid #e5e7eb",
-                        cursor: "pointer",
+                        cursor: selectedReport?.foto_temuan && !evidence ? "default" : "pointer",
                       }}
-                      title="Klik untuk ganti foto"
+                      title={selectedReport?.foto_temuan && !evidence ? "Foto dari sumber" : "Klik untuk ganti foto"}
                     />
                   </div>
                 ) : (
