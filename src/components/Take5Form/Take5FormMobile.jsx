@@ -10,6 +10,7 @@ import {
 } from "../../config/siteLocations";
 import SelectModalWithSearch from "../SelectModalWithSearch";
 import PICSelector from "../PICSelector";
+import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 
 function getToday() {
@@ -288,7 +289,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
     }
   };
 
-  // Styles untuk mobile - header tetap di atas, konten yang scroll
+  // Styles untuk mobile - header tetap di atas, konten yang scroll (sama Hazard Report)
   const contentAreaStyle = {
     width: "100vw",
     height: "100vh",
@@ -298,6 +299,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
     flexDirection: "column",
     alignItems: "center",
     overflow: "hidden",
+    paddingTop: 60,
   };
 
   const scrollContentStyle = {
@@ -522,80 +524,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
 
   return (
     <div style={contentAreaStyle}>
-      {/* Header - Orange seperti TasklistMobile */}
-      {/* Header - tulisan Take 5 putih di tengah (sama Hazard Report) */}
-      <div
-        style={{
-          flexShrink: 0,
-          background: "#ea580c",
-          padding: "16px 20px 16px 16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-        }}
-      >
-        <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center" }}>
-          {onBack && (
-            <button
-              onClick={onBack}
-              style={{
-                background: "none",
-                border: "none",
-                color: "white",
-                cursor: "pointer",
-                padding: 8,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
-          )}
-        </div>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: 18,
-            fontWeight: 600,
-            color: "white",
-            flex: 1,
-            textAlign: "center",
-          }}
-        >
-          Take 5
-        </h2>
-        <div
-          style={{
-            width: 44,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            paddingRight: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 14,
-              fontWeight: 600,
-              color: "#ea580c",
-            }}
-          >
-            {user?.nama?.charAt(0).toUpperCase() || "U"}
-          </div>
-        </div>
-      </div>
+      <MobileHeader user={user} onBack={onBack} title="Take 5" showBack={true} />
 
       <div style={scrollContentStyle}>
         <div

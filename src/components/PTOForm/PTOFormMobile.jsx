@@ -3,6 +3,7 @@ import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 import SelectModalWithSearch from "../SelectModalWithSearch";
+import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import {
   shouldUseLocationSelector,
@@ -372,7 +373,7 @@ function PTOFormMobile({ user, onBack, onNavigate }) {
     setCropImageSrc(null);
   };
 
-  // Mobile styles - header tetap di atas, konten yang scroll
+  // Mobile styles - header tetap di atas, konten yang scroll (sama Hazard Report)
   const contentStyle = {
     width: "100%",
     height: "100vh",
@@ -382,6 +383,7 @@ function PTOFormMobile({ user, onBack, onNavigate }) {
     flexDirection: "column",
     alignItems: "center",
     overflow: "hidden",
+    paddingTop: 60,
   };
 
   const scrollContentStyle = {
@@ -393,16 +395,6 @@ function PTOFormMobile({ user, onBack, onNavigate }) {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-  };
-
-  const headerStyle = {
-    flexShrink: 0,
-    background: "#ea580c",
-    padding: "16px 20px 16px 16px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
   };
 
   const cardStyle = {
@@ -506,9 +498,7 @@ function PTOFormMobile({ user, onBack, onNavigate }) {
   if (success) {
     return (
       <div style={contentStyle}>
-        <div style={{ ...headerStyle, background: "#ea580c" }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#fff", flex: 1, textAlign: "center" }}>PTO</h2>
-        </div>
+        <MobileHeader user={user} onBack={onBack} title="PTO" showBack={true} />
         <div style={scrollContentStyle}>
         <div style={{ ...cardStyle, marginTop: 24, padding: 24, textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
@@ -548,58 +538,7 @@ function PTOFormMobile({ user, onBack, onNavigate }) {
 
   return (
     <div style={contentStyle}>
-      {/* Header - tulisan PTO putih di tengah (sama Hazard Report) */}
-      <div style={headerStyle}>
-        <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center" }}>
-        <button
-          onClick={onBack}
-          style={{
-              background: "none",
-            border: "none",
-              color: "#fff",
-            cursor: "pointer",
-              padding: 8,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </button>
-        </div>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#fff", flex: 1, textAlign: "center" }}>
-          PTO
-        </h2>
-        <div
-          style={{
-            width: 44,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            paddingRight: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 14,
-              fontWeight: 600,
-              color: "#fff",
-            }}
-          >
-            {user?.nama?.charAt(0)?.toUpperCase() || "U"}
-          </div>
-        </div>
-      </div>
+      <MobileHeader user={user} onBack={onBack} title="PTO" showBack={true} />
 
       <div style={scrollContentStyle}>
         <div style={{ ...cardStyle, marginTop: 16 }}>

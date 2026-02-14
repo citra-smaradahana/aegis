@@ -19,7 +19,7 @@ function MobileHeader({ user, onBack, title, showBack = true }) {
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
       }}
     >
-      <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center" }}>
+      <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 8 }}>
         {showBack && onBack && (
           <button
             onClick={onBack}
