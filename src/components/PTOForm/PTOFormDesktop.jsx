@@ -1261,7 +1261,7 @@ function PTOFormDesktop({ user, onBack }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "0 0 0 120px",
+          padding: "0 80px 0 24px",
         }}
       >
         <div
@@ -1319,7 +1319,7 @@ function PTOFormDesktop({ user, onBack }) {
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: "0 0 0 120px",
+        padding: "0 80px 0 24px",
         overflow: "hidden",
       }}
     >

@@ -12,6 +12,7 @@ const PICSelector = ({
 }) => {
   const [showPICSelection, setShowPICSelection] = useState(false);
   const [picOptions, setPicOptions] = useState([]);
+  const [picSearchQuery, setPicSearchQuery] = useState("");
 
   // Fetch PIC options from users table
   useEffect(() => {
@@ -83,7 +84,14 @@ const PICSelector = ({
 
     onChange({ target: { name: "pic", value: pic } });
     setShowPICSelection(false);
+    setPicSearchQuery("");
   };
+
+  const filteredPicOptions = picOptions.filter((p) =>
+    (p.nama || "")
+      .toLowerCase()
+      .includes((picSearchQuery || "").toLowerCase())
+  );
 
   const handleBack = () => {
     setShowPICSelection(false);
@@ -141,6 +149,24 @@ const PICSelector = ({
           </div>
         </div>
 
+        {/* Search input */}
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
+          <input
+            type="text"
+            value={picSearchQuery}
+            onChange={(e) => setPicSearchQuery(e.target.value)}
+            placeholder="Ketik nama untuk mencari..."
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: 8,
+              border: "1px solid #d1d5db",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
         {/* PIC List */}
         <div style={{ padding: "16px" }}>
           {picOptions.length === 0 ? (
@@ -149,11 +175,21 @@ const PICSelector = ({
             >
               Tidak ada PIC tersedia
             </div>
+          ) : filteredPicOptions.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "20px",
+                color: "#666",
+              }}
+            >
+              Tidak ada nama yang sesuai
+            </div>
           ) : (
             <div
               style={{ display: "flex", flexDirection: "column", gap: "12px" }}
             >
-              {picOptions.map((pic, index) => (
+              {filteredPicOptions.map((pic, index) => (
                 <div
                   key={index}
                   onClick={() => handlePICSelect(pic.nama)}
@@ -212,9 +248,16 @@ const PICSelector = ({
     return <PICSelectionPage />;
   }
 
+  const openPICSelection = () => {
+    if (!disabled) {
+      setPicSearchQuery("");
+      setShowPICSelection(true);
+    }
+  };
+
   return (
     <div
-      onClick={() => !disabled && setShowPICSelection(true)}
+      onClick={openPICSelection}
       style={{
         border: "1px solid #d1d5db",
         borderRadius: "8px",

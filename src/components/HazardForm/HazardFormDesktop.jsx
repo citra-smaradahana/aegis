@@ -49,6 +49,10 @@ function HazardFormDesktop({ user }) {
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
+  const [picDropdownOpen, setPicDropdownOpen] = useState(false);
+  const [picSearchQuery, setPicSearchQuery] = useState("");
+  const picInputRef = useRef();
+  const picDropdownRef = useRef();
   const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -154,6 +158,15 @@ function HazardFormDesktop({ user }) {
     }
   }, [selectedReport]);
 
+  // Default lokasi dari site yang didaftarkan pekerja (masih dapat diubah)
+  useEffect(() => {
+    if (user?.site && !selectedReport) {
+      setForm((prev) =>
+        prev.lokasi === "" ? { ...prev, lokasi: user.site } : prev
+      );
+    }
+  }, [user?.site, selectedReport]);
+
   // Fetch PIC options by lokasi
   useEffect(() => {
     async function fetchPIC() {
@@ -166,11 +179,12 @@ function HazardFormDesktop({ user }) {
         .select("nama")
         .eq("site", form.lokasi);
       if (!error && data) {
-        // Filter out current user dari PIC options
+        // Filter out current user dari PIC options, urutkan abjad
         const filteredPIC = data
           .map((u) => u.nama)
           .filter(Boolean)
-          .filter((nama) => nama !== user.nama); // Exclude current user
+          .filter((nama) => nama !== user.nama) // Exclude current user
+          .sort((a, b) => a.localeCompare(b, "id"));
         setPicOptions(filteredPIC);
       } else {
         setPicOptions([]);
@@ -225,6 +239,20 @@ function HazardFormDesktop({ user }) {
       setEvidencePreview(null);
     }
   }, [evidence]);
+
+  // Tutup dropdown PIC saat klik di luar
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        picDropdownRef.current &&
+        !picDropdownRef.current.contains(e.target)
+      ) {
+        setPicDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Handler
   const handleChange = (e) => {
@@ -569,7 +597,7 @@ function HazardFormDesktop({ user }) {
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: "0 0 0 120px",
+        padding: "0 80px 0 24px",
         overflow: "hidden",
       }}
     >
@@ -814,7 +842,7 @@ function HazardFormDesktop({ user }) {
                   />
                 </div>
 
-                <div style={{ marginBottom: 6 }}>
+                <div style={{ marginBottom: 6, position: "relative" }}>
                   <label
                     style={{
                       fontWeight: 600,
@@ -837,41 +865,130 @@ function HazardFormDesktop({ user }) {
                       </span>
                     )}
                   </label>
-                  <select
-                    name="pic"
-                    value={form.pic}
-                    onChange={handleChange}
-                    required
-                    disabled={
-                      !form.lokasi || selectedReport?.sumber_laporan === "PTO"
-                    } // Disabled hanya jika PTO, bukan Take 5
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      padding: 12,
-                      fontSize: 15,
-                      border: "1px solid #334155",
-                      background: !form.lokasi ? "#1f2937" : "#0b1220",
-                      color: !form.lokasi ? "#9ca3af" : "#e5e7eb",
-                      cursor:
-                        !form.lokasi || selectedReport?.sumber_laporan === "PTO"
-                          ? "not-allowed"
-                          : "pointer",
-                      opacity:
-                        selectedReport?.sumber_laporan === "PTO" ? 0.7 : 1, // Slightly dimmed when auto-filled from PTO
-                    }}
-                  >
-                    <option value="">
-                      {!form.lokasi
-                        ? "Pilih lokasi terlebih dahulu"
-                        : "Pilih PIC"}
-                    </option>
-                    {picOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
+                  {selectedReport?.sumber_laporan === "PTO" || !form.lokasi ? (
+                    <input
+                      type="text"
+                      readOnly
+                      value={form.pic}
+                      placeholder={
+                        !form.lokasi ? "Pilih lokasi terlebih dahulu" : ""
+                      }
+                      style={{
+                        width: "100%",
+                        borderRadius: 8,
+                        padding: 12,
+                        fontSize: 15,
+                        border: "1px solid #334155",
+                        background: !form.lokasi ? "#1f2937" : "#0b1220",
+                        color: !form.lokasi ? "#9ca3af" : "#e5e7eb",
+                        cursor: "not-allowed",
+                        opacity:
+                          selectedReport?.sumber_laporan === "PTO" ? 0.7 : 1,
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      ref={picDropdownRef}
+                      style={{ position: "relative" }}
+                    >
+                      <input
+                        ref={picInputRef}
+                        type="text"
+                        value={
+                          picDropdownOpen ? picSearchQuery : form.pic
+                        }
+                        onChange={(e) => {
+                          setPicSearchQuery(e.target.value);
+                          setPicDropdownOpen(true);
+                        }}
+                        onFocus={() => {
+                          setPicSearchQuery(form.pic || "");
+                          setPicDropdownOpen(true);
+                        }}
+                        placeholder="Ketik nama untuk mencari..."
+                        style={{
+                          width: "100%",
+                          borderRadius: 8,
+                          padding: 12,
+                          fontSize: 15,
+                          border: "1px solid #334155",
+                          background: "#0b1220",
+                          color: "#e5e7eb",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                      {picDropdownOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            marginTop: 4,
+                            maxHeight: 200,
+                            overflowY: "auto",
+                            background: "#1f2937",
+                            border: "1px solid #374151",
+                            borderRadius: 8,
+                            zIndex: 1000,
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                          }}
+                        >
+                          {picOptions
+                            .filter((opt) =>
+                              opt
+                                .toLowerCase()
+                                .includes(picSearchQuery.toLowerCase())
+                            )
+                            .map((opt) => (
+                              <div
+                                key={opt}
+                                onClick={() => {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    pic: opt,
+                                  }));
+                                  setPicDropdownOpen(false);
+                                  setPicSearchQuery("");
+                                }}
+                                style={{
+                                  padding: "10px 12px",
+                                  cursor: "pointer",
+                                  color: "#e5e7eb",
+                                  fontSize: 15,
+                                  borderBottom:
+                                    "1px solid #374151",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "#374151";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "transparent";
+                                }}
+                              >
+                                {opt}
+                              </div>
+                            ))}
+                          {picOptions.filter((opt) =>
+                            opt
+                              .toLowerCase()
+                              .includes(picSearchQuery.toLowerCase())
+                          ).length === 0 && (
+                            <div
+                              style={{
+                                padding: 12,
+                                color: "#9ca3af",
+                                fontSize: 14,
+                              }}
+                            >
+                              Tidak ada nama yang sesuai
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tombol Navigasi - Halaman 1 */}

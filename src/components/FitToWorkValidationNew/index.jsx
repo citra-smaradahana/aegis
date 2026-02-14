@@ -40,11 +40,15 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
       console.log("fetchValidations - User Site:", userSite);
       console.log("fetchValidations - filterStatus:", filterStatus);
 
+      // Pakai initial_status_fatigue agar record yang divalidasi jadi "Fit To Work"
+      // (status_fatigue berubah) tetap masuk ke Selesai/Closed
       let query = supabase
         .from("fit_to_work")
         .select("*")
-        .eq("site", userSite) // Site-based filtering
-        .eq("status_fatigue", "Not Fit To Work"); // Only show Not Fit To Work entries
+        .eq("site", userSite)
+        .or("initial_status_fatigue.eq.Not Fit To Work,status_fatigue.eq.Not Fit To Work") // Awal Not Fit ATAU saat ini masih Not Fit
+        .order("created_at", { ascending: false })
+        .limit(10000);
 
       // Semua validator melihat seluruh validasi (untuk memantau tahap 1 dan tahap 2).
       // Filter workflow hanya dari dropdown; tidak filter by jabatan.
@@ -110,11 +114,8 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
     console.log("Component - userSite:", user?.site);
     console.log("Component - filterStatus:", filterStatus);
 
-    // Force refresh data
+    // Force refresh data (all-time, no date filter)
     fetchValidations();
-
-    // Clear any cached data
-    setValidations([]);
 
     console.log("=== COMPONENT MOUNT COMPLETE ===");
   }, [user, filterStatus]);

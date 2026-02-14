@@ -315,6 +315,15 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
     }
   }, [selectedReport]);
 
+  // Default lokasi dari site yang didaftarkan pekerja (masih dapat diubah)
+  useEffect(() => {
+    if (user?.site && !selectedReport) {
+      setForm((prev) =>
+        prev.lokasi === "" ? { ...prev, lokasi: user.site } : prev
+      );
+    }
+  }, [user?.site, selectedReport]);
+
   // Fetch PIC options by lokasi
   useEffect(() => {
     async function fetchPIC() {
@@ -327,11 +336,12 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
         .select("nama")
         .eq("site", form.lokasi);
       if (!error && data) {
-        // Filter out current user dari PIC options
+        // Filter out current user dari PIC options, urutkan abjad
         const filteredPIC = data
           .map((u) => u.nama)
           .filter(Boolean)
-          .filter((nama) => nama !== user.nama); // Exclude current user
+          .filter((nama) => nama !== user.nama) // Exclude current user
+          .sort((a, b) => a.localeCompare(b, "id"));
         setPicOptions(filteredPIC);
       } else {
         setPicOptions([]);

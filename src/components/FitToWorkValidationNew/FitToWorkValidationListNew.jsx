@@ -13,6 +13,8 @@ function FitToWorkValidationListNew({
 }) {
   const [selectedValidation, setSelectedValidation] = useState(null);
   const [currentPage, setCurrentPage] = useState("list"); // "list" atau "form"
+  const [completeListPageSize, setCompleteListPageSize] = useState(3);
+  const [completeListPage, setCompleteListPage] = useState(0);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -110,10 +112,11 @@ function FitToWorkValidationListNew({
       <div
         style={{
           width: "100%",
-          height: "100vh",
+          minHeight: "100vh",
           background: isMobile ? "#f8fafc" : "transparent",
-          padding: isMobile ? "0" : "0 0 0 120px",
-          overflow: "hidden",
+          padding: isMobile ? "0" : "0 80px 0 24px",
+          overflowY: "auto",
+          paddingBottom: 80,
         }}
       >
         <FitToWorkValidationFormNew
@@ -282,7 +285,7 @@ function FitToWorkValidationListNew({
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: isMobile ? "0" : "0 32px 0 80px",
+        padding: isMobile ? "0" : "0 80px 0 24px",
         overflow: isMobile ? "visible" : "auto",
       }}
     >
@@ -392,7 +395,7 @@ function FitToWorkValidationListNew({
           </div>
         </div>
 
-        {/* Section: Selesai (Complete) */}
+        {/* Section: Selesai (Complete) - All-time dengan pagination */}
         <div>
           <h3
             style={{
@@ -407,25 +410,158 @@ function FitToWorkValidationListNew({
           >
             <span style={{ color: "#4caf50" }}>✅</span> Selesai ({completeList.length})
           </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {completeList.length > 0 ? (
-              completeList.map((validation, index) => renderValidationCard(validation, index))
-            ) : (
+          {completeList.length > 0 ? (
+            <>
+              {/* Pagination controls - Selesai */}
               <div
                 style={{
-                  padding: "20px",
-                  backgroundColor: "#1f2937",
-                  borderRadius: "12px",
-                  border: "1px dashed #374151",
-                  color: "#9ca3af",
-                  fontSize: "14px",
-                  textAlign: "center",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "12px",
+                  flexWrap: "wrap",
+                  gap: "8px",
                 }}
               >
-                Belum ada validasi selesai
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "13px", color: "#9ca3af" }}>
+                    Tampilkan
+                  </span>
+                  <select
+                    value={completeListPageSize}
+                    onChange={(e) => {
+                      setCompleteListPageSize(Number(e.target.value));
+                      setCompleteListPage(0);
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid #374151",
+                      backgroundColor: "#1f2937",
+                      color: "#e5e7eb",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <option value={3}>3</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span style={{ fontSize: "13px", color: "#9ca3af" }}>
+                    data
+                  </span>
+                </div>
+                <div style={{ fontSize: "13px", color: "#9ca3af" }}>
+                  {completeList.length} total
+                </div>
               </div>
-            )}
-          </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {completeList
+                  .slice(
+                    completeListPage * completeListPageSize,
+                    completeListPage * completeListPageSize + completeListPageSize
+                  )
+                  .map((validation, index) =>
+                    renderValidationCard(validation, index)
+                  )}
+              </div>
+              {/* Tombol Sebelumnya / Berikutnya */}
+              {completeList.length > completeListPageSize && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: "16px",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <div style={{ fontSize: "13px", color: "#9ca3af" }}>
+                    Menampilkan{" "}
+                    {completeListPage * completeListPageSize + 1} -{" "}
+                    {Math.min(
+                      (completeListPage + 1) * completeListPageSize,
+                      completeList.length
+                    )}{" "}
+                    dari {completeList.length}
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCompleteListPage((p) => Math.max(0, p - 1))
+                      }
+                      disabled={completeListPage === 0}
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        border: "1px solid #374151",
+                        background: completeListPage === 0 ? "#374151" : "#1f2937",
+                        color: completeListPage === 0 ? "#6b7280" : "#e5e7eb",
+                        cursor: completeListPage === 0 ? "not-allowed" : "pointer",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCompleteListPage((p) =>
+                          p + 1 <
+                          Math.ceil(completeList.length / completeListPageSize)
+                            ? p + 1
+                            : p
+                        )
+                      }
+                      disabled={
+                        completeListPage + 1 >=
+                        Math.ceil(completeList.length / completeListPageSize)
+                      }
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        border: "1px solid #374151",
+                        background:
+                          completeListPage + 1 >=
+                          Math.ceil(completeList.length / completeListPageSize)
+                            ? "#374151"
+                            : "#1f2937",
+                        color:
+                          completeListPage + 1 >=
+                          Math.ceil(completeList.length / completeListPageSize)
+                            ? "#6b7280"
+                            : "#e5e7eb",
+                        cursor:
+                          completeListPage + 1 >=
+                          Math.ceil(completeList.length / completeListPageSize)
+                            ? "not-allowed"
+                            : "pointer",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Berikutnya
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div
+              style={{
+                padding: "20px",
+                backgroundColor: "#1f2937",
+                borderRadius: "12px",
+                border: "1px dashed #374151",
+                color: "#9ca3af",
+                fontSize: "14px",
+                textAlign: "center",
+              }}
+            >
+              Belum ada validasi selesai
+            </div>
+          )}
         </div>
 
         {/* Legacy single list - removed; empty placeholder when no data at all */}

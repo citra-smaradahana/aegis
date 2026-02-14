@@ -1404,10 +1404,10 @@ function FitToWorkValidationFormNew({
         padding: isMobile ? "0" : "20px",
         maxWidth: "1400px",
         margin: "0 auto",
-        height: isMobile ? "100vh" : "100vh",
-        overflow: "auto",
+        minHeight: "100vh",
+        overflow: "visible",
         background: isMobile ? "#f8fafc" : "transparent",
-        paddingBottom: isMobile ? 80 : 0, // Space untuk bottom nav di mobile
+        paddingBottom: isMobile ? 100 : 80, // Space agar tombol Simpan Validasi tidak tertutup
       }}
     >
       {/* Mobile Header */}
@@ -1515,7 +1515,7 @@ function FitToWorkValidationFormNew({
 
           {/* Submit Button */}
           {(canEditLevel1() || canEditLevel2()) && (
-            <div style={{ textAlign: "center", marginTop: "24px" }}>
+            <div style={{ textAlign: "center", marginTop: "24px", marginBottom: "40px" }}>
               <button
                 type="submit"
                 disabled={loading || !isFormValid()}

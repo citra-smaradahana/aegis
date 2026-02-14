@@ -542,7 +542,7 @@ function TasklistPageDesktop({ user }) {
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: "0 0 0 120px",
+        padding: "0 80px 0 24px",
         overflow: "hidden",
       }}
     >
@@ -608,7 +608,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >
@@ -658,7 +658,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >
@@ -711,7 +711,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >
@@ -762,7 +762,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >
@@ -815,7 +815,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >
@@ -871,7 +871,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >
@@ -925,7 +925,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >
@@ -963,7 +963,7 @@ function TasklistPageDesktop({ user }) {
             width: "100%",
             height: "100vh",
             background: "transparent",
-            padding: "0 0 0 120px",
+            padding: "0 80px 0 24px",
             overflow: "hidden",
           }}
         >

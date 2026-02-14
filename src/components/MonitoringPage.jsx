@@ -34,6 +34,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     fitToWorkPercentage: 0,
     initialNotFitToWork: 0,
     improvedToFit: 0,
+    summaryDate: "",
+    listData: [],
     improvementCount: 0,
     totalImprovements: 0,
     siteStats: {},
@@ -80,6 +82,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     hazard: [],
   });
 
+  // Pagination untuk tabel Data Pengisian Fit To Work
+  const [fitToWorkTablePage, setFitToWorkTablePage] = useState(0);
+  const [fitToWorkTablePageSize, setFitToWorkTablePageSize] = useState(10);
+
   // Initialize based on subMenu
   useEffect(() => {
     if (subMenu === "Statistik Fit To Work") {
@@ -93,6 +99,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       fetchHazardStats();
     }
   }, [subMenu]);
+
+  // Reset pagination saat data berubah
+  useEffect(() => {
+    if (selectedTable === "fit_to_work_stats") {
+      setFitToWorkTablePage(0);
+    }
+  }, [fitToWorkStats.listData?.length, selectedTable]);
 
   // Fetch data when filters change
   useEffect(() => {
@@ -452,20 +465,37 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       filteredData = filteredData.filter((item) => item.site === site);
     }
 
-    const totalSubmissions = filteredData.length;
+    // Summary = data pengisian pada hari tersebut saja (tidak menggabungkan hari lain)
+    let summaryDateStr;
+    if (dateFrom && dateTo) {
+      summaryDateStr = dateTo;
+    } else if (dateFrom) {
+      summaryDateStr = dateFrom;
+    } else if (dateTo) {
+      summaryDateStr = dateTo;
+    } else {
+      // Gunakan tanggal lokal (bukan UTC) agar sesuai zona waktu Indonesia
+      const now = new Date();
+      summaryDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
+    const summaryData = filteredData.filter(
+      (item) => item.tanggal === summaryDateStr
+    );
+
+    const totalSubmissions = summaryData.length;
     // Status saat ini (setelah validasi)
-    const fitToWork = filteredData.filter(
+    const fitToWork = summaryData.filter(
       (item) => item.status_fatigue === "Fit To Work"
     ).length;
-    const notFitToWork = filteredData.filter(
+    const notFitToWork = summaryData.filter(
       (item) => item.status_fatigue === "Not Fit To Work"
     ).length;
     // Berdasarkan initial_status_fatigue (saat pengisian pertama, sebelum validasi)
-    const initialNotFitToWork = filteredData.filter(
+    const initialNotFitToWork = summaryData.filter(
       (item) =>
         (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work"
     ).length;
-    const improvedToFit = filteredData.filter(
+    const improvedToFit = summaryData.filter(
       (item) =>
         (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
         item.status_fatigue === "Fit To Work"
@@ -477,9 +507,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         ? parseFloat(((fitToWork / totalSubmissions) * 100).toFixed(1))
         : 0;
 
-    // Site statistics (hanya tampilkan site yang dipilih jika ada filter)
+    // Site statistics untuk hari tersebut
     const siteStats = {};
-    filteredData.forEach((item) => {
+    summaryData.forEach((item) => {
       if (!siteStats[item.site]) {
         siteStats[item.site] = {
           total: 0,
@@ -571,8 +601,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }
     }
 
-    // Status changes tracking (termasuk initial → saat ini)
-    const statusChanges = filteredData
+    // Status changes tracking untuk hari tersebut
+    const statusChanges = summaryData
       .filter((item) => item.workflow_status === "Closed")
       .map((item) => ({
         nama: item.nama,
@@ -586,7 +616,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
             : "Not Fit To Work",
       }))
       .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
-      .slice(0, 10); // Last 10 status changes
+      .slice(0, 10);
 
     return {
       totalSubmissions,
@@ -597,10 +627,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       improvedToFit,
       improvementCount: 0, // Keep for backward compatibility
       totalImprovements: 0, // Keep for backward compatibility
+      summaryDate: summaryDateStr, // Tanggal untuk summary (hari tersebut)
       siteStats,
       dailyStats,
       statusChanges,
-      recentReports: filteredData.slice(0, 10),
+      recentReports: summaryData.slice(0, 10),
+      listData: [...filteredData].sort(
+        (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
+      ), // All-time data, sorted terbaru dulu
     };
   };
 
@@ -2079,6 +2113,16 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
             <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
               Monitoring perbaikan status dari Not Fit To Work menjadi Fit To
               Work
+              {fitToWorkStats.summaryDate && (
+                <span style={{ display: "block", marginTop: 4, fontSize: 13 }}>
+                  Data untuk {new Date(fitToWorkStats.summaryDate + "T12:00:00").toLocaleDateString("id-ID", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+              )}
             </p>
           </div>
 
@@ -2541,10 +2585,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
             </div>
           </div>
 
-          {/* Status Changes */}
+          {/* Tabel Data Fit To Work - All-time, pagination, Status Awal & Akhir */}
           <div style={{ marginBottom: "30px" }}>
             <h3 style={{ color: "#ffffff", marginBottom: "20px" }}>
-              📋 Perubahan Status
+              📋 Data Pengisian Fit To Work
             </h3>
             <div
               style={{
@@ -2553,9 +2597,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 borderRadius: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 border: "1px solid #e5e7eb",
+                overflowX: "auto",
               }}
             >
-              {fitToWorkStats.statusChanges.length === 0 ? (
+              {(fitToWorkStats.listData || []).length === 0 ? (
                 <div
                   style={{
                     textAlign: "center",
@@ -2563,233 +2608,214 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                     padding: "40px",
                   }}
                 >
-                  Belum ada perubahan status yang tercatat
+                  Belum ada data pengisian Fit To Work
                 </div>
               ) : (
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                      <th
-                        style={{
-                          textAlign: "left",
-                          padding: "12px",
-                          color: "#1a1a1a",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        Nama
-                      </th>
-                      <th
-                        style={{
-                          textAlign: "left",
-                          padding: "12px",
-                          color: "#1a1a1a",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        Site
-                      </th>
-                      <th
-                        style={{
-                          textAlign: "left",
-                          padding: "12px",
-                          color: "#1a1a1a",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        Tanggal
-                      </th>
-                      <th
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#1a1a1a",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        Status (Awal → Saat ini)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fitToWorkStats.statusChanges.map((change, index) => (
-                      <tr
-                        key={index}
-                        style={{ borderBottom: "1px solid #e5e7eb" }}
-                      >
-                        <td style={{ padding: "12px", color: "#1a1a1a" }}>
-                          {change.nama}
-                        </td>
-                        <td style={{ padding: "12px", color: "#1a1a1a" }}>
-                          {change.site}
-                        </td>
-                        <td style={{ padding: "12px", color: "#1a1a1a" }}>
-                          {new Date(change.tanggal).toLocaleDateString("id-ID")}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {change.initialStatus &&
-                          change.initialStatus !== change.finalStatus ? (
-                            <span>
-                              <span style={{ color: "#f59e0b" }}>
-                                {change.initialStatus}
-                              </span>
-                              {" → "}
-                              <span
-                                style={{
-                                  color: getStatusColor(change.finalStatus),
-                                }}
-                              >
-                                {change.finalStatus}
-                              </span>
-                            </span>
-                          ) : (
-                            <span
-                              style={{
-                                color: getStatusColor(change.finalStatus),
-                              }}
-                            >
-                              {change.finalStatus}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-
-          {/* Individual Statistics */}
-          <div style={{ marginBottom: "30px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "20px",
-              }}
-            >
-              <h3 style={{ color: "#ffffff" }}>📊 Statistik per Individu</h3>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => handleDownloadIndividualExcel("fit_to_work")}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "4px",
-                    border: "none",
-                    background: "#10b981",
-                    color: "#fff",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  📊 Excel
-                </button>
-                <button
-                  onClick={() => handleDownloadIndividualPDF("fit_to_work")}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "4px",
-                    border: "none",
-                    background: "#ef4444",
-                    color: "#fff",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  📄 PDF
-                </button>
-              </div>
-            </div>
-            {renderIndividualStatsTable(
-              individualStats.fitToWork,
-              "fit_to_work"
-            )}
-          </div>
-
-          {/* Recent Reports */}
-          <div style={{ marginBottom: "30px" }}>
-            <h3 style={{ color: "#ffffff", marginBottom: "20px" }}>
-              📋 Laporan Terbaru
-            </h3>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                gap: "16px",
-              }}
-            >
-              {fitToWorkStats.recentReports.slice(0, 6).map((report, index) => (
-                <div
-                  key={index}
-                  style={{
-                    background: "white",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                    border: "1px solid #e5e7eb",
-                  }}
-                >
+                <>
+                  {/* Pagination controls - atas */}
                   <div
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      marginBottom: "8px",
+                      marginBottom: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        color: "#1a1a1a",
-                      }}
-                    >
-                      {report.nama}
-                    </span>
-                    <span
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        backgroundColor:
-                          report.status_fatigue === "Fit To Work"
-                            ? "#dcfce7"
-                            : "#fef2f2",
-                        color:
-                          report.status_fatigue === "Fit To Work"
-                            ? "#166534"
-                            : "#dc2626",
-                      }}
-                    >
-                      {report.status_fatigue}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "13px", color: "#374151" }}>
+                        Tampilkan
+                      </span>
+                      <select
+                        value={fitToWorkTablePageSize}
+                        onChange={(e) => {
+                          setFitToWorkTablePageSize(Number(e.target.value));
+                          setFitToWorkTablePage(0);
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span style={{ fontSize: "13px", color: "#374151" }}>
+                        data
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      {fitToWorkStats.listData.length} total data
+                    </div>
                   </div>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Tanggal Input
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Nama Pekerja
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          NRP Pekerja
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Jabatan
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Site
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Jumlah Jam Tidur
+                        </th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Status Awal
+                        </th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Status Akhir
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(fitToWorkStats.listData || [])
+                        .slice(
+                          fitToWorkTablePage * fitToWorkTablePageSize,
+                          fitToWorkTablePage * fitToWorkTablePageSize + fitToWorkTablePageSize
+                        )
+                        .map((row, index) => {
+                          const statusAwal = row.initial_status_fatigue || row.status_fatigue || "-";
+                          const statusAkhir = row.status_fatigue || "-";
+                          return (
+                            <tr
+                              key={row.id || index}
+                              style={{ borderBottom: "1px solid #e5e7eb" }}
+                            >
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                                {row.tanggal
+                                  ? new Date(row.tanggal + "T12:00:00").toLocaleDateString("id-ID")
+                                  : "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.nama || "-"}</td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.nrp || "-"}</td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.jabatan || "-"}</td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.site || "-"}</td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                                {row.total_jam_tidur != null
+                                  ? `${Math.floor(row.total_jam_tidur)} jam`
+                                  : row.jam_tidur || "-"}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "12px",
+                                  textAlign: "center",
+                                  fontWeight: "bold",
+                                  color: statusAwal === "Fit To Work" ? "#166534" : "#dc2626",
+                                }}
+                              >
+                                {statusAwal}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "12px",
+                                  textAlign: "center",
+                                  fontWeight: "bold",
+                                  color: statusAkhir === "Fit To Work" ? "#166534" : "#dc2626",
+                                }}
+                              >
+                                {statusAkhir}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  {/* Pagination - next/prev */}
                   <div
                     style={{
-                      fontSize: "12px",
-                      color: "#333",
-                      marginBottom: "4px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
                     }}
                   >
-                    Site: {report.site}
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      Menampilkan{" "}
+                      {fitToWorkStats.listData.length === 0
+                        ? 0
+                        : fitToWorkTablePage * fitToWorkTablePageSize + 1}{" "}
+                      -{" "}
+                      {Math.min(
+                        (fitToWorkTablePage + 1) * fitToWorkTablePageSize,
+                        fitToWorkStats.listData.length
+                      )}{" "}
+                      dari {fitToWorkStats.listData.length}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setFitToWorkTablePage((p) => Math.max(0, p - 1))}
+                        disabled={fitToWorkTablePage === 0}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background: fitToWorkTablePage === 0 ? "#f3f4f6" : "#fff",
+                          color: fitToWorkTablePage === 0 ? "#9ca3af" : "#374151",
+                          cursor: fitToWorkTablePage === 0 ? "not-allowed" : "pointer",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Sebelumnya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFitToWorkTablePage((p) =>
+                            p + 1 < Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                              ? p + 1
+                              : p
+                          )
+                        }
+                        disabled={
+                          fitToWorkTablePage + 1 >=
+                          Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                        }
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background:
+                            fitToWorkTablePage + 1 >=
+                            Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                              ? "#f3f4f6"
+                              : "#fff",
+                          color:
+                            fitToWorkTablePage + 1 >=
+                            Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                              ? "#9ca3af"
+                              : "#374151",
+                          cursor:
+                            fitToWorkTablePage + 1 >=
+                            Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                              ? "not-allowed"
+                              : "pointer",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Berikutnya
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ fontSize: "12px", color: "#333" }}>
-                    Tanggal:{" "}
-                    {new Date(report.tanggal).toLocaleDateString("id-ID")}
-                  </div>
-                </div>
-              ))}
+                </>
+              )}
             </div>
           </div>
         </div>

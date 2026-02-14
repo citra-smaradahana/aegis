@@ -286,7 +286,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     }
   };
 
-  // Styles untuk desktop
+  // Styles untuk desktop - geser sedikit ke kiri agar seimbang
   const contentAreaStyle = {
     width: "100%",
     height: "100vh",
@@ -294,7 +294,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "center",
-    padding: "0px 0 0px 120px",
+    padding: "0 80px 0 24px",
     overflow: "hidden",
   };
 

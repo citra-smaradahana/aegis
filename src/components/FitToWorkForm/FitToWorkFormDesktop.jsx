@@ -277,7 +277,7 @@ const FitToWorkFormDesktop = ({ user }) => {
     }
   };
 
-  // Styles untuk desktop
+  // Styles untuk desktop - geser sedikit ke kiri agar lebih seimbang
   const contentAreaStyle = {
     width: "100%",
     height: "100vh",
@@ -285,7 +285,7 @@ const FitToWorkFormDesktop = ({ user }) => {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "center",
-    padding: "0 0 0 120px",
+    padding: "0 80px 0 24px",
     overflow: "hidden",
   };
 
@@ -428,6 +428,7 @@ const FitToWorkFormDesktop = ({ user }) => {
               border: "1.5px solid #2563eb",
               textAlign: "center",
               width: "100%",
+              boxSizing: "border-box",
               fontSize: 16,
             }}
           >
