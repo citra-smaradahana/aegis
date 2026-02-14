@@ -16,7 +16,6 @@ import {
 import PendingReportsList from "./PendingReportsList";
 import MobileSiteSelector from "../MobileSiteSelector";
 import LocationDetailSelector from "../LocationDetailSelector";
-import PICSelector from "../PICSelector";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 
@@ -977,6 +976,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                       disabled={!!selectedReport || !form.lokasi}
                       style={getFieldBorderStyle("detailLokasi")}
                       required
+                      useNativeDropdown
                     />
                     {showCustomInput && (
                       <input
@@ -1110,16 +1110,46 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
                     </span>
                   )}
                 </label>
-                <PICSelector
+                <select
+                  name="pic"
                   value={form.pic}
                   onChange={handleChange}
-                  placeholder="Pilih PIC"
-                  site={form.lokasi}
-                  style={getFieldBorderStyle("pic")}
                   required
-                  currentUser={user}
-                  disabled={selectedReport?.sumber_laporan === "PTO"} // Disabled hanya jika PTO, bukan Take 5
-                />
+                  disabled={
+                    !form.lokasi || selectedReport?.sumber_laporan === "PTO"
+                  }
+                  style={{
+                    width: "100%",
+                    borderRadius: 8,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    border: "1px solid #d1d5db",
+                    backgroundColor:
+                      !form.lokasi || selectedReport?.sumber_laporan === "PTO"
+                        ? "#f3f4f6"
+                        : "#ffffff",
+                    color:
+                      !form.lokasi || selectedReport?.sumber_laporan === "PTO"
+                        ? "#9ca3af"
+                        : "#000000",
+                    cursor:
+                      !form.lokasi || selectedReport?.sumber_laporan === "PTO"
+                        ? "not-allowed"
+                        : "pointer",
+                    ...getFieldBorderStyle("pic"),
+                  }}
+                >
+                  <option value="">
+                    {!form.lokasi
+                      ? "Pilih lokasi terlebih dahulu"
+                      : "Pilih PIC"}
+                  </option>
+                  {picOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
                 {picOptions.length === 0 && form.lokasi && (
                   <div
                     style={{

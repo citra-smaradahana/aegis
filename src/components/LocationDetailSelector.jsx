@@ -10,6 +10,7 @@ const LocationDetailSelector = ({
   disabled = false,
   style = {},
   required = false,
+  useNativeDropdown = false, // true = selalu dropdown, tidak buka halaman lain (untuk Hazard Report mobile)
 }) => {
   const [showLocationSelection, setShowLocationSelection] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -262,10 +263,44 @@ const LocationDetailSelector = ({
     </MobileBackGesture>
   );
 
+  // Native dropdown untuk mobile (Hazard Report: tidak redirect ke halaman lain)
+  const renderNativeMobileDropdown = () => {
+    if (!useNativeDropdown || !isMobile) return null;
+    return (
+      <select
+        value={value || ""}
+        onChange={(e) =>
+          onChange({ target: { name: "detailLokasi", value: e.target.value } })
+        }
+        disabled={disabled}
+        required={required}
+        style={{
+          width: "100%",
+          padding: "12px 16px",
+          borderRadius: "8px",
+          border: "1px solid #d1d5db",
+          fontSize: "14px",
+          backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
+          color: disabled ? "#9ca3af" : "#000000",
+          cursor: disabled ? "not-allowed" : "pointer",
+          ...style,
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {locationOptions.map((location) => (
+          <option key={location} value={location}>
+            {location}
+          </option>
+        ))}
+      </select>
+    );
+  };
+
   // Mobile dropdown untuk non-BSIB. Paksa tidak tampil di desktop
   const renderMobileDropdown = () => {
     if (!isMobile) return null; // cegah render di desktop sepenuhnya
     if (site === "BSIB") return null;
+    if (useNativeDropdown) return null;
 
     return (
       <div
@@ -318,8 +353,11 @@ const LocationDetailSelector = ({
       {/* Mobile dropdown for non-BSIB sites */}
       {renderMobileDropdown()}
 
-      {/* Mobile page for BSIB - hanya saat mobile */}
-      {isMobile && site === "BSIB" && (
+      {/* Native dropdown mobile (Hazard Report: dropdown saja, tidak redirect) */}
+      {renderNativeMobileDropdown()}
+
+      {/* Mobile page for BSIB - hanya saat mobile, tidak jika useNativeDropdown */}
+      {isMobile && site === "BSIB" && !useNativeDropdown && (
         <div
           onClick={() => !disabled && setShowLocationSelection(true)}
           className="mobile-dropdown location-selector"
