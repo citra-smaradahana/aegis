@@ -8,6 +8,7 @@ function TasklistFormRejectAtDoneMobile({
   onClose,
   onSuccess,
   readOnly,
+  embedded,
 }) {
   const [form, setForm] = useState({
     deskripsi_penyelesaian: '',
@@ -229,9 +230,9 @@ function TasklistFormRejectAtDoneMobile({
   return (
     <div
       style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#f3f4f6',
+        width: embedded ? '100%' : '100vw',
+        height: embedded ? 'auto' : '100vh',
+        background: embedded ? 'transparent' : '#f3f4f6',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -643,11 +644,7 @@ function TasklistFormRejectAtDoneMobile({
           background: '#fff',
           padding: '16px',
           borderTop: '1px solid #e5e7eb',
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 56, // asumsi navbar tinggi 56px
-          zIndex: 100,
+          ...(embedded ? {} : { position: 'fixed', left: 0, right: 0, bottom: 56, zIndex: 100 }),
         }}
       >
         <button

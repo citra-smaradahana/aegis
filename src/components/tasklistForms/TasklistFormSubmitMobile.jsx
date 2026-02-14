@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 
-function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
+function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly, embedded }) {
   const [form, setForm] = useState({
     action_plan: '',
     due_date: '',
@@ -79,9 +79,9 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
   return (
     <div
       style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#f3f4f6',
+        width: embedded ? '100%' : '100vw',
+        height: embedded ? 'auto' : '100vh',
+        background: embedded ? 'transparent' : '#f3f4f6',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -96,6 +96,7 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}
       >
         <div>
@@ -139,8 +140,9 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         style={{
           flex: 1,
           padding: '16px',
-          overflowY: 'auto',
-          paddingBottom: '120px', // Tambah padding bottom agar due date bisa di-scroll
+          overflowY: embedded ? 'visible' : 'auto',
+          paddingBottom: embedded ? '16px' : '120px',
+          minHeight: 0,
         }}
       >
         {/* Lokasi */}
@@ -408,17 +410,13 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly }) {
         </div>
       )}
 
-      {/* Fixed Submit Button */}
+      {/* Submit Button - fixed hanya saat tidak embedded */}
       <div
         style={{
           background: '#fff',
           padding: '16px',
           borderTop: '1px solid #e5e7eb',
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 56, // asumsi navbar tinggi 56px
-          zIndex: 100,
+          ...(embedded ? {} : { position: 'fixed', left: 0, right: 0, bottom: 56, zIndex: 100 }),
         }}
       >
         <button

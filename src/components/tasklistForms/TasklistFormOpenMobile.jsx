@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 
-function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
+function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly, embedded }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [approveSelected, setApproveSelected] = useState(null); // null, 'ya', 'tidak'
@@ -75,9 +75,9 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
   return (
     <div
       style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#f3f4f6',
+        width: embedded ? '100%' : '100vw',
+        height: embedded ? 'auto' : '100vh',
+        background: embedded ? 'transparent' : '#f3f4f6',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -135,8 +135,9 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
         style={{
           flex: 1,
           padding: '16px',
-          overflowY: 'auto',
-          paddingBottom: '120px', // Tambah padding bottom agar bisa di-scroll
+          overflowY: embedded ? 'visible' : 'auto',
+          paddingBottom: embedded ? '16px' : '120px',
+          minHeight: 0,
         }}
       >
         {/* Lokasi */}
@@ -475,11 +476,7 @@ function TasklistFormOpenMobile({ hazard, onClose, onSuccess, readOnly }) {
           background: '#fff',
           padding: '16px',
           borderTop: '1px solid #e5e7eb',
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 56, // asumsi navbar tinggi 56px
-          zIndex: 100,
+          ...(embedded ? {} : { position: 'fixed', left: 0, right: 0, bottom: 56, zIndex: 100 }),
         }}
       >
         <button

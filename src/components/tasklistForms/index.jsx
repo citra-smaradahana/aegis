@@ -14,7 +14,7 @@ import TasklistFormRejectAtDoneMobile from './TasklistFormRejectAtDoneMobile';
 import TasklistFormClosed from './TasklistFormClosed';
 import TasklistFormClosedMobile from './TasklistFormClosedMobile';
 
-function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess }) {
+function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess, embedded }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -35,6 +35,7 @@ function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess }) {
         readOnly={readOnly}
         onClose={onClose}
         onSuccess={onSuccess}
+        embedded={embedded}
       />
     ) : (
       <TasklistFormSubmit
@@ -55,6 +56,7 @@ function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess }) {
         readOnly={readOnly}
         onClose={onClose}
         onSuccess={onSuccess}
+        embedded={embedded}
       />
     ) : (
       <TasklistFormOpen
@@ -75,6 +77,7 @@ function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess }) {
         readOnly={readOnly}
         onClose={onClose}
         onSuccess={onSuccess}
+        embedded={embedded}
       />
     ) : (
       <TasklistFormRejectAtOpen
@@ -95,6 +98,7 @@ function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess }) {
         readOnly={readOnly}
         onClose={onClose}
         onSuccess={onSuccess}
+        embedded={embedded}
       />
     ) : (
       <TasklistFormProgress
@@ -115,6 +119,7 @@ function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess }) {
         readOnly={readOnly}
         onClose={onClose}
         onSuccess={onSuccess}
+        embedded={embedded}
       />
     ) : (
       <TasklistFormDone
@@ -135,6 +140,7 @@ function TasklistForm({ user, status, hazard, readOnly, onClose, onSuccess }) {
         readOnly={readOnly}
         onClose={onClose}
         onSuccess={onSuccess}
+        embedded={embedded}
       />
     ) : (
       <TasklistFormRejectAtDone
