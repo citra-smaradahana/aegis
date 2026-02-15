@@ -28,10 +28,7 @@ const SITE_OPTIONS = [
   "PMTU",
 ];
 
-function getToday() {
-  const today = new Date();
-  return today.toISOString().slice(0, 10);
-}
+import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
 const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const [site, setSite] = useState(user.site || "");
@@ -215,7 +212,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
       // Log data yang akan dikirim untuk debugging
       const take5Data = {
         user_id: user.id,
-        tanggal: getToday(),
+        tanggal: getTodayWITA(),
         site: site,
         detail_lokasi: detailLokasi,
         judul_pekerjaan: "Take 5 Assessment", // Field required di database
@@ -549,7 +546,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
             <div style={fieldMargin}>
               <label style={labelStyle}>Tanggal</label>
               <input
-                value={getToday()}
+                value={getTodayWITA()}
                 readOnly
                 style={{
                   ...inputStyle,

@@ -16,6 +16,7 @@ import {
 } from "../../config/siteLocations";
 import { SUB_OPTIONS, matchPotensiBahayaToKetidaksesuaian } from "../../config/hazardKetidaksesuaianOptions";
 import PendingReportsList from "./PendingReportsList";
+import { getNowWITAISO } from "../../utils/dateTimeHelpers";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import SelectModalWithSearch from "../SelectModalWithSearch";
@@ -370,7 +371,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
             quick_action: form.quickAction,
             deskripsi_temuan: form.deskripsiTemuan,
             evidence: evidenceUrl,
-            created_at: new Date().toISOString(),
+            created_at: getNowWITAISO(),
             status: "Submit",
             action_plan: null,
             due_date: null,
@@ -416,7 +417,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           quick_action: form.quickAction,
           deskripsi_temuan: form.deskripsiTemuan,
           evidence: evidenceUrl,
-          created_at: new Date().toISOString(),
+          created_at: getNowWITAISO(),
           status: "Submit",
           action_plan: null,
           due_date: null,

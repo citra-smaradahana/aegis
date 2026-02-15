@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
+import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import LocationDetailSelector from "../LocationDetailSelector";
 import Cropper from "react-easy-crop";
 
@@ -40,7 +41,7 @@ const alasanObservasiOptions = [
 
 function PTOFormDesktop({ user, onBack }) {
   const [formData, setFormData] = useState({
-    tanggal: new Date().toISOString().split("T")[0], // Set tanggal hari ini
+    tanggal: getTodayWITA(),
     site: user?.site || "",
     detailLokasi: "",
     alasanObservasi: "",

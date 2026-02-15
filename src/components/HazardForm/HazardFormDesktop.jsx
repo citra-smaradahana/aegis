@@ -9,6 +9,7 @@ import {
 } from "../../config/siteLocations";
 import { matchPotensiBahayaToKetidaksesuaian } from "../../config/hazardKetidaksesuaianOptions";
 import PendingReportsList from "./PendingReportsList";
+import { getNowWITAISO } from "../../utils/dateTimeHelpers";
 import LocationDetailSelector from "../LocationDetailSelector";
 
 const lokasiOptions = [
@@ -422,7 +423,7 @@ function HazardFormDesktop({ user }) {
         quick_action: form.quickAction,
         deskripsi_temuan: form.deskripsiTemuan,
         evidence: evidenceUrl,
-        created_at: new Date().toISOString(),
+        created_at: getNowWITAISO(),
         status: "Submit",
         evaluator_nama: evaluatorNama,
         take_5_id:

@@ -1,12 +1,8 @@
 import { supabase } from "../supabaseClient";
 import { fetchActiveMandatesForUser, isDelegatorOnsite } from "./mandateHelpers";
+import { getTodayWITA, getNowWITAISO } from "./dateTimeHelpers";
 
-/** Tanggal hari ini WITA (YYYY-MM-DD) - sama dengan FitToWorkForm */
-export function getTodayWITA() {
-  const now = new Date();
-  const wita = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  return wita.toISOString().split("T")[0];
-}
+export { getTodayWITA };
 
 /**
  * Daftar jabatan bawahan per validator (untuk scope "belum isi FTW")
@@ -160,7 +156,7 @@ export async function markUserOff(userId, validatorUser) {
       user_id: userId,
       tanggal: today,
       marked_by: validatorUser.id,
-      created_at: new Date().toISOString(),
+      created_at: getNowWITAISO(),
     },
     { onConflict: "user_id,tanggal" }
   );

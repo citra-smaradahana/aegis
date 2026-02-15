@@ -11,6 +11,7 @@ import {
   allowsCustomInput,
   CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
+import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
 const alasanObservasiOptions = [
   "Pekerja Baru",
@@ -137,7 +138,7 @@ const PersonSelectModal = ({
 
 function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [formData, setFormData] = useState({
-    tanggal: new Date().toISOString().split("T")[0],
+    tanggal: getTodayWITA(),
     site: user?.site || "",
     detailLokasi: "",
     alasanObservasi: "",

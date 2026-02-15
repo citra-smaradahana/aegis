@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
 const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }) => {
   const [jamTidur, setJamTidur] = useState("");
@@ -18,23 +19,6 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
   const [sudahIsiHariIni, setSudahIsiHariIni] = useState(false);
   const [totalJamTidurAngka, setTotalJamTidurAngka] = useState(0);
   const [dataHariIni, setDataHariIni] = useState(null);
-
-  // Get today's date in WITA (Waktu Indonesia Tengah)
-  // This ensures users can fill Fit To Work again after 00:00 WITA
-  // instead of waiting 24 hours from their last submission
-  const getTodayWITA = () => {
-    const now = new Date();
-    // Convert to WITA (UTC+8) by adding 8 hours to UTC
-    const witaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    const todayWITA = witaTime.toISOString().split("T")[0];
-
-    // Debug logging
-    console.log("Current local time:", now.toISOString());
-    console.log("WITA time:", witaTime.toISOString());
-    console.log("Today WITA date:", todayWITA);
-
-    return todayWITA;
-  };
 
   const today = getTodayWITA();
 
