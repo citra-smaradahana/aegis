@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import TasklistPageDesktop from "./TasklistPageDesktop";
 import TasklistPageMobile from "./TasklistPageMobile";
 
-function TasklistPage({ user, onBack, onNavigate }) {
+function TasklistPage({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ function TasklistPage({ user, onBack, onNavigate }) {
   }, []);
 
   return isMobile ? (
-    <TasklistPageMobile user={user} onBack={onBack} onNavigate={onNavigate} />
+    <TasklistPageMobile user={user} onBack={onBack} onNavigate={onNavigate} tasklistTodoCount={tasklistTodoCount} />
   ) : (
     <TasklistPageDesktop user={user} />
   );

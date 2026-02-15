@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import HazardFormDesktop from './HazardFormDesktop';
 import HazardFormMobile from './HazardFormMobile';
 
-function HazardForm({ user, onBack, onNavigate }) {
+function HazardForm({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ function HazardForm({ user, onBack, onNavigate }) {
   }, []);
 
   return isMobile ? (
-    <HazardFormMobile user={user} onBack={onBack} onNavigate={onNavigate} />
+    <HazardFormMobile user={user} onBack={onBack} onNavigate={onNavigate} tasklistTodoCount={tasklistTodoCount} />
   ) : (
     <HazardFormDesktop user={user} />
   );

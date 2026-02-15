@@ -3,18 +3,22 @@ import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
 
 function FitToWorkValidationListNew({
   validations,
+  usersNotFilled = [],
+  usersMarkedOff = [],
   onValidationSelect,
+  onMarkUserOff,
+  onUnmarkUserOff,
+  canReviseOff = false,
   filterStatus,
   onFilterChange,
   onBack,
   user,
   onUpdate,
   isMobile = false,
+  tasklistTodoCount = 0,
 }) {
   const [selectedValidation, setSelectedValidation] = useState(null);
   const [currentPage, setCurrentPage] = useState("list"); // "list" atau "form"
-  const [completeListPageSize, setCompleteListPageSize] = useState(3);
-  const [completeListPage, setCompleteListPage] = useState(0);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -126,17 +130,17 @@ function FitToWorkValidationListNew({
           onClose={handleBackToList}
           onBack={handleBackToList}
           isMobile={isMobile}
+          tasklistTodoCount={tasklistTodoCount}
         />
       </div>
     );
   }
 
-  // Pisahkan Pending (perlu tindakan) dan Complete (selesai) untuk pemantauan
+  // Pisahkan Pending (perlu tindakan) - Selesai diganti dengan Belum Isi FTW (usersNotFilled)
   const pendingStatuses = ["Pending", "Level1_Review", "Level1 Review", "Level2_Review"];
   const pendingList = (validations || []).filter((v) =>
     pendingStatuses.includes(v.workflow_status)
   );
-  const completeList = (validations || []).filter((v) => v.workflow_status === "Closed");
 
   const renderValidationCard = (validation, index) => (
     <div
@@ -332,6 +336,7 @@ function FitToWorkValidationListNew({
             display: "flex",
             gap: "16px",
             marginBottom: "28px",
+            marginTop: isMobile ? "16px" : 0,
             flexWrap: "wrap",
             justifyContent: "center",
             padding: isMobile ? "0 0 16px 0" : "0",
@@ -364,7 +369,7 @@ function FitToWorkValidationListNew({
           <h3
             style={{
               margin: "0 0 12px 0",
-              color: "#e5e7eb",
+              color: isMobile ? "#1f2937" : "#e5e7eb",
               fontSize: "16px",
               fontWeight: "600",
               display: "flex",
@@ -381,12 +386,13 @@ function FitToWorkValidationListNew({
               <div
                 style={{
                   padding: "20px",
-                  backgroundColor: "#1f2937",
+                  backgroundColor: isMobile ? "#f3f4f6" : "#1f2937",
                   borderRadius: "12px",
-                  border: "1px dashed #374151",
-                  color: "#9ca3af",
+                  border: isMobile ? "1px dashed #9ca3af" : "1px dashed #374151",
+                  color: isMobile ? "#374151" : "#d1d5db",
                   fontSize: "14px",
                   textAlign: "center",
+                  fontWeight: "500",
                 }}
               >
                 Tidak ada validasi yang perlu ditindaklanjuti
@@ -395,12 +401,12 @@ function FitToWorkValidationListNew({
           </div>
         </div>
 
-        {/* Section: Selesai (Complete) - All-time dengan pagination */}
+        {/* Section: Belum Isi Fit To Work Hari Ini (karyawan yang belum isi FTW / belum di-off) */}
         <div>
           <h3
             style={{
               margin: "0 0 12px 0",
-              color: "#e5e7eb",
+              color: isMobile ? "#1f2937" : "#e5e7eb",
               fontSize: "16px",
               fontWeight: "600",
               display: "flex",
@@ -408,164 +414,199 @@ function FitToWorkValidationListNew({
               gap: "8px",
             }}
           >
-            <span style={{ color: "#4caf50" }}>✅</span> Selesai ({completeList.length})
+            <span style={{ color: "#f59e0b" }}>📋</span> Belum Isi Fit To Work Hari Ini ({usersNotFilled.length})
           </h3>
-          {completeList.length > 0 ? (
-            <>
-              {/* Pagination controls - Selesai */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "12px",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "13px", color: "#9ca3af" }}>
-                    Tampilkan
-                  </span>
-                  <select
-                    value={completeListPageSize}
-                    onChange={(e) => {
-                      setCompleteListPageSize(Number(e.target.value));
-                      setCompleteListPage(0);
-                    }}
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: "6px",
-                      border: "1px solid #374151",
-                      backgroundColor: "#1f2937",
-                      color: "#e5e7eb",
-                      fontSize: "13px",
-                    }}
-                  >
-                    <option value={3}>3</option>
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                  </select>
-                  <span style={{ fontSize: "13px", color: "#9ca3af" }}>
-                    data
-                  </span>
-                </div>
-                <div style={{ fontSize: "13px", color: "#9ca3af" }}>
-                  {completeList.length} total
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {completeList
-                  .slice(
-                    completeListPage * completeListPageSize,
-                    completeListPage * completeListPageSize + completeListPageSize
-                  )
-                  .map((validation, index) =>
-                    renderValidationCard(validation, index)
-                  )}
-              </div>
-              {/* Tombol Sebelumnya / Berikutnya */}
-              {completeList.length > completeListPageSize && (
+          <p
+            style={{
+              margin: "0 0 12px 0",
+              color: isMobile ? "#4b5563" : "#9ca3af",
+              fontSize: "13px",
+              fontWeight: "500",
+            }}
+          >
+            Karyawan yang wajib mengisi Fit To Work. Tandai Off jika tidak hadir.
+          </p>
+          {usersNotFilled.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {usersNotFilled.map((u) => (
                 <div
+                  key={u.id}
                   style={{
+                    background: isMobile ? "white" : "#1f2937",
+                    border: isMobile ? "1px solid #e5e7eb" : "1px solid #374151",
+                    borderRadius: "12px",
+                    padding: isMobile ? "16px" : "20px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginTop: "16px",
                     flexWrap: "wrap",
                     gap: "12px",
+                    boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                   }}
                 >
-                  <div style={{ fontSize: "13px", color: "#9ca3af" }}>
-                    Menampilkan{" "}
-                    {completeListPage * completeListPageSize + 1} -{" "}
-                    {Math.min(
-                      (completeListPage + 1) * completeListPageSize,
-                      completeList.length
-                    )}{" "}
-                    dari {completeList.length}
-                  </div>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCompleteListPage((p) => Math.max(0, p - 1))
-                      }
-                      disabled={completeListPage === 0}
+                  <div>
+                    <div
                       style={{
-                        padding: "6px 14px",
-                        borderRadius: "6px",
-                        border: "1px solid #374151",
-                        background: completeListPage === 0 ? "#374151" : "#1f2937",
-                        color: completeListPage === 0 ? "#6b7280" : "#e5e7eb",
-                        cursor: completeListPage === 0 ? "not-allowed" : "pointer",
-                        fontSize: "13px",
+                        color: isMobile ? "#1f2937" : "#e5e7eb",
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        marginBottom: "4px",
                       }}
                     >
-                      Sebelumnya
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCompleteListPage((p) =>
-                          p + 1 <
-                          Math.ceil(completeList.length / completeListPageSize)
-                            ? p + 1
-                            : p
-                        )
-                      }
-                      disabled={
-                        completeListPage + 1 >=
-                        Math.ceil(completeList.length / completeListPageSize)
-                      }
+                      {u.nama}
+                    </div>
+                    <div
                       style={{
-                        padding: "6px 14px",
-                        borderRadius: "6px",
-                        border: "1px solid #374151",
-                        background:
-                          completeListPage + 1 >=
-                          Math.ceil(completeList.length / completeListPageSize)
-                            ? "#374151"
-                            : "#1f2937",
-                        color:
-                          completeListPage + 1 >=
-                          Math.ceil(completeList.length / completeListPageSize)
-                            ? "#6b7280"
-                            : "#e5e7eb",
-                        cursor:
-                          completeListPage + 1 >=
-                          Math.ceil(completeList.length / completeListPageSize)
-                            ? "not-allowed"
-                            : "pointer",
-                        fontSize: "13px",
+                        color: isMobile ? "#6b7280" : "#9ca3af",
+                        fontSize: "14px",
                       }}
                     >
-                      Berikutnya
-                    </button>
+                      {u.jabatan} • NRP: {u.nrp} • {u.site}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => onMarkUserOff?.(u)}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      border: "1px solid #f59e0b",
+                      background: "#f59e0b20",
+                      color: "#f59e0b",
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Tandai Off / Tidak Hadir
+                  </button>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           ) : (
             <div
               style={{
                 padding: "20px",
-                backgroundColor: "#1f2937",
+                backgroundColor: isMobile ? "#f3f4f6" : "#1f2937",
                 borderRadius: "12px",
-                border: "1px dashed #374151",
-                color: "#9ca3af",
+                border: isMobile ? "1px dashed #9ca3af" : "1px dashed #374151",
+                color: isMobile ? "#374151" : "#d1d5db",
                 fontSize: "14px",
                 textAlign: "center",
+                fontWeight: "500",
               }}
             >
-              Belum ada validasi selesai
+              Semua karyawan sudah mengisi Fit To Work atau telah ditandai off hari ini
             </div>
           )}
         </div>
 
-        {/* Legacy single list - removed; empty placeholder when no data at all */}
-        {validations && validations.length === 0 && (
+        {/* Section: Sudah Ditandai Off Hari Ini (hanya PJO, Asst PJO, SHERQ - untuk revisi) */}
+        {canReviseOff && (
+          <div>
+            <h3
+              style={{
+                margin: "24px 0 12px 0",
+                color: isMobile ? "#1f2937" : "#e5e7eb",
+                fontSize: "16px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <span style={{ color: "#6b7280" }}>📴</span> Sudah Ditandai Off Hari Ini ({usersMarkedOff.length})
+            </h3>
+            <p
+              style={{
+                margin: "0 0 12px 0",
+                color: isMobile ? "#4b5563" : "#9ca3af",
+                fontSize: "13px",
+                fontWeight: "500",
+              }}
+            >
+              Karyawan yang sudah ditandai tidak hadir. Klik Tandai On / Hadir untuk merevisi jika salah tandai.
+            </p>
+            {usersMarkedOff.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {usersMarkedOff.map((u) => (
+                  <div
+                    key={u.id}
+                    style={{
+                      background: isMobile ? "white" : "#1f2937",
+                      border: isMobile ? "1px solid #e5e7eb" : "1px solid #374151",
+                      borderRadius: "12px",
+                      padding: isMobile ? "16px" : "20px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                      boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          color: isMobile ? "#1f2937" : "#e5e7eb",
+                          fontSize: "16px",
+                          fontWeight: "600",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {u.nama}
+                      </div>
+                      <div
+                        style={{
+                          color: isMobile ? "#6b7280" : "#9ca3af",
+                          fontSize: "14px",
+                        }}
+                      >
+                        {u.jabatan} • NRP: {u.nrp} • {u.site}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onUnmarkUserOff?.(u)}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "1px solid #10b981",
+                        background: "#10b98120",
+                        color: "#10b981",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Tandai On / Hadir
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: "20px",
+                  backgroundColor: isMobile ? "#f3f4f6" : "#1f2937",
+                  borderRadius: "12px",
+                  border: isMobile ? "1px dashed #9ca3af" : "1px dashed #374151",
+                  color: isMobile ? "#374151" : "#d1d5db",
+                  fontSize: "14px",
+                  textAlign: "center",
+                  fontWeight: "500",
+                }}
+              >
+                Tidak ada karyawan yang ditandai off hari ini
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty placeholder when no pending, no users not filled, and no users marked off (when can revise) */}
+        {validations && validations.length === 0 && (!usersNotFilled || usersNotFilled.length === 0) && (!canReviseOff || !usersMarkedOff || usersMarkedOff.length === 0) && (
           <div
             style={{
               display: "flex",

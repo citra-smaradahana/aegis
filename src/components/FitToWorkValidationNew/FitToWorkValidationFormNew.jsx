@@ -10,6 +10,7 @@ function FitToWorkValidationFormNew({
   onClose,
   onBack,
   isMobile = false,
+  tasklistTodoCount = 0,
 }) {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -1584,6 +1585,7 @@ function FitToWorkValidationFormNew({
       {isMobile && (
         <MobileBottomNavigation
           activeTab="home"
+          tasklistTodoCount={tasklistTodoCount}
           onNavigate={(tab) => {
             if (tab === "home") {
               onBack && onBack();

@@ -3,7 +3,7 @@ import { supabase } from "../../supabaseClient";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import MandatSection from "./MandatSection";
 
-function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate }) {
+function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTodoCount = 0 }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -564,6 +564,7 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate }) {
       {/* Bottom Navigation */}
       <MobileBottomNavigation
         activeTab="profile"
+        tasklistTodoCount={tasklistTodoCount}
         onNavigate={(tab) => {
           if (tab === "home") {
             onBack && onBack();

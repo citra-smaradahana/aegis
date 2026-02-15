@@ -4,10 +4,19 @@ import FitToWorkValidationListNew from "./FitToWorkValidationListNew";
 import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+import {
+  fetchUsersNotYetFilledFTW,
+  markUserOff,
+  fetchUsersMarkedOffToday,
+  unmarkUserOff,
+  canReviseOffStatus,
+} from "../../utils/fitToWorkAbsentHelpers";
 
-function FitToWorkValidationNew({ user, onBack, onNavigate }) {
+function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [validations, setValidations] = useState([]);
+  const [usersNotFilled, setUsersNotFilled] = useState([]);
+  const [usersMarkedOff, setUsersMarkedOff] = useState([]);
   const [selectedValidation, setSelectedValidation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -100,11 +109,33 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
 
       setValidations(validationsData);
       console.log("=== FETCH VALIDATIONS NEW - END ===");
-    } catch (error) {
-      console.error("Error in fetchValidations:", error);
+    } catch (err) {
+      console.error("Error in fetchValidations:", err);
       setError("Terjadi kesalahan saat mengambil data validasi");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch users yang belum isi Fit To Work hari ini (untuk section Belum Isi FTW)
+  const fetchUsersNotFilled = async () => {
+    if (!user) return;
+    try {
+      const data = await fetchUsersNotYetFilledFTW(user);
+      setUsersNotFilled(data || []);
+    } catch (err) {
+      console.error("Error fetching users not filled:", err);
+    }
+  };
+
+  // Fetch users yang sudah ditandai off hari ini (untuk revisi oleh PJO/Asst PJO/SHERQ)
+  const fetchUsersMarkedOff = async () => {
+    if (!user) return;
+    try {
+      const data = await fetchUsersMarkedOffToday(user);
+      setUsersMarkedOff(data || []);
+    } catch (err) {
+      console.error("Error fetching users marked off:", err);
     }
   };
 
@@ -114,8 +145,22 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
     console.log("Component - userSite:", user?.site);
     console.log("Component - filterStatus:", filterStatus);
 
-    // Force refresh data (all-time, no date filter)
-    fetchValidations();
+    // Fetch validasi (Perlu Tindakan) + users belum isi FTW (Belum Isi Hari Ini)
+    const load = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          (async () => {
+            await fetchValidations();
+          })(),
+          fetchUsersNotFilled(),
+          fetchUsersMarkedOff(),
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
 
     console.log("=== COMPONENT MOUNT COMPLETE ===");
   }, [user, filterStatus]);
@@ -166,8 +211,10 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
         workflow_status: data[0]?.workflow_status,
       });
 
-      // Refresh the validations list
+      // Refresh both lists
       await fetchValidations();
+      await fetchUsersNotFilled();
+      await fetchUsersMarkedOff();
 
       return { success: true, error: null };
     } catch (error) {
@@ -178,6 +225,24 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
 
   const handleCloseForm = () => {
     setSelectedValidation(null);
+  };
+
+  const handleMarkUserOff = async (targetUser) => {
+    const result = await markUserOff(targetUser.id, user);
+    if (result?.error) {
+      console.error("Error marking user off:", result.error);
+      return;
+    }
+    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff()]);
+  };
+
+  const handleUnmarkUserOff = async (targetUser) => {
+    const result = await unmarkUserOff(targetUser.id);
+    if (result?.error) {
+      console.error("Error unmarking user off:", result.error);
+      return;
+    }
+    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff()]);
   };
 
   if (loading) {
@@ -193,7 +258,22 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
       <div style={{ textAlign: "center", padding: "20px", color: "red" }}>
         <div>Error: {error}</div>
         <button
-          onClick={fetchValidations}
+          onClick={() => {
+            setError(null);
+            const load = async () => {
+              setLoading(true);
+              try {
+                await Promise.all([
+                  (async () => { await fetchValidations(); })(),
+                  fetchUsersNotFilled(),
+                  fetchUsersMarkedOff(),
+                ]);
+              } finally {
+                setLoading(false);
+              }
+            };
+            load();
+          }}
           style={{
             marginTop: "10px",
             padding: "8px 16px",
@@ -216,7 +296,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
         width: "100%",
         minHeight: "100vh",
         background: isMobile ? "#f8fafc" : "transparent",
-        paddingBottom: isMobile ? 80 : 0, // Space untuk bottom nav di mobile
+        paddingBottom: isMobile ? 120 : 0, // Space agar card terakhir tidak tertutup bottom nav
       }}
     >
       {/* Mobile Header */}
@@ -237,13 +317,19 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
       >
         <FitToWorkValidationListNew
           validations={validations}
+          usersNotFilled={usersNotFilled}
+          usersMarkedOff={usersMarkedOff}
           onValidationSelect={handleValidationSelect}
+          onMarkUserOff={handleMarkUserOff}
+          onUnmarkUserOff={handleUnmarkUserOff}
+          canReviseOff={canReviseOffStatus(user?.jabatan)}
           filterStatus={filterStatus}
           onFilterChange={setFilterStatus}
           onBack={onBack}
           user={user}
           onUpdate={handleValidationUpdate}
           isMobile={isMobile}
+          tasklistTodoCount={tasklistTodoCount}
         />
       </div>
 
@@ -251,6 +337,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate }) {
       {isMobile && (
         <MobileBottomNavigation
           activeTab="home"
+          tasklistTodoCount={tasklistTodoCount}
           onNavigate={(tab) => {
             if (tab === "home") {
               onBack && onBack();

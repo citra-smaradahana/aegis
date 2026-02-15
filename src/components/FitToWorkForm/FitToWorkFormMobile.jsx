@@ -3,7 +3,7 @@ import { supabase } from "../../supabaseClient";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 
-const FitToWorkFormMobile = ({ user, onBack, onNavigate }) => {
+const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }) => {
   const [jamTidur, setJamTidur] = useState("");
   const [jamBangun, setJamBangun] = useState("");
   const [jumlahJamTidur, setJumlahJamTidur] = useState("");
@@ -853,6 +853,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate }) => {
       {/* Bottom Navigation */}
       <MobileBottomNavigation
         activeTab="home"
+        tasklistTodoCount={tasklistTodoCount}
         onNavigate={(tab) => {
           if (tab === "home") {
             onBack && onBack();

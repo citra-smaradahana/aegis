@@ -20,7 +20,7 @@ import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import SelectModalWithSearch from "../SelectModalWithSearch";
 
-function HazardFormMobile({ user, onBack, onNavigate }) {
+function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const getSubOptions = (kategori) => {
     const arr = SUB_OPTIONS[kategori] || [];
     return [...arr].sort((a, b) => a.localeCompare(b, "id"));
@@ -1756,6 +1756,7 @@ function HazardFormMobile({ user, onBack, onNavigate }) {
       {/* Bottom Navigation */}
       <MobileBottomNavigation
         activeTab=""
+        tasklistTodoCount={tasklistTodoCount}
         onNavigate={(tab) => {
           if (tab === "home") {
             onBack && onBack();

@@ -4,7 +4,7 @@ import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import TasklistForm from "../tasklistForms";
 
-function TasklistPageMobile({ user, onBack, onNavigate }) {
+function TasklistPageMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -493,6 +493,7 @@ function TasklistPageMobile({ user, onBack, onNavigate }) {
       {/* Bottom Navigation */}
       <MobileBottomNavigation
         activeTab="tasklist"
+        tasklistTodoCount={tasklistTodoCount}
         onNavigate={(tab) => {
           if (tab === "home") {
             onBack && onBack();

@@ -39,7 +39,7 @@ function canAccessFitToWorkValidation(user) {
   return validatorJabatan.includes(jabatan);
 }
 
-function HomeMobile({ user, onNavigate, validationCount = 0 }) {
+function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = false, tasklistTodoCount = 0 }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [readMoreCampaign, setReadMoreCampaign] = useState(null);
@@ -404,24 +404,27 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
                   }}
                 >
                   {item.label}
+                  {item.key === "fit-to-work" && ftwNeedsFill && (
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        background: "#ef4444",
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
                   {item.key === "fit-to-work-validation" && validationCount > 0 && (
                     <span
                       style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
                         background: "#ef4444",
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        minWidth: 22,
-                        height: 22,
-                        borderRadius: 11,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "0 6px",
+                        flexShrink: 0,
                       }}
-                    >
-                      {validationCount > 99 ? "99+" : validationCount}
-                    </span>
+                    />
                   )}
                 </h3>
                 <p
@@ -685,6 +688,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0 }) {
       {/* Bottom Navigation */}
       <MobileBottomNavigation
         activeTab="home"
+        tasklistTodoCount={tasklistTodoCount}
         onNavigate={(tab) => {
           if (tab === "home") {
             // Already on home

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import { sessionManager, setupSessionAutoExtend } from "./utils/sessionManager";
 import { fetchValidationCountForUser } from "./utils/fitToWorkValidationCount";
+import { userNeedsToFillFTWToday } from "./utils/fitToWorkAbsentHelpers";
+import { fetchTasklistTodoCountForUser } from "./utils/tasklistTodoCount";
 import Login from "./components/Login";
 import MonitoringPage from "./components/MonitoringPage";
 import SiteSelectionPage from "./components/SiteSelectionPage";
@@ -119,6 +121,8 @@ function App() {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showNotificationPanel, setShowNotificationPanel] = useState(false);
     const [validationCount, setValidationCount] = useState(0);
+    const [ftwNeedsFill, setFtwNeedsFill] = useState(false);
+    const [tasklistTodoCount, setTasklistTodoCount] = useState(0);
     const canAccessMonitoring =
       user?.role === "evaluator" || user?.role === "admin";
     // Hanya jabatan validator yang boleh melihat dan mengakses Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
@@ -155,27 +159,55 @@ function App() {
       return () => { cancelled = true; };
     }, [user?.id, user?.jabatan, user?.site, activeMenu]);
 
+    // Fetch apakah user wajib isi Fit To Work hari ini (untuk badge menu)
+    useEffect(() => {
+      if (!user?.id || !user?.nrp || !user?.site) {
+        setFtwNeedsFill(false);
+        return;
+      }
+      let cancelled = false;
+      userNeedsToFillFTWToday(user).then((needs) => {
+        if (!cancelled) setFtwNeedsFill(!!needs);
+      });
+      return () => { cancelled = true; };
+    }, [user?.id, user?.nrp, user?.site, activeMenu]);
+
+    // Fetch jumlah To Do di Tasklist untuk user (untuk badge bottom nav)
+    useEffect(() => {
+      if (!user?.id || !user?.site) {
+        setTasklistTodoCount(0);
+        return;
+      }
+      let cancelled = false;
+      fetchTasklistTodoCountForUser(user).then((count) => {
+        if (!cancelled) setTasklistTodoCount(count);
+      });
+      return () => { cancelled = true; };
+    }, [user?.id, user?.site, user?.nama, activeMenu]);
+
     const renderContent = () => {
       switch (activeMenu) {
         case "dashboard":
-          return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} />;
+          return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
         case "fit-to-work":
           return (
             <FitToWorkForm
               user={user}
               onBack={handleBackToMain}
               onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
             />
           );
         case "fit-to-work-validation":
           if (!canAccessFitToWorkValidation()) {
-            return <Home user={user} onNavigate={handleMenuChange} />;
+            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
           }
           return (
             <FitToWorkValidationNew
               user={user}
               onBack={handleBackToMain}
               onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
             />
           );
         case "take-5":
@@ -184,6 +216,7 @@ function App() {
               user={user}
               onBack={handleBackToMain}
               onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
             />
           );
         case "hazard":
@@ -192,6 +225,7 @@ function App() {
               user={user}
               onBack={handleBackToMain}
               onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
             />
           );
         case "tasklist":
@@ -200,10 +234,11 @@ function App() {
               user={user}
               onBack={handleBackToMain}
               onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
             />
           );
         case "pto":
-          return <PTOForm user={user} onBack={handleBackToMain} onNavigate={handleMenuChange} />;
+          return <PTOForm user={user} onBack={handleBackToMain} onNavigate={handleMenuChange} tasklistTodoCount={tasklistTodoCount} />;
         case "monitoring-fit-to-work":
           return canAccessMonitoring ? (
             <MonitoringPage
@@ -212,7 +247,7 @@ function App() {
               subMenu="Statistik Fit To Work"
             />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} />
+            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
           );
         case "monitoring-take-5":
           return canAccessMonitoring ? (
@@ -222,7 +257,7 @@ function App() {
               subMenu="Take 5"
             />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} />
+            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
           );
         case "monitoring-hazard":
           return canAccessMonitoring ? (
@@ -232,7 +267,7 @@ function App() {
               subMenu="Hazard"
             />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} />
+            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
           );
         case "monitoring-pto":
           return canAccessMonitoring ? (
@@ -242,16 +277,16 @@ function App() {
               subMenu="PTO"
             />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} />
+            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
           );
         case "campaign":
           if (user?.jabatan !== "Administrator") {
-            return <Home user={user} onNavigate={handleMenuChange} />;
+            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
           }
           return <Campaign user={user} onBack={handleBackToMain} />;
         case "user-management":
           if (user?.jabatan !== "Administrator") {
-            return <Home user={user} onNavigate={handleMenuChange} />;
+            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
           }
           return <UserManagement user={user} onBack={handleBackToMain} />;
         case "profile":
@@ -261,13 +296,14 @@ function App() {
               onBack={handleBackToMain}
               onLogout={handleLogout}
               onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
             />
           );
         default:
           return canAccessMonitoring ? (
             <MonitoringPage user={user} onLogout={handleLogout} />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} />
+            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
           );
       }
     };
@@ -570,9 +606,9 @@ function App() {
               >
                 {[
                   { key: "dashboard", label: "Home" },
-                  { key: "fit-to-work", label: "Fit To Work" },
+                  { key: "fit-to-work", label: "Fit To Work", badge: ftwNeedsFill },
                   ...(canAccessFitToWorkValidation()
-                    ? [{ key: "fit-to-work-validation", label: "Validasi Fit To Work" }]
+                    ? [{ key: "fit-to-work-validation", label: "Validasi Fit To Work", badgeCount: validationCount }]
                     : []),
                   { key: "take-5", label: "Take 5" },
                   { key: "hazard", label: "Hazard Report" },
@@ -595,9 +631,51 @@ function App() {
                       borderRadius: 6,
                       cursor: "pointer",
                       fontSize: "14px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
                     }}
                   >
-                    {item.label}
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span
+                        style={{
+                          background: "#f59e0b",
+                          color: "#000",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          minWidth: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "0 4px",
+                        }}
+                      >
+                        !
+                      </span>
+                    )}
+                    {item.badgeCount > 0 && (
+                      <span
+                        style={{
+                          background: "#ef4444",
+                          color: "#fff",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          minWidth: 20,
+                          height: 20,
+                          borderRadius: 10,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "0 5px",
+                        }}
+                      >
+                        {item.badgeCount > 99 ? "99+" : item.badgeCount}
+                      </span>
+                    )}
                   </button>
                 ))}
 

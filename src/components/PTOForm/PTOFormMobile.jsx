@@ -135,7 +135,7 @@ const PersonSelectModal = ({
   );
 };
 
-function PTOFormMobile({ user, onBack, onNavigate }) {
+function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [formData, setFormData] = useState({
     tanggal: new Date().toISOString().split("T")[0],
     site: user?.site || "",
@@ -516,6 +516,7 @@ function PTOFormMobile({ user, onBack, onNavigate }) {
         </div>
         <MobileBottomNavigation
           activeTab="home"
+          tasklistTodoCount={tasklistTodoCount}
           onNavigate={(tab) => {
             if (tab === "home") onBack && onBack();
             else if (tab === "profile") onNavigate && onNavigate("profile");
@@ -963,6 +964,7 @@ function PTOFormMobile({ user, onBack, onNavigate }) {
       {/* Bottom Navigation - selaras dengan Take5/Hazard */}
       <MobileBottomNavigation
         activeTab="home"
+        tasklistTodoCount={tasklistTodoCount}
         onNavigate={(tab) => {
           if (tab === "home") onBack && onBack();
           else if (tab === "profile") onNavigate && onNavigate("profile");

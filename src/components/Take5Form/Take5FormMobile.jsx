@@ -18,7 +18,7 @@ function getToday() {
   return today.toISOString().slice(0, 10);
 }
 
-const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
+const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistTodoCount = 0 }) => {
   const [site, setSite] = useState(user.site || "");
   const [detailLokasi, setDetailLokasi] = useState("");
   const [, setLocationOptions] = useState([]);
@@ -1108,6 +1108,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate }) => {
       {/* Bottom Navigation */}
       <MobileBottomNavigation
         activeTab="take5"
+        tasklistTodoCount={tasklistTodoCount}
         onNavigate={(tab) => {
           if (tab === "home") {
             onBack && onBack();

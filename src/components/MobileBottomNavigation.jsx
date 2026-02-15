@@ -1,6 +1,6 @@
 import React from "react";
 
-function MobileBottomNavigation({ activeTab = "home", onNavigate }) {
+function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCount = 0 }) {
   const navItems = [
     {
       id: "home",
@@ -59,9 +59,25 @@ function MobileBottomNavigation({ activeTab = "home", onNavigate }) {
               transition: "all 0.2s ease",
               color: activeTab === item.id ? "#3b82f6" : "#6b7280",
               fontWeight: activeTab === item.id ? 600 : 500,
+              position: "relative",
             }}
           >
-            <div style={{ fontSize: 20 }}>{item.icon}</div>
+            <div style={{ position: "relative", display: "inline-flex" }}>
+              <span style={{ fontSize: 20 }}>{item.icon}</span>
+              {item.id === "tasklist" && tasklistTodoCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    right: -6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    background: "#ef4444",
+                  }}
+                />
+              )}
+            </div>
             <span style={{ fontSize: 12 }}>{item.label}</span>
           </button>
         ))}

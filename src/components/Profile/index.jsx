@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import ProfileMobile from "./ProfileMobile";
 import ProfileDesktop from "./ProfileDesktop";
 
-function Profile({ user, onClose, onBack, onLogout, onNavigate }) {
+function Profile({ user, onClose, onBack, onLogout, onNavigate, tasklistTodoCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -22,6 +22,7 @@ function Profile({ user, onClose, onBack, onLogout, onNavigate }) {
         onBack={onBack}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        tasklistTodoCount={tasklistTodoCount}
       />
     );
   }

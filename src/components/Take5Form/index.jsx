@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Take5FormDesktop from "./Take5FormDesktop";
 import Take5FormMobile from "./Take5FormMobile";
 
-function Take5Form({ user, onRedirectHazard, onBack, onNavigate }) {
+function Take5Form({ user, onRedirectHazard, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -20,6 +20,7 @@ function Take5Form({ user, onRedirectHazard, onBack, onNavigate }) {
       onRedirectHazard={onRedirectHazard}
       onBack={onBack}
       onNavigate={onNavigate}
+      tasklistTodoCount={tasklistTodoCount}
     />
   ) : (
     <Take5FormDesktop user={user} onRedirectHazard={onRedirectHazard} />
