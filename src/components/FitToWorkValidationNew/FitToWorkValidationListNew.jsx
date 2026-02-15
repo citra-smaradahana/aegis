@@ -437,9 +437,8 @@ function FitToWorkValidationListNew({
                     borderRadius: "12px",
                     padding: isMobile ? "16px" : "20px",
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
                     gap: "12px",
                     boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                   }}
@@ -539,9 +538,8 @@ function FitToWorkValidationListNew({
                       borderRadius: "12px",
                       padding: isMobile ? "16px" : "20px",
                       display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
+                      flexDirection: "column",
+                      alignItems: "flex-start",
                       gap: "12px",
                       boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                     }}
