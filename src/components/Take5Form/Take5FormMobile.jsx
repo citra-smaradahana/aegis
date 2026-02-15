@@ -4,10 +4,12 @@ import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
+  getLocationOptionsAsync,
   allowsCustomInput,
   shouldUseLocationSelector,
   CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
+import { fetchSites } from "../../utils/masterDataHelpers";
 import SelectModalWithSearch from "../SelectModalWithSearch";
 import PICSelector from "../PICSelector";
 import MobileHeader from "../MobileHeader";
@@ -18,7 +20,8 @@ import { getTodayWITA } from "../../utils/dateTimeHelpers";
 const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistTodoCount = 0 }) => {
   const [site, setSite] = useState(user.site || "");
   const [detailLokasi, setDetailLokasi] = useState("");
-  const [, setLocationOptions] = useState([]);
+  const [siteOptions, setSiteOptions] = useState(CUSTOM_INPUT_SITES);
+  const [detailLokasiOptions, setDetailLokasiOptions] = useState([]);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [siteSearchQuery, setSiteSearchQuery] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -75,19 +78,26 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
     }
   }, [hasNegativeAnswer, aman]);
 
-  // Update location options when site changes
   useEffect(() => {
-    if (site) {
-      const options = getLocationOptions(site);
-      setLocationOptions(options);
-      // Reset detail lokasi when site changes
-      setDetailLokasi("");
-      setShowCustomInput(false);
-    } else {
-      setLocationOptions([]);
-      setDetailLokasi("");
-      setShowCustomInput(false);
+    let cancelled = false;
+    fetchSites().then((arr) => {
+      if (!cancelled && Array.isArray(arr) && arr.length > 0) setSiteOptions(arr);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    setDetailLokasi("");
+    setShowCustomInput(false);
+    if (!site) {
+      setDetailLokasiOptions([]);
+      return;
     }
+    let cancelled = false;
+    getLocationOptionsAsync(site).then((opts) => {
+      if (!cancelled) setDetailLokasiOptions(opts || getLocationOptions(site) || []);
+    });
+    return () => { cancelled = true; };
   }, [site]);
 
 
@@ -579,7 +589,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
             </div>
             <SelectModalWithSearch
               title="Pilih Lokasi"
-              options={CUSTOM_INPUT_SITES}
+              options={siteOptions}
               onSelect={(val) => {
                 setSite(val);
                 setShowSiteModal(false);
@@ -634,7 +644,7 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
                 <SelectModalWithSearch
                   title="Pilih Detail Lokasi"
                   options={[
-                    ...(getLocationOptions(site) || []),
+                    ...(detailLokasiOptions || []),
                     ...(allowsCustomInput(site) ? ["Lainnya"] : []),
                   ]}
                   onSelect={(val) => {

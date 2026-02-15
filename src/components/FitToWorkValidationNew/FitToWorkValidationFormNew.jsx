@@ -317,8 +317,12 @@ function FitToWorkValidationFormNew({
           backgroundColor: "#1f2937",
           border: "1px solid #374151",
           borderRadius: "12px",
-          padding: "24px",
+          padding: isMobile ? "16px" : "24px",
           marginBottom: "24px",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
         <h3
@@ -335,7 +339,7 @@ function FitToWorkValidationFormNew({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: "16px",
             marginBottom: "20px",
           }}
@@ -469,21 +473,22 @@ function FitToWorkValidationFormNew({
           >
             Jawaban Fit To Work:
           </h4>
-          <div style={{ fontSize: "14px", lineHeight: "1.5" }}>
+          <div style={{ fontSize: "14px", lineHeight: "1.5", width: "100%", minWidth: 0 }}>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: "12px",
-                alignItems: "center",
+                display: isMobile ? "flex" : "grid",
+                flexDirection: isMobile ? "column" : undefined,
+                gridTemplateColumns: isMobile ? undefined : "1fr auto",
+                gap: "8px",
+                alignItems: isMobile ? "stretch" : "center",
                 marginBottom: "8px",
-                padding: "8px 12px",
+                padding: "10px 12px",
                 backgroundColor: "#111827",
                 borderRadius: "6px",
                 border: "1px solid #374151",
               }}
             >
-              <div style={{ color: "#e5e7eb", fontSize: "13px" }}>
+              <div style={{ color: "#e5e7eb", fontSize: "13px", wordBreak: "break-word", overflowWrap: "break-word", flex: "1 1 auto", minWidth: 0 }}>
                 Q1: Tidak mengkonsumsi obat yang mempengaruhi kerja
               </div>
               <div
@@ -493,6 +498,7 @@ function FitToWorkValidationFormNew({
                     : "#ef4444",
                   fontWeight: "600",
                   fontSize: "13px",
+                  flexShrink: 0,
                 }}
               >
                 {validation.tidak_mengkonsumsi_obat ? "Ya" : "Tidak"}
@@ -501,18 +507,19 @@ function FitToWorkValidationFormNew({
 
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: "12px",
-                alignItems: "center",
+                display: isMobile ? "flex" : "grid",
+                flexDirection: isMobile ? "column" : undefined,
+                gridTemplateColumns: isMobile ? undefined : "1fr auto",
+                gap: "8px",
+                alignItems: isMobile ? "stretch" : "center",
                 marginBottom: "8px",
-                padding: "8px 12px",
+                padding: "10px 12px",
                 backgroundColor: "#111827",
                 borderRadius: "6px",
                 border: "1px solid #374151",
               }}
             >
-              <div style={{ color: "#e5e7eb", fontSize: "13px" }}>
+              <div style={{ color: "#e5e7eb", fontSize: "13px", wordBreak: "break-word", overflowWrap: "break-word", flex: "1 1 auto", minWidth: 0 }}>
                 Q2: Tidak ada masalah pribadi/keluarga
               </div>
               <div
@@ -522,6 +529,7 @@ function FitToWorkValidationFormNew({
                     : "#ef4444",
                   fontWeight: "600",
                   fontSize: "13px",
+                  flexShrink: 0,
                 }}
               >
                 {validation.tidak_ada_masalah_pribadi ? "Ya" : "Tidak"}
@@ -530,18 +538,19 @@ function FitToWorkValidationFormNew({
 
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: "12px",
-                alignItems: "center",
+                display: isMobile ? "flex" : "grid",
+                flexDirection: isMobile ? "column" : undefined,
+                gridTemplateColumns: isMobile ? undefined : "1fr auto",
+                gap: "8px",
+                alignItems: isMobile ? "stretch" : "center",
                 marginBottom: "8px",
-                padding: "8px 12px",
+                padding: "10px 12px",
                 backgroundColor: "#111827",
                 borderRadius: "6px",
                 border: "1px solid #374151",
               }}
             >
-              <div style={{ color: "#e5e7eb", fontSize: "13px" }}>
+              <div style={{ color: "#e5e7eb", fontSize: "13px", wordBreak: "break-word", overflowWrap: "break-word", flex: "1 1 auto", minWidth: 0 }}>
                 Q3: Siap bekerja dengan aman
               </div>
               <div
@@ -549,6 +558,7 @@ function FitToWorkValidationFormNew({
                   color: validation.siap_bekerja ? "#10b981" : "#ef4444",
                   fontWeight: "600",
                   fontSize: "13px",
+                  flexShrink: 0,
                 }}
               >
                 {validation.siap_bekerja ? "Ya" : "Tidak"}
@@ -736,7 +746,7 @@ function FitToWorkValidationFormNew({
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
                   gap: "16px",
                   marginBottom: "12px",
                 }}
@@ -930,8 +940,12 @@ function FitToWorkValidationFormNew({
         backgroundColor: "#1f2937",
         border: "1px solid #374151",
         borderRadius: "12px",
-        padding: "24px",
+        padding: isMobile ? "16px" : "24px",
         marginBottom: "24px",
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       <h3
@@ -993,19 +1007,23 @@ function FitToWorkValidationFormNew({
           backgroundColor: "#1f2937",
           border: "1px solid #374151",
           borderRadius: "12px",
-          padding: "24px",
+          padding: isMobile ? "16px" : "24px",
           marginBottom: "24px",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
         <h3
-          style={{
-            margin: "0 0 20px 0",
-            color: "#e5e7eb",
-            fontWeight: 600,
-            fontSize: "18px",
-          }}
-        >
-          Validasi Tahap 1 - {user.jabatan}
+        style={{
+          margin: "0 0 20px 0",
+          color: "#e5e7eb",
+          fontWeight: 600,
+          fontSize: "18px",
+        }}
+      >
+        Validasi Tahap 1 - {user.jabatan}
         </h3>
 
         <div style={{ marginBottom: "20px" }}>
@@ -1088,8 +1106,12 @@ function FitToWorkValidationFormNew({
         backgroundColor: "#1f2937",
         border: "1px solid #374151",
         borderRadius: "12px",
-        padding: "24px",
+        padding: isMobile ? "16px" : "24px",
         marginBottom: "24px",
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       <h3
@@ -1157,8 +1179,12 @@ function FitToWorkValidationFormNew({
           backgroundColor: "#1f2937",
           border: "1px solid #374151",
           borderRadius: "12px",
-          padding: "24px",
+          padding: isMobile ? "16px" : "24px",
           marginBottom: "24px",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
         {isDirectPJOValidation && (
@@ -1303,13 +1329,13 @@ function FitToWorkValidationFormNew({
           >
             Rekomendasi Final: *
           </label>
-          <div style={{ display: "flex", gap: "16px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
             {/* Tombol Fit To Work */}
             <button
               type="button"
               onClick={() => handleInputChange("validasi_tahap2", "Fit")}
               style={{
-                padding: "12px 24px",
+                padding: "12px 20px",
                 backgroundColor:
                   formData.validasi_tahap2 === "Fit"
                     ? "#10b981"
@@ -1321,7 +1347,8 @@ function FitToWorkValidationFormNew({
                 fontWeight: "600",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
-                minWidth: "140px",
+                minWidth: isMobile ? "120px" : "140px",
+                flex: isMobile ? "1 1 45%" : undefined,
                 outline: "none",
               }}
             >
@@ -1333,7 +1360,7 @@ function FitToWorkValidationFormNew({
               type="button"
               onClick={() => handleInputChange("validasi_tahap2", "Not Fit")}
               style={{
-                padding: "12px 24px",
+                padding: "12px 20px",
                 backgroundColor:
                   formData.validasi_tahap2 === "Not Fit"
                     ? "#ef4444"
@@ -1346,7 +1373,8 @@ function FitToWorkValidationFormNew({
                 fontWeight: "600",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
-                minWidth: "140px",
+                minWidth: isMobile ? "120px" : "140px",
+                flex: isMobile ? "1 1 45%" : undefined,
                 outline: "none",
               }}
             >
@@ -1403,12 +1431,15 @@ function FitToWorkValidationFormNew({
     <div
       style={{
         padding: isMobile ? "0" : "20px",
-        maxWidth: "1400px",
+        maxWidth: isMobile ? "100%" : "1400px",
+        width: "100%",
         margin: "0 auto",
         minHeight: "100vh",
         overflow: "visible",
+        overflowX: "hidden",
         background: isMobile ? "#f8fafc" : "transparent",
-        paddingBottom: isMobile ? 100 : 80, // Space agar tombol Simpan Validasi tidak tertutup
+        paddingBottom: isMobile ? 100 : 80,
+        boxSizing: "border-box",
       }}
     >
       {/* Mobile Header */}
@@ -1468,8 +1499,12 @@ function FitToWorkValidationFormNew({
 
       <div
         style={{
-          padding: isMobile ? "20px" : "0",
-          marginTop: isMobile ? 60 : 0, // Space untuk mobile header
+          padding: isMobile ? "16px" : "0",
+          marginTop: isMobile ? 60 : 0,
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          overflowX: "hidden",
         }}
       >
         <form onSubmit={handleSubmit}>
@@ -1480,16 +1515,18 @@ function FitToWorkValidationFormNew({
               gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
               gap: "24px",
               alignItems: "start",
+              width: "100%",
+              minWidth: 0,
             }}
           >
             {/* Left Column */}
-            <div>
+            <div style={{ minWidth: 0, width: "100%" }}>
               {/* Fit To Work Data */}
               {renderFitToWorkData()}
             </div>
 
             {/* Right Column */}
-            <div>
+            <div style={{ minWidth: 0, width: "100%" }}>
               {/* Level 1 Form */}
               {renderLevel1Form()}
 

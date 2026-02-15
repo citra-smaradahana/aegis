@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
+import { fetchSites, fetchJabatan } from "../../utils/masterDataHelpers";
 import "./UserForm.css";
 
 const roleOptions = [
@@ -9,47 +10,27 @@ const roleOptions = [
   { value: "admin", label: "Admin" },
 ];
 
-const jabatanOptions = [
-  {
-    value: "Penanggung Jawab Operasional",
-    label: "Penanggung Jawab Operasional",
-  },
-  {
-    value: "Asst. Penanggung Jawab Operasional",
-    label: "Asst. Penanggung Jawab Operasional",
-  },
+const jabatanOptionsFallback = [
+  { value: "Penanggung Jawab Operasional", label: "Penanggung Jawab Operasional" },
+  { value: "Asst. Penanggung Jawab Operasional", label: "Asst. Penanggung Jawab Operasional" },
   { value: "SHERQ Officer", label: "SHERQ Officer" },
   { value: "SHERQ Supervisor", label: "SHERQ Supervisor" },
-  { value: "SHERQ System & Compliance Officer", label: "SHERQ System & Compliance Officer" },
-  { value: "Technical Service", label: "Technical Service" },
+  { value: "Administrator", label: "Administrator" },
+  { value: "Admin Site Project", label: "Admin Site Project" },
   { value: "Field Leading Hand", label: "Field Leading Hand" },
   { value: "Plant Leading Hand", label: "Plant Leading Hand" },
   { value: "Operator MMU", label: "Operator MMU" },
-  { value: "Operator Plant", label: "Operator Plant" },
-  { value: "Operator WOPP", label: "Operator WOPP" },
-  { value: "Mekanik", label: "Mekanik" },
   { value: "Crew", label: "Crew" },
-  { value: "Administrator", label: "Administrator" },
-  { value: "Admin Site Project", label: "Admin Site Project" },
   { value: "Blaster", label: "Blaster" },
   { value: "Quality Controller", label: "Quality Controller" },
-  { value: "Training & Development Specialist", label: "Training & Development Specialist" },
 ];
 
-const siteOptions = [
-  { value: "Head Office", label: "Head Office" },
-  { value: "Balikpapan", label: "Balikpapan" },
-  { value: "ADRO", label: "ADRO" },
-  { value: "AMMP", label: "AMMP" },
-  { value: "BSIB", label: "BSIB" },
-  { value: "GAMR", label: "GAMR" },
-  { value: "HRSB", label: "HRSB" },
-  { value: "HRSE", label: "HRSE" },
-  { value: "PABB", label: "PABB" },
-  { value: "PBRB", label: "PBRB" },
-  { value: "PKJA", label: "PKJA" },
-  { value: "PPAB", label: "PPAB" },
-  { value: "PSMM", label: "PSMM" },
+const siteOptionsFallback = [
+  { value: "Head Office", label: "Head Office" }, { value: "Balikpapan", label: "Balikpapan" },
+  { value: "ADRO", label: "ADRO" }, { value: "AMMP", label: "AMMP" }, { value: "BSIB", label: "BSIB" },
+  { value: "GAMR", label: "GAMR" }, { value: "HRSB", label: "HRSB" }, { value: "HRSE", label: "HRSE" },
+  { value: "PABB", label: "PABB" }, { value: "PBRB", label: "PBRB" }, { value: "PKJA", label: "PKJA" },
+  { value: "PPAB", label: "PPAB" }, { value: "PSMM", label: "PSMM" },
 ];
 
 function UserForm({ user, onSubmit, onClose, loading }) {
@@ -71,6 +52,19 @@ function UserForm({ user, onSubmit, onClose, loading }) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [errors, setErrors] = useState({});
   const [componentError, setComponentError] = useState(null);
+  const [siteOptions, setSiteOptions] = useState(siteOptionsFallback);
+  const [jabatanOptions, setJabatanOptions] = useState(jabatanOptionsFallback);
+
+  // Fetch master data dari DB
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchSites(), fetchJabatan()]).then(([sites, jabatan]) => {
+      if (cancelled) return;
+      if (sites?.length > 0) setSiteOptions(sites.map((s) => ({ value: s, label: s })));
+      if (jabatan?.length > 0) setJabatanOptions(jabatan);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Crop state
   const [crop, setCrop] = useState({ x: 0, y: 0 });

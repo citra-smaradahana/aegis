@@ -1,4 +1,6 @@
-// Configuration for site locations
+import { fetchSiteLocations } from "../utils/masterDataHelpers";
+
+// Configuration for site locations (fallback jika DB kosong)
 export const SITE_LOCATIONS = {
   BSIB: [
     "Office",
@@ -34,10 +36,18 @@ export const CUSTOM_INPUT_SITES = [
   "PMTU",
 ];
 
-// Function to get location options for a specific site
+// Sync: ambil dari config (fallback)
 export const getLocationOptions = (site) => {
   return SITE_LOCATIONS[site] || SITE_LOCATIONS.DEFAULT;
 };
+
+// Async: ambil dari DB, fallback ke config jika kosong
+export async function getLocationOptionsAsync(site) {
+  if (!site) return getLocationOptions(site);
+  const fromDb = await fetchSiteLocations(site);
+  if (fromDb && fromDb.length > 0) return fromDb;
+  return getLocationOptions(site);
+}
 
 // Function to check if a site has specific locations
 export const hasSpecificLocations = (site) => {

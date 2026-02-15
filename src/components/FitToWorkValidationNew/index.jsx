@@ -10,7 +10,9 @@ import {
   fetchUsersMarkedOffToday,
   unmarkUserOff,
   canReviseOffStatus,
+  getSubordinateJabatansForValidator,
 } from "../../utils/fitToWorkAbsentHelpers";
+import { fetchActiveMandatesForUser, isDelegatorOnsite } from "../../utils/mandateHelpers";
 
 function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -41,13 +43,40 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
 
     try {
       console.log("=== FETCH VALIDATIONS NEW - START ===");
-      const userJabatan = user.jabatan;
+      const userJabatan = (user.jabatan || "").trim().replace(/\s+/g, " ");
       const userSite = user.site;
 
       console.log("fetchValidations - User:", user);
       console.log("fetchValidations - User Jabatan:", userJabatan);
       console.log("fetchValidations - User Site:", userSite);
       console.log("fetchValidations - filterStatus:", filterStatus);
+
+      // Dapatkan jabatan bawahan yang boleh dilihat validator (FLH tidak lihat Mekanik/Operator Plant kecuali ada mandat PLH)
+      let mandates = [];
+      let isDelegatorOnsiteMap = {};
+      if (userJabatan === "Field Leading Hand") {
+        mandates = await fetchActiveMandatesForUser(user.id, userSite);
+        for (const m of mandates) {
+          if (m.delegated_by_user_id) {
+            isDelegatorOnsiteMap[m.delegated_by_user_id] = await isDelegatorOnsite(
+              m.delegated_by_user_id,
+              userSite
+            );
+          }
+        }
+      }
+      const subordinateJabatans = getSubordinateJabatansForValidator(
+        userJabatan,
+        mandates,
+        isDelegatorOnsiteMap
+      );
+
+      // null = lihat semua (PJO, Asst PJO, SHERQ, Admin). [] = tidak ada akses. [...] = filter by jabatan.
+      if (subordinateJabatans && subordinateJabatans.length === 0) {
+        setValidations([]);
+        setLoading(false);
+        return;
+      }
 
       // Pakai initial_status_fatigue agar record yang divalidasi jadi "Fit To Work"
       // (status_fatigue berubah) tetap masuk ke Selesai/Closed
@@ -59,8 +88,12 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
         .order("created_at", { ascending: false })
         .limit(10000);
 
-      // Semua validator melihat seluruh validasi (untuk memantau tahap 1 dan tahap 2).
-      // Filter workflow hanya dari dropdown; tidak filter by jabatan.
+      // Filter by jabatan: FLH hanya lihat bawahan (bukan Mekanik/Operator Plant tanpa mandat); PLH hanya lihat Mekanik & Operator Plant
+      if (subordinateJabatans && subordinateJabatans.length > 0) {
+        query = query.in("jabatan", subordinateJabatans);
+        console.log("fetchValidations - Filter jabatan:", subordinateJabatans);
+      }
+
       if (filterStatus && filterStatus !== "all") {
         query = query.eq("workflow_status", filterStatus);
         console.log(

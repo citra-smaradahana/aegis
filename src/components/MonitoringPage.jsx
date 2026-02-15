@@ -3,6 +3,21 @@ import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { fetchSitesFTWStatusMap } from "../utils/masterDataHelpers";
+import { getTodayWITA, getDateWITARelative, getMonthBoundaryWITA } from "../utils/dateTimeHelpers";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { CUSTOM_INPUT_SITES } from "../config/siteLocations";
 
 const TABLE_OPTIONS = [
@@ -86,6 +101,18 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   const [fitToWorkTablePage, setFitToWorkTablePage] = useState(0);
   const [fitToWorkTablePageSize, setFitToWorkTablePageSize] = useState(10);
 
+  // Detect mobile untuk posisi filter fixed (sidebar 240px di desktop)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  // Chart view mode untuk grafik batang: daily | weekly | monthly | yearly
+  const [chartViewMode, setChartViewMode] = useState("daily");
+  const [chartAggregatedData, setChartAggregatedData] = useState([]);
+
   // Initialize based on subMenu
   useEffect(() => {
     if (subMenu === "Statistik Fit To Work") {
@@ -118,47 +145,23 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     }
   }, [dateFrom, dateTo, site]);
 
-  // Helper function untuk generate date dari preset
+  // Helper function untuk generate date dari preset (WITA)
   const getDateFromPreset = (preset) => {
-    const today = new Date();
-    const formatDate = (date) => date.toISOString().split("T")[0];
-
     switch (preset) {
       case "today":
-        return formatDate(today);
+        return getTodayWITA();
       case "yesterday":
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        return formatDate(yesterday);
+        return getDateWITARelative(-1);
       case "7daysAgo":
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(today.getDate() - 6);
-        return formatDate(sevenDaysAgo);
+        return getDateWITARelative(-6);
       case "30daysAgo":
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 29);
-        return formatDate(thirtyDaysAgo);
+        return getDateWITARelative(-29);
       case "thisMonthStart":
-        const firstDayThisMonth = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          1
-        );
-        return formatDate(firstDayThisMonth);
+        return getMonthBoundaryWITA("firstDayThisMonth");
       case "lastMonthStart":
-        const firstDayLastMonth = new Date(
-          today.getFullYear(),
-          today.getMonth() - 1,
-          1
-        );
-        return formatDate(firstDayLastMonth);
+        return getMonthBoundaryWITA("firstDayLastMonth");
       case "lastMonthEnd":
-        const lastDayLastMonth = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          0
-        );
-        return formatDate(lastDayLastMonth);
+        return getMonthBoundaryWITA("lastDayLastMonth");
       case "custom":
         return "";
       default:
@@ -234,23 +237,55 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     setLoading(true);
     try {
       let query = supabase.from("fit_to_work").select("*");
-
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
 
-      const { data: fitToWorkData, error } = await query;
+      const startDt = dateFrom || getDateWITARelative(-6);
+      const endDt = dateTo || getTodayWITA();
 
+      const [fitRes, usersRes, absentRes, ftwStatusMap] = await Promise.all([
+        query,
+        supabase.from("users").select("id, site").not("site", "is", null),
+        supabase.from("fit_to_work_absent").select("user_id, tanggal").gte("tanggal", startDt).lte("tanggal", endDt),
+        fetchSitesFTWStatusMap(),
+      ]);
+
+      const { data: fitToWorkData, error } = fitRes;
       if (error) {
         console.error("Error fetching Fit To Work data:", error);
+        setLoading(false);
         return;
       }
 
-      // Calculate statistics
-      const stats = calculateFitToWorkStats(fitToWorkData || []);
+      const users = (usersRes.data || []).filter((u) => u.site);
+      const absentList = absentRes.data || [];
+
+      // Hanya hitung kewajiban untuk site dengan FTW enabled
+      let usersBySite = {};
+      users.forEach((u) => {
+        if (ftwStatusMap[u.site] === false) return;
+        if (site && u.site !== site) return;
+        usersBySite[u.site] = (usersBySite[u.site] || 0) + 1;
+      });
+
+      const userIdToSite = {};
+      users.forEach((u) => { userIdToSite[u.id] = u.site; });
+
+      let absentByDateSite = {};
+      absentList.forEach((a) => {
+        const s = userIdToSite[a.user_id];
+        if (!s || ftwStatusMap[s] === false || (site && s !== site)) return;
+        if (!absentByDateSite[a.tanggal]) absentByDateSite[a.tanggal] = {};
+        absentByDateSite[a.tanggal][s] = (absentByDateSite[a.tanggal][s] || 0) + 1;
+      });
+
+      const stats = calculateFitToWorkStats(fitToWorkData || [], {
+        usersBySite,
+        absentByDateSite,
+      });
       setFitToWorkStats(stats);
 
-      // Calculate individual statistics
       const individualData = calculateIndividualStats(
         fitToWorkData || [],
         "fit_to_work"
@@ -262,6 +297,114 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       setLoading(false);
     }
   };
+
+  // Fetch aggregated chart data for Weekly/Monthly/Yearly views
+  useEffect(() => {
+    if (selectedTable !== "fit_to_work_stats" || chartViewMode === "daily") {
+      setChartAggregatedData([]);
+      return;
+    }
+    const run = async () => {
+      let rangeFromStr, rangeToStr;
+      if (chartViewMode === "monthly") {
+        rangeToStr = getTodayWITA();
+        const todayStr = getTodayWITA();
+        const [y, m] = todayStr.split("-").map(Number);
+        const start = new Date(Date.UTC(y, m - 1 - 11, 1));
+        rangeFromStr = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}-01`;
+      } else if (chartViewMode === "yearly") {
+        rangeToStr = getTodayWITA();
+        const todayStr = getTodayWITA();
+        const y = parseInt(todayStr.split("-")[0], 10);
+        rangeFromStr = `${y - 4}-01-01`;
+      } else {
+        return;
+      }
+
+      try {
+        let query = supabase.from("fit_to_work").select("*").gte("tanggal", rangeFromStr).lte("tanggal", rangeToStr);
+        if (site) query = query.eq("site", site);
+
+        const [fitRes, usersRes, absentRes, ftwStatusMap] = await Promise.all([
+          query,
+          supabase.from("users").select("id, site").not("site", "is", null),
+          supabase.from("fit_to_work_absent").select("user_id, tanggal").gte("tanggal", rangeFromStr).lte("tanggal", rangeToStr),
+          fetchSitesFTWStatusMap(),
+        ]);
+
+        if (fitRes.error) throw fitRes.error;
+        const fitData = fitRes.data || [];
+        const users = (usersRes.data || []).filter((u) => u.site && (!site || u.site === site));
+        const absentList = absentRes.data || [];
+
+        let usersBySite = {};
+        users.forEach((u) => {
+          if (ftwStatusMap[u.site] === false) return;
+          usersBySite[u.site] = (usersBySite[u.site] || 0) + 1;
+        });
+        const userIdToSite = {};
+        users.forEach((u) => { userIdToSite[u.id] = u.site; });
+        let absentByDateSite = {};
+        absentList.forEach((a) => {
+          const s = userIdToSite[a.user_id];
+          if (!s || ftwStatusMap[s] === false) return;
+          if (!absentByDateSite[a.tanggal]) absentByDateSite[a.tanggal] = {};
+          absentByDateSite[a.tanggal][s] = (absentByDateSite[a.tanggal][s] || 0) + 1;
+        });
+
+        // Build daily stats for chart range manually (WITA)
+        const daily = [];
+        let cur = new Date(rangeFromStr + "T12:00:00+08:00");
+        const endD = new Date(rangeToStr + "T12:00:00+08:00");
+        while (cur <= endD) {
+          const dateStr = cur.toISOString().slice(0, 10);
+          const dayData = fitData.filter((item) => item.tanggal === dateStr);
+          let total = 0, absent = 0;
+          Object.entries(usersBySite).forEach(([s, n]) => {
+            total += n;
+            absent += (absentByDateSite[dateStr] || {})[s] || 0;
+          });
+          const kewajiban = Math.max(0, total - absent);
+          const pengisian = dayData.length;
+          const fitToWork = dayData.filter((item) => item.status_fatigue === "Fit To Work").length;
+          const notFitToWork = dayData.filter((item) => item.status_fatigue === "Not Fit To Work").length;
+          daily.push({ date: dateStr, kewajiban, pengisian, total: pengisian, fitToWork, notFitToWork });
+          cur.setTime(cur.getTime() + 24 * 60 * 60 * 1000);
+        }
+
+        if (chartViewMode === "monthly") {
+          const byMonth = {};
+          daily.forEach((d) => {
+            const dt = new Date(d.date);
+            const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+            if (!byMonth[key]) byMonth[key] = { label: "", kewajiban: 0, pengisian: 0, fitToWork: 0, notFitToWork: 0 };
+            byMonth[key].kewajiban += d.kewajiban ?? 0;
+            byMonth[key].pengisian += d.pengisian ?? d.total ?? 0;
+            byMonth[key].fitToWork += d.fitToWork ?? 0;
+            byMonth[key].notFitToWork += d.notFitToWork ?? 0;
+            const names = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+            byMonth[key].label = `${names[dt.getMonth()]} ${dt.getFullYear()}`;
+          });
+          setChartAggregatedData(Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v));
+        } else if (chartViewMode === "yearly") {
+          const byYear = {};
+          daily.forEach((d) => {
+            const y = new Date(d.date).getFullYear();
+            if (!byYear[y]) byYear[y] = { label: String(y), kewajiban: 0, pengisian: 0, fitToWork: 0, notFitToWork: 0 };
+            byYear[y].kewajiban += d.kewajiban ?? 0;
+            byYear[y].pengisian += d.pengisian ?? d.total ?? 0;
+            byYear[y].fitToWork += d.fitToWork ?? 0;
+            byYear[y].notFitToWork += d.notFitToWork ?? 0;
+          });
+          setChartAggregatedData(Object.entries(byYear).sort((a, b) => a[0] - b[0]).map(([, v]) => v));
+        }
+      } catch (err) {
+        console.error("Error fetching chart data:", err);
+        setChartAggregatedData([]);
+      }
+    };
+    run();
+  }, [selectedTable, chartViewMode, site]);
 
   // Fetch Take 5 Statistics
   const fetchTake5Stats = async () => {
@@ -451,7 +594,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   };
 
   // Calculate Fit To Work Statistics
-  const calculateFitToWorkStats = (data) => {
+  const calculateFitToWorkStats = (data, extra = {}) => {
+    const { usersBySite = {}, absentByDateSite = {} } = extra;
     // Filter data berdasarkan date range dan site
     let filteredData = [...data];
 
@@ -474,9 +618,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     } else if (dateTo) {
       summaryDateStr = dateTo;
     } else {
-      // Gunakan tanggal lokal (bukan UTC) agar sesuai zona waktu Indonesia
-      const now = new Date();
-      summaryDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      summaryDateStr = getTodayWITA();
     }
     const summaryData = filteredData.filter(
       (item) => item.tanggal === summaryDateStr
@@ -536,23 +678,33 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }
     });
 
-    // Daily statistics (last 7 days atau sesuai filter)
+    // Daily statistics (last 7 days atau sesuai filter, WITA)
     const dailyStats = [];
-    const startDate = dateFrom ? new Date(dateFrom) : new Date();
-    const endDate = dateTo ? new Date(dateTo) : new Date();
+    const startDateStr = dateFrom || getDateWITARelative(-6);
+    const endDateStr = dateTo || getTodayWITA();
 
     if (!dateFrom && !dateTo) {
       // Default: last 7 days
-      const today = new Date();
       for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = getDateWITARelative(-i);
 
         const dayData = filteredData.filter((item) => item.tanggal === dateStr);
+        const pengisian = dayData.length;
+        const kewajiban = (() => {
+          let total = 0;
+          let absent = 0;
+          Object.entries(usersBySite).forEach(([s, n]) => {
+            total += n;
+            absent += (absentByDateSite[dateStr] || {})[s] || 0;
+          });
+          return Math.max(0, total - absent);
+        })();
         dailyStats.push({
           date: dateStr,
-          total: dayData.length,
+          total: pengisian,
+          pengisian,
+          kewajiban,
+          persentasePengisian: kewajiban > 0 ? parseFloat(((pengisian / kewajiban) * 100).toFixed(1)) : 0,
           fitToWork: dayData.filter(
             (item) => item.status_fatigue === "Fit To Work"
           ).length,
@@ -572,14 +724,28 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }
     } else {
       // Custom date range
-      const currentDate = new Date(startDate);
+      let currentDate = new Date(startDateStr + "T12:00:00+08:00");
+      const endDate = new Date(endDateStr + "T12:00:00+08:00");
       while (currentDate <= endDate) {
-        const dateStr = currentDate.toISOString().split("T")[0];
+        const dateStr = currentDate.toISOString().slice(0, 10);
 
         const dayData = filteredData.filter((item) => item.tanggal === dateStr);
+        const pengisian = dayData.length;
+        const kewajiban = (() => {
+          let total = 0;
+          let absent = 0;
+          Object.entries(usersBySite).forEach(([s, n]) => {
+            total += n;
+            absent += (absentByDateSite[dateStr] || {})[s] || 0;
+          });
+          return Math.max(0, total - absent);
+        })();
         dailyStats.push({
           date: dateStr,
-          total: dayData.length,
+          total: pengisian,
+          pengisian,
+          kewajiban,
+          persentasePengisian: kewajiban > 0 ? parseFloat(((pengisian / kewajiban) * 100).toFixed(1)) : 0,
           fitToWork: dayData.filter(
             (item) => item.status_fatigue === "Fit To Work"
           ).length,
@@ -597,7 +763,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           ).length,
         });
 
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentDate.setTime(currentDate.getTime() + 24 * 60 * 60 * 1000);
       }
     }
 
@@ -709,18 +875,15 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (item.status?.toLowerCase() === "closed") siteStats[siteName].closed++;
     });
 
-    // Daily statistics (last 7 days atau sesuai filter)
+    // Daily statistics (last 7 days atau sesuai filter, WITA)
     const dailyStats = [];
-    const startDate = dateFrom ? new Date(dateFrom) : new Date();
-    const endDate = dateTo ? new Date(dateTo) : new Date();
+    const startDateStr = dateFrom || getDateWITARelative(-6);
+    const endDateStr = dateTo || getTodayWITA();
 
     if (!dateFrom && !dateTo) {
       // Default: last 7 days
-      const today = new Date();
       for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = getDateWITARelative(-i);
 
         const dayData = filteredData.filter((item) => {
           const itemDate = new Date(item.created_at)
@@ -754,9 +917,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }
     } else {
       // Custom date range
-      const currentDate = new Date(startDate);
+      let currentDate = new Date(startDateStr + "T12:00:00+08:00");
+      const endDate = new Date(endDateStr + "T12:00:00+08:00");
       while (currentDate <= endDate) {
-        const dateStr = currentDate.toISOString().split("T")[0];
+        const dateStr = currentDate.toISOString().slice(0, 10);
 
         const dayData = filteredData.filter((item) => {
           const itemDate = new Date(item.created_at)
@@ -788,7 +952,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           ).length,
         });
 
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentDate.setTime(currentDate.getTime() + 24 * 60 * 60 * 1000);
       }
     }
 
@@ -945,18 +1109,15 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     console.log("calculateHazardStats - Site stats:", siteStats);
 
-    // Daily statistics (last 7 days atau sesuai filter)
+    // Daily statistics (last 7 days atau sesuai filter, WITA)
     const dailyStats = [];
-    const startDate = dateFrom ? new Date(dateFrom) : new Date();
-    const endDate = dateTo ? new Date(dateTo) : new Date();
+    const startDateStr = dateFrom || getDateWITARelative(-6);
+    const endDateStr = dateTo || getTodayWITA();
 
     if (!dateFrom && !dateTo) {
       // Default: last 7 days
-      const today = new Date();
       for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = getDateWITARelative(-i);
 
         const dayData = filteredData.filter((item) => {
           const itemDate = new Date(item.created_at)
@@ -990,9 +1151,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }
     } else {
       // Custom date range
-      const currentDate = new Date(startDate);
+      let currentDate = new Date(startDateStr + "T12:00:00+08:00");
+      const endDate = new Date(endDateStr + "T12:00:00+08:00");
       while (currentDate <= endDate) {
-        const dateStr = currentDate.toISOString().split("T")[0];
+        const dateStr = currentDate.toISOString().slice(0, 10);
 
         const dayData = filteredData.filter((item) => {
           const itemDate = new Date(item.created_at)
@@ -1024,7 +1186,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           ).length,
         });
 
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentDate.setTime(currentDate.getTime() + 24 * 60 * 60 * 1000);
       }
     }
 
@@ -1146,7 +1308,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     XLSX.utils.book_append_sheet(workbook, worksheet, selectedTable);
     XLSX.writeFile(
       workbook,
-      `${selectedTable}_${new Date().toISOString().split("T")[0]}.xlsx`
+      `${selectedTable}_${getTodayWITA()}.xlsx`
     );
   }
 
@@ -1201,7 +1363,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     XLSX.writeFile(
       workbook,
-      `Fit_To_Work_Statistics_${new Date().toISOString().split("T")[0]}.xlsx`
+      `Fit_To_Work_Statistics_${getTodayWITA()}.xlsx`
     );
   }
 
@@ -1929,23 +2091,37 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       <div style={{ padding: "0" }}>
         {/* Content Container - Centered */}
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          {/* Filter Panel untuk Dashboard Statistik */}
+          {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
           <div
             style={{
-              display: "flex",
-              gap: "16px",
-              marginBottom: "20px",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
+              position: "fixed",
+              top: 0,
+              left: isMobile ? 0 : 240,
+              right: 0,
+              zIndex: 100,
+              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
+              padding: "20px 0",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             }}
           >
+            <div
+              style={{
+                maxWidth: "1400px",
+                margin: "0 auto",
+                padding: "0 20px",
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
             <div
               style={{
                 display: "flex",
                 gap: "16px",
                 flexWrap: "wrap",
-                alignItems: "center",
+                alignItems: "flex-end",
               }}
             >
               <div
@@ -1955,7 +2131,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   style={{
                     fontSize: "12px",
                     fontWeight: "bold",
-                    color: "#666",
+                    color: "#e5e7eb",
                   }}
                 >
                   Dari:
@@ -1966,6 +2142,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   onChange={(e) => setDateFrom(e.target.value)}
                   style={{
                     padding: "8px 12px",
+                    height: 38,
+                    boxSizing: "border-box",
                     borderRadius: "6px",
                     border: "1px solid #ddd",
                     fontSize: "14px",
@@ -1980,7 +2158,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   style={{
                     fontSize: "12px",
                     fontWeight: "bold",
-                    color: "#666",
+                    color: "#e5e7eb",
                   }}
                 >
                   Sampai:
@@ -1991,6 +2169,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   onChange={(e) => setDateTo(e.target.value)}
                   style={{
                     padding: "8px 12px",
+                    height: 38,
+                    boxSizing: "border-box",
                     borderRadius: "6px",
                     border: "1px solid #ddd",
                     fontSize: "14px",
@@ -2005,7 +2185,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   style={{
                     fontSize: "12px",
                     fontWeight: "bold",
-                    color: "#666",
+                    color: "#e5e7eb",
                   }}
                 >
                   Site:
@@ -2015,6 +2195,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   onChange={(e) => setSite(e.target.value)}
                   style={{
                     padding: "8px 12px",
+                    height: 38,
+                    boxSizing: "border-box",
                     borderRadius: "6px",
                     border: "1px solid #ddd",
                     fontSize: "14px",
@@ -2029,42 +2211,29 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   ))}
                 </select>
               </div>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-              >
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    color: "#666",
-                  }}
-                >
-                  &nbsp;
-                </label>
-                <button
-                  onClick={() => {
-                    setDateFrom("");
-                    setDateTo("");
-                    setSite("");
-                  }}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "6px",
-                    border: "1px solid #ddd",
-                    background: "#f8f9fa",
-                    color: "#666",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  Reset Filter
-                </button>
-              </div>
             </div>
 
-            {/* Download Buttons */}
-            <div style={{ display: "flex", gap: "8px" }}>
+            {/* Reset & Download Buttons */}
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button
+                onClick={() => {
+                  setDateFrom("");
+                  setDateTo("");
+                  setSite("");
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  border: "1px solid #ddd",
+                  background: "#f8f9fa",
+                  color: "#374151",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+              >
+                Reset Filter
+              </button>
               <button
                 onClick={handleDownloadFitToWorkExcel}
                 disabled={!fitToWorkStats}
@@ -2104,7 +2273,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 📄 PDF
               </button>
             </div>
+            </div>
           </div>
+          {/* Spacer agar konten tidak tertutup filter fixed */}
+          <div style={{ height: 100 }} />
           {/* Header */}
           <div style={{ marginBottom: "30px" }}>
             <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
@@ -2448,7 +2620,27 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      Total
+                      Kewajiban
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#3b82f6",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Pengisian
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#0ea5e9",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      % Pengisian
                     </th>
                     <th
                       style={{
@@ -2523,7 +2715,27 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           fontWeight: "bold",
                         }}
                       >
-                        {day.total}
+                        {day.kewajiban ?? "-"}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#3b82f6",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.pengisian ?? day.total ?? 0}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#0ea5e9",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.persentasePengisian != null ? `${day.persentasePengisian}%` : "-"}
                       </td>
                       <td
                         style={{
@@ -2573,8 +2785,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           fontWeight: "bold",
                         }}
                       >
-                        {day.total > 0
-                          ? ((day.fitToWork / day.total) * 100).toFixed(1)
+                        {(day.pengisian ?? day.total) > 0
+                          ? ((day.fitToWork / (day.pengisian ?? day.total)) * 100).toFixed(1)
                           : 0}
                         %
                       </td>
@@ -2582,6 +2794,125 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pie Chart & Bar Chart - Bersebelahan (filter mempengaruhi keduanya) */}
+              {fitToWorkStats.dailyStats.length > 0 && (
+                <div style={{ marginTop: "24px", display: "flex", gap: "24px", flexWrap: "wrap", alignItems: "flex-start" }}>
+                  {/* Pie Chart - mengikuti filter Harian/Bulanan/Tahunan */}
+                  {(() => {
+                    let totalFit = 0, totalNotFit = 0;
+                    if (chartViewMode === "daily" || chartAggregatedData.length === 0) {
+                      totalFit = fitToWorkStats.dailyStats.reduce((s, d) => s + (d.fitToWork ?? 0), 0);
+                      totalNotFit = fitToWorkStats.dailyStats.reduce((s, d) => s + (d.notFitToWork ?? 0), 0);
+                    } else {
+                      totalFit = chartAggregatedData.reduce((s, d) => s + (d.fitToWork ?? 0), 0);
+                      totalNotFit = chartAggregatedData.reduce((s, d) => s + (d.notFitToWork ?? 0), 0);
+                    }
+                    const pieData = [
+                      { name: "Fit To Work", value: totalFit, color: "#22c55e" },
+                      { name: "Not Fit To Work", value: totalNotFit, color: "#ef4444" },
+                    ].filter((d) => d.value > 0);
+                    return pieData.length > 0 ? (
+                      <div style={{ flex: "1 1 280px", minWidth: 280, maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <h4 style={{ marginBottom: "4px", color: "#1a1a1a", fontSize: "14px" }}>
+                          Perbandingan Fit To Work vs Not Fit To Work
+                        </h4>
+                        <span style={{ marginBottom: "12px", color: "#6b7280", fontSize: "12px" }}>
+                          {chartViewMode === "daily" && "(7 Hari)"}
+                          {chartViewMode === "monthly" && chartAggregatedData.length > 0 && "(12 Bulan)"}
+                          {chartViewMode === "yearly" && chartAggregatedData.length > 0 && "(5 Tahun)"}
+                        </span>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={80}
+                              paddingAngle={2}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {pieData.map((entry, i) => (
+                                <Cell key={i} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [v, ""]} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Bar Chart - Kewajiban vs Pengisian */}
+                  <div style={{ flex: "1 1 400px", minWidth: 400, height: "360px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
+                    <h4 style={{ margin: 0, color: "#1a1a1a", fontSize: "14px" }}>
+                      Grafik Kewajiban vs Pengisian
+                      {chartViewMode === "daily" && " (7 Hari)"}
+                      {chartViewMode === "monthly" && " (12 Bulan)"}
+                      {chartViewMode === "yearly" && " (5 Tahun)"}
+                    </h4>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      {["daily", "monthly", "yearly"].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setChartViewMode(m)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            border: chartViewMode === m ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                            background: chartViewMode === m ? "#eff6ff" : "#fff",
+                            color: chartViewMode === m ? "#1d4ed8" : "#374151",
+                            fontSize: "12px",
+                            fontWeight: 500,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {m === "daily" && "Harian"}
+                          {m === "monthly" && "Bulanan"}
+                          {m === "yearly" && "Tahunan"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart
+                      data={
+                        chartViewMode === "daily"
+                          ? fitToWorkStats.dailyStats.map((d) => ({
+                              tanggal: new Date(d.date + "T12:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
+                              Kewajiban: d.kewajiban ?? 0,
+                              Pengisian: d.pengisian ?? d.total ?? 0,
+                            }))
+                          : chartAggregatedData.map((d) => ({
+                              tanggal: d.label ?? "-",
+                              Kewajiban: d.kewajiban ?? 0,
+                              Pengisian: d.pengisian ?? 0,
+                            }))
+                      }
+                      margin={{ top: 10, right: 20, left: 10, bottom: 40 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="tanggal" tick={{ fontSize: 12 }} height={40} />
+                      <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="Kewajiban" fill="#6b7280" name="Kewajiban" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Pengisian" fill="#3b82f6" name="Pengisian" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  {chartViewMode !== "daily" && chartAggregatedData.length === 0 && (
+                    <div style={{ textAlign: "center", color: "#6b7280", fontSize: "13px", marginTop: "8px" }}>
+                      Memuat data...
+                    </div>
+                  )}
+                </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2835,23 +3166,37 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     return (
       <div style={{ padding: "0" }}>
-        {/* Filter Panel untuk Dashboard Statistik */}
+        {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
         <div
           style={{
-            display: "flex",
-            gap: "16px",
-            marginBottom: "20px",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
+            position: "fixed",
+            top: 0,
+            left: isMobile ? 0 : 240,
+            right: 0,
+            zIndex: 100,
+            background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
+            padding: "20px 0",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           }}
         >
+          <div
+            style={{
+              maxWidth: "1400px",
+              margin: "0 auto",
+              padding: "0 20px",
+              display: "flex",
+              gap: "16px",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
           <div
             style={{
               display: "flex",
               gap: "16px",
               flexWrap: "wrap",
-              alignItems: "center",
+              alignItems: "flex-end",
             }}
           >
             <div
@@ -2861,7 +3206,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 style={{
                   fontSize: "12px",
                   fontWeight: "bold",
-                  color: "#666",
+                  color: "#e5e7eb",
                 }}
               >
                 Tanggal Dari:
@@ -2872,6 +3217,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 onChange={(e) => setDateFrom(e.target.value)}
                 style={{
                   padding: "8px 12px",
+                  height: 38,
+                  boxSizing: "border-box",
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
@@ -2885,7 +3232,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 style={{
                   fontSize: "12px",
                   fontWeight: "bold",
-                  color: "#666",
+                  color: "#e5e7eb",
                 }}
               >
                 Tanggal Sampai:
@@ -2896,6 +3243,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 onChange={(e) => setDateTo(e.target.value)}
                 style={{
                   padding: "8px 12px",
+                  height: 38,
+                  boxSizing: "border-box",
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
@@ -2909,7 +3258,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 style={{
                   fontSize: "12px",
                   fontWeight: "bold",
-                  color: "#666",
+                  color: "#e5e7eb",
                 }}
               >
                 Site:
@@ -2919,6 +3268,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 onChange={(e) => setSite(e.target.value)}
                 style={{
                   padding: "8px 12px",
+                  height: 38,
+                  boxSizing: "border-box",
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
@@ -2927,59 +3278,46 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               >
                 <option value="">Semua Site</option>
                 <option value="Head Office">Head Office</option>
-                <option value="Balikpapan">Balikpapan</option>
-                <option value="ADRO">ADRO</option>
-                <option value="AMMP">AMMP</option>
-                <option value="BSIB">BSIB</option>
-                <option value="GAMR">GAMR</option>
-                <option value="HRSB">HRSB</option>
-                <option value="HRSE">HRSE</option>
-                <option value="PABB">PABB</option>
-                <option value="PBRB">PBRB</option>
-                <option value="PKJA">PKJA</option>
-                <option value="PPAB">PPAB</option>
-                <option value="PSMM">PSMM</option>
-                <option value="REBH">REBH</option>
-                <option value="RMTU">RMTU</option>
-                <option value="PMTU">PMTU</option>
-              </select>
-            </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#666",
-                }}
-              >
-                &nbsp;
-              </label>
-              <button
-                onClick={() => {
-                  setDateFrom("");
-                  setDateTo("");
-                  setSite("");
-                }}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  background: "#f8f9fa",
-                  color: "#666",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                Reset Filter
-              </button>
-            </div>
+                  <option value="Balikpapan">Balikpapan</option>
+                  <option value="ADRO">ADRO</option>
+                  <option value="AMMP">AMMP</option>
+                  <option value="BSIB">BSIB</option>
+                  <option value="GAMR">GAMR</option>
+                  <option value="HRSB">HRSB</option>
+                  <option value="HRSE">HRSE</option>
+                  <option value="PABB">PABB</option>
+                  <option value="PBRB">PBRB</option>
+                  <option value="PKJA">PKJA</option>
+                  <option value="PPAB">PPAB</option>
+                  <option value="PSMM">PSMM</option>
+                  <option value="REBH">REBH</option>
+                  <option value="RMTU">RMTU</option>
+                  <option value="PMTU">PMTU</option>
+                </select>
+              </div>
           </div>
 
-          {/* Download Buttons */}
-          <div style={{ display: "flex", gap: "8px" }}>
+          {/* Reset & Download Buttons */}
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+                setSite("");
+              }}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "1px solid #ddd",
+                background: "#f8f9fa",
+                color: "#374151",
+                fontSize: "14px",
+                cursor: "pointer",
+                fontWeight: "500",
+              }}
+            >
+              Reset Filter
+            </button>
             <button
               onClick={handleDownloadTake5Excel}
               disabled={!take5Stats}
@@ -3019,7 +3357,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               📄 PDF
             </button>
           </div>
+          </div>
         </div>
+        {/* Spacer agar konten tidak tertutup filter fixed */}
+        <div style={{ height: 100 }} />
         {/* Header */}
         <div style={{ marginBottom: "30px" }}>
           <h2 style={{ color: "#232946", marginBottom: "10px" }}>
@@ -3361,23 +3702,37 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     return (
       <div style={{ padding: "0" }}>
-        {/* Filter Panel untuk Dashboard Statistik */}
+        {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
         <div
           style={{
-            display: "flex",
-            gap: "16px",
-            marginBottom: "20px",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
+            position: "fixed",
+            top: 0,
+            left: isMobile ? 0 : 240,
+            right: 0,
+            zIndex: 100,
+            background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
+            padding: "20px 0",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           }}
         >
+          <div
+            style={{
+              maxWidth: "1400px",
+              margin: "0 auto",
+              padding: "0 20px",
+              display: "flex",
+              gap: "16px",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
           <div
             style={{
               display: "flex",
               gap: "16px",
               flexWrap: "wrap",
-              alignItems: "center",
+              alignItems: "flex-end",
             }}
           >
             <div
@@ -3387,7 +3742,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 style={{
                   fontSize: "12px",
                   fontWeight: "bold",
-                  color: "#666",
+                  color: "#e5e7eb",
                 }}
               >
                 Tanggal Dari:
@@ -3398,6 +3753,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 onChange={(e) => setDateFrom(e.target.value)}
                 style={{
                   padding: "8px 12px",
+                  height: 38,
+                  boxSizing: "border-box",
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
@@ -3411,7 +3768,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 style={{
                   fontSize: "12px",
                   fontWeight: "bold",
-                  color: "#666",
+                  color: "#e5e7eb",
                 }}
               >
                 Tanggal Sampai:
@@ -3422,6 +3779,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 onChange={(e) => setDateTo(e.target.value)}
                 style={{
                   padding: "8px 12px",
+                  height: 38,
+                  boxSizing: "border-box",
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
@@ -3435,7 +3794,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 style={{
                   fontSize: "12px",
                   fontWeight: "bold",
-                  color: "#666",
+                  color: "#e5e7eb",
                 }}
               >
                 Site:
@@ -3445,6 +3804,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 onChange={(e) => setSite(e.target.value)}
                 style={{
                   padding: "8px 12px",
+                  height: 38,
+                  boxSizing: "border-box",
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
@@ -3459,42 +3820,29 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 ))}
               </select>
             </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#666",
-                }}
-              >
-                &nbsp;
-              </label>
-              <button
-                onClick={() => {
-                  setDateFrom("");
-                  setDateTo("");
-                  setSite("");
-                }}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  background: "#f8f9fa",
-                  color: "#666",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                Reset Filter
-              </button>
-            </div>
           </div>
 
-          {/* Download Buttons */}
-          <div style={{ display: "flex", gap: "8px" }}>
+          {/* Reset & Download Buttons */}
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+                setSite("");
+              }}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "1px solid #ddd",
+                background: "#f8f9fa",
+                color: "#374151",
+                fontSize: "14px",
+                cursor: "pointer",
+                fontWeight: "500",
+              }}
+            >
+              Reset Filter
+            </button>
             <button
               onClick={handleDownloadHazardExcel}
               disabled={!hazardStats}
@@ -3553,8 +3901,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               📷 PDF + Gambar
             </button>
           </div>
+          </div>
         </div>
-
+        {/* Spacer agar konten tidak tertutup filter fixed */}
+        <div style={{ height: 100 }} />
         {/* Header */}
         <div style={{ marginBottom: "30px" }}>
           <h2 style={{ color: "#232946", marginBottom: "10px" }}>
@@ -4416,7 +4766,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   return (
     <div
       style={{
-        padding: "20px",
+        padding: "0 20px 20px 20px",
         overflow: "auto",
         scrollbarWidth: "thin",
         scrollbarColor: "rgba(0,0,0,0.3) transparent",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getLocationOptions } from "../config/siteLocations";
+import { getLocationOptions, getLocationOptionsAsync } from "../config/siteLocations";
 import MobileBackGesture from "./MobileBackGesture";
 
 const LocationDetailSelector = ({
@@ -14,21 +14,20 @@ const LocationDetailSelector = ({
 }) => {
   const [showLocationSelection, setShowLocationSelection] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [locationOptions, setLocationOptions] = useState([]);
 
-  // BSIB specific locations
-  const bsibLocations = [
-    "Office",
-    "Workshop",
-    "OSP",
-    "PIT A",
-    "PIT C",
-    "PIT E",
-    "Candrian",
-    "HLO",
-  ];
-
-  const locationOptions =
-    site === "BSIB" ? bsibLocations : getLocationOptions(site);
+  // Fetch location options dari DB, fallback ke config
+  useEffect(() => {
+    if (!site) {
+      setLocationOptions(getLocationOptions(site));
+      return;
+    }
+    let cancelled = false;
+    getLocationOptionsAsync(site).then((opts) => {
+      if (!cancelled) setLocationOptions(opts || getLocationOptions(site));
+    });
+    return () => { cancelled = true; };
+  }, [site]);
 
   // Update mobile detection on resize
   useEffect(() => {

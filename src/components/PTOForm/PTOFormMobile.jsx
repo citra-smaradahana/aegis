@@ -8,29 +8,22 @@ import MobileBottomNavigation from "../MobileBottomNavigation";
 import {
   shouldUseLocationSelector,
   getLocationOptions,
+  getLocationOptionsAsync,
   allowsCustomInput,
   CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
+import { fetchProsedur, fetchAlasanObservasi } from "../../utils/masterDataHelpers";
 
-const alasanObservasiOptions = [
-  "Pekerja Baru",
-  "Kinerja Pekerja Kurang Baik",
-  "Tes Praktek",
-  "Kinerja Pekerja Baik",
-  "Observasi Rutin",
-  "Baru Terjadi Insiden",
-  "Pekerja Dengan Pengetahuan Terbatas",
+const alasanObservasiFallback = [
+  "Pekerja Baru", "Kinerja Pekerja Kurang Baik", "Tes Praktek", "Kinerja Pekerja Baik",
+  "Observasi Rutin", "Baru Terjadi Insiden", "Pekerja Dengan Pengetahuan Terbatas",
 ];
 
-const prosedurOptions = [
-  "Prosedur Kerja Aman",
-  "Prosedur Penggunaan APD",
-  "Prosedur Operasi Mesin",
-  "Prosedur Pekerjaan di Ketinggian",
-  "Prosedur Pekerjaan Panas",
-  "Prosedur Pengangkatan Manual",
-  "Prosedur Pekerjaan di Ruang Terbatas",
+const prosedurFallback = [
+  "Prosedur Kerja Aman", "Prosedur Penggunaan APD", "Prosedur Operasi Mesin",
+  "Prosedur Pekerjaan di Ketinggian", "Prosedur Pekerjaan Panas",
+  "Prosedur Pengangkatan Manual", "Prosedur Pekerjaan di Ruang Terbatas",
 ];
 
 // Modal untuk memilih person (observer, observee, PIC) - return id
@@ -166,6 +159,9 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [observers, setObservers] = useState([]);
   const [observees, setObservees] = useState([]);
   const [pics, setPICs] = useState([]);
+  const [alasanObservasiOptions, setAlasanObservasiOptions] = useState(alasanObservasiFallback);
+  const [prosedurOptions, setProsedurOptions] = useState(prosedurFallback);
+  const [detailLokasiOptions, setDetailLokasiOptions] = useState([]);
 
   const [showObserverModal, setShowObserverModal] = useState(false);
   const [showObserveeModal, setShowObserveeModal] = useState(false);
@@ -192,6 +188,28 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
     setShowCustomDetailInput(false);
     setFormData((p) => ({ ...p, detailLokasi: "" }));
   }, [formData.site]);
+
+  useEffect(() => {
+    if (!formData.site) {
+      setDetailLokasiOptions(getLocationOptions(formData.site) || []);
+      return;
+    }
+    let cancelled = false;
+    getLocationOptionsAsync(formData.site).then((opts) => {
+      if (!cancelled) setDetailLokasiOptions(opts || getLocationOptions(formData.site) || []);
+    });
+    return () => { cancelled = true; };
+  }, [formData.site]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchAlasanObservasi(), fetchProsedur()]).then(([alasan, prosedur]) => {
+      if (cancelled) return;
+      if (alasan?.length > 0) setAlasanObservasiOptions(alasan);
+      if (prosedur?.length > 0) setProsedurOptions(prosedur);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const f = async () => {
@@ -885,7 +903,7 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
       <SelectModalWithSearch
         title="Pilih Detail Lokasi"
         options={[
-          ...(getLocationOptions(formData.site) || []),
+          ...(detailLokasiOptions || []),
           ...(allowsCustomInput(formData.site) ? ["Lainnya"] : []),
         ]}
         onSelect={(val) => {

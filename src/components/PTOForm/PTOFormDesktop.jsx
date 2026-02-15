@@ -3,6 +3,7 @@ import { supabase } from "../../supabaseClient";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import LocationDetailSelector from "../LocationDetailSelector";
 import Cropper from "react-easy-crop";
+import { fetchProsedur, fetchAlasanObservasi } from "../../utils/masterDataHelpers";
 
 // Inject CSS for PTO navigation buttons with higher specificity
 if (typeof document !== "undefined") {
@@ -29,14 +30,15 @@ if (typeof document !== "undefined") {
   document.head.appendChild(style);
 }
 
-const alasanObservasiOptions = [
-  "Pekerja Baru",
-  "Kinerja Pekerja Kurang Baik",
-  "Tes Praktek",
-  "Kinerja Pekerja Baik",
-  "Observasi Rutin",
-  "Baru Terjadi Insiden",
-  "Pekerja Dengan Pengetahuan Terbatas",
+const alasanObservasiFallback = [
+  "Pekerja Baru", "Kinerja Pekerja Kurang Baik", "Tes Praktek", "Kinerja Pekerja Baik",
+  "Observasi Rutin", "Baru Terjadi Insiden", "Pekerja Dengan Pengetahuan Terbatas",
+];
+
+const prosedurFallback = [
+  "Prosedur Kerja Aman", "Prosedur Penggunaan APD", "Prosedur Operasi Mesin",
+  "Prosedur Pekerjaan di Ketinggian", "Prosedur Pekerjaan Panas",
+  "Prosedur Pengangkatan Manual", "Prosedur Pekerjaan di Ruang Terbatas",
 ];
 
 function PTOFormDesktop({ user, onBack }) {
@@ -72,6 +74,8 @@ function PTOFormDesktop({ user, onBack }) {
   const [observers, setObservers] = useState([]);
   const [observees, setObservees] = useState([]);
   const [pics, setPICs] = useState([]);
+  const [alasanObservasiOptions, setAlasanObservasiOptions] = useState(alasanObservasiFallback);
+  const [prosedurOptions, setProsedurOptions] = useState(prosedurFallback);
 
   // Photo crop states
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -88,6 +92,16 @@ function PTOFormDesktop({ user, onBack }) {
       fetchPICs();
     }
   }, [formData.site, formData.observerTambahan]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchAlasanObservasi(), fetchProsedur()]).then(([alasan, prosedur]) => {
+      if (cancelled) return;
+      if (alasan?.length > 0) setAlasanObservasiOptions(alasan);
+      if (prosedur?.length > 0) setProsedurOptions(prosedur);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const fetchSites = async () => {
     try {
@@ -667,26 +681,9 @@ function PTOFormDesktop({ user, onBack }) {
             }}
           >
             <option value="">Pilih Prosedur</option>
-            <option value="Prosedur Kerja Aman">Prosedur Kerja Aman</option>
-            <option value="Prosedur Penggunaan APD">
-              Prosedur Penggunaan APD
-            </option>
-            <option value="Prosedur Operasi Mesin">
-              Prosedur Operasi Mesin
-            </option>
-            <option value="Prosedur Pekerjaan di Ketinggian">
-              Prosedur Pekerjaan di Ketinggian
-            </option>
-            <option value="Prosedur Pekerjaan Panas">
-              Prosedur Pekerjaan Panas
-            </option>
-            <option value="Prosedur Pengangkatan Manual">
-              Prosedur Pengangkatan Manual
-            </option>
-            <option value="Prosedur Pekerjaan di Ruang Terbatas">
-              Prosedur Pekerjaan di Ruang Terbatas
-            </option>
-            {/* TODO: Fetch dari table prosedur */}
+            {prosedurOptions.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
           </select>
         </div>
       </div>

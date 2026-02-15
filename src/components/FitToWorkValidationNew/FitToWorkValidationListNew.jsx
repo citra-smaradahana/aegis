@@ -19,6 +19,7 @@ function FitToWorkValidationListNew({
 }) {
   const [selectedValidation, setSelectedValidation] = useState(null);
   const [currentPage, setCurrentPage] = useState("list"); // "list" atau "form"
+  const [confirmOffUser, setConfirmOffUser] = useState(null); // { user, action: 'off'|'on' } untuk popup konfirmasi
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -116,11 +117,14 @@ function FitToWorkValidationListNew({
       <div
         style={{
           width: "100%",
+          maxWidth: "100vw",
           minHeight: "100vh",
           background: isMobile ? "#f8fafc" : "transparent",
           padding: isMobile ? "0" : "0 80px 0 24px",
           overflowY: "auto",
+          overflowX: "hidden",
           paddingBottom: 80,
+          boxSizing: "border-box",
         }}
       >
         <FitToWorkValidationFormNew
@@ -465,7 +469,7 @@ function FitToWorkValidationListNew({
                   </div>
                   <button
                     type="button"
-                    onClick={() => onMarkUserOff?.(u)}
+                    onClick={() => setConfirmOffUser({ user: u, action: "off" })}
                     style={{
                       padding: "8px 16px",
                       borderRadius: "8px",
@@ -566,7 +570,7 @@ function FitToWorkValidationListNew({
                     </div>
                     <button
                       type="button"
-                      onClick={() => onUnmarkUserOff?.(u)}
+                      onClick={() => setConfirmOffUser({ user: u, action: "on" })}
                       style={{
                         padding: "8px 16px",
                         borderRadius: "8px",
@@ -600,6 +604,106 @@ function FitToWorkValidationListNew({
                 Tidak ada karyawan yang ditandai off hari ini
               </div>
             )}
+          </div>
+        )}
+
+        {/* Popup Konfirmasi Off/On User */}
+        {confirmOffUser && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 9999,
+              padding: "16px",
+            }}
+            onClick={() => setConfirmOffUser(null)}
+          >
+            <div
+              style={{
+                background: isMobile ? "#fff" : "#1f2937",
+                borderRadius: "12px",
+                padding: "24px",
+                maxWidth: "400px",
+                width: "100%",
+                border: isMobile ? "none" : "1px solid #374151",
+                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3
+                style={{
+                  margin: "0 0 12px 0",
+                  color: isMobile ? "#1f2937" : "#e5e7eb",
+                  fontSize: "18px",
+                  fontWeight: "600",
+                }}
+              >
+                Konfirmasi
+              </h3>
+              <p
+                style={{
+                  margin: "0 0 20px 0",
+                  color: isMobile ? "#4b5563" : "#9ca3af",
+                  fontSize: "14px",
+                  lineHeight: 1.5,
+                }}
+              >
+                {confirmOffUser.action === "off"
+                  ? `Apakah Anda yakin akan menandai ${confirmOffUser.user.nama} (${confirmOffUser.user.nrp}) sebagai tidak hadir (off) hari ini?`
+                  : `Apakah Anda yakin akan menandai ${confirmOffUser.user.nama} (${confirmOffUser.user.nrp}) sebagai hadir (on)?`}
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setConfirmOffUser(null)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #6b7280",
+                    background: "transparent",
+                    color: isMobile ? "#374151" : "#9ca3af",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirmOffUser.action === "off") {
+                      onMarkUserOff?.(confirmOffUser.user);
+                    } else {
+                      onUnmarkUserOff?.(confirmOffUser.user);
+                    }
+                    setConfirmOffUser(null);
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: confirmOffUser.action === "off" ? "#f59e0b" : "#10b981",
+                    color: "#fff",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Ya, Konfirmasi
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

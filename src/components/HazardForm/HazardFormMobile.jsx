@@ -10,11 +10,13 @@ import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   getLocationOptions,
+  getLocationOptionsAsync,
   allowsCustomInput,
   shouldUseLocationSelector,
   CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
 import { SUB_OPTIONS, matchPotensiBahayaToKetidaksesuaian } from "../../config/hazardKetidaksesuaianOptions";
+import { fetchKetidaksesuaianSubOptions } from "../../utils/masterDataHelpers";
 import PendingReportsList from "./PendingReportsList";
 import { getNowWITAISO } from "../../utils/dateTimeHelpers";
 import MobileHeader from "../MobileHeader";
@@ -22,8 +24,12 @@ import MobileBottomNavigation from "../MobileBottomNavigation";
 import SelectModalWithSearch from "../SelectModalWithSearch";
 
 function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
+  const [subOptionsMap, setSubOptionsMap] = useState(null);
+  const [detailLokasiOptions, setDetailLokasiOptions] = useState([]);
+
   const getSubOptions = (kategori) => {
-    const arr = SUB_OPTIONS[kategori] || [];
+    const opts = subOptionsMap || SUB_OPTIONS;
+    const arr = opts[kategori] || [];
     return [...arr].sort((a, b) => a.localeCompare(b, "id"));
   };
   // Multi-page state
@@ -58,7 +64,6 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [subKetidaksesuaianSearchQuery, setSubKetidaksesuaianSearchQuery] = useState("");
   const [showQuickActionModal, setShowQuickActionModal] = useState(false);
   const [quickActionSearchQuery, setQuickActionSearchQuery] = useState("");
-  const [, setLocationOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -96,7 +101,8 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
       let ketidaksesuaian = "";
       let subKetidaksesuaian = "";
       if (selectedReport.sumber_laporan === "Take5" && selectedReport.potensi_bahaya) {
-        const matched = matchPotensiBahayaToKetidaksesuaian(selectedReport.potensi_bahaya, SUB_OPTIONS);
+        const opts = subOptionsMap || SUB_OPTIONS;
+        const matched = matchPotensiBahayaToKetidaksesuaian(selectedReport.potensi_bahaya, opts);
         ketidaksesuaian = matched.ketidaksesuaian || "";
         subKetidaksesuaian = matched.subKetidaksesuaian || "";
       }
@@ -166,19 +172,26 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
     fetchPIC();
   }, [form.lokasi, user.nama]);
 
-  // Update location options when lokasi changes
   useEffect(() => {
-    if (form.lokasi) {
-      const options = getLocationOptions(form.lokasi);
-      setLocationOptions(options);
-      // Reset detail lokasi when lokasi changes
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
-      setShowCustomInput(false);
-    } else {
-      setLocationOptions([]);
-      setForm((prev) => ({ ...prev, detailLokasi: "" }));
-      setShowCustomInput(false);
+    let cancelled = false;
+    fetchKetidaksesuaianSubOptions().then((opts) => {
+      if (!cancelled && opts && Object.keys(opts).length > 0) setSubOptionsMap(opts);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, detailLokasi: "" }));
+    setShowCustomInput(false);
+    if (!form.lokasi) {
+      setDetailLokasiOptions([]);
+      return;
     }
+    let cancelled = false;
+    getLocationOptionsAsync(form.lokasi).then((opts) => {
+      if (!cancelled) setDetailLokasiOptions(opts || getLocationOptions(form.lokasi) || []);
+    });
+    return () => { cancelled = true; };
   }, [form.lokasi]);
 
   // Handle detail lokasi change
@@ -837,7 +850,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     </div>
                     <SelectModalWithSearch
                       title="Pilih Detail Lokasi"
-                      options={getLocationOptions(form.lokasi) || []}
+                      options={detailLokasiOptions || []}
                       value={form.detailLokasi}
                       onSelect={(val) => {
                         setShowDetailLokasiModal(false);
@@ -1248,14 +1261,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                 </div>
                 <SelectModalWithSearch
                   title="Pilih Ketidaksesuaian"
-                  options={[
-                    "APD", "Area Parkir", "Bahaya Peledakan", "Bahaya Biologi",
-                    "Bahaya Elektrikal", "External Issue", "Fasilitas Mixing Plant",
-                    "Fasilitas Office", "Fasilitas Workshop", "Izin Kerja",
-                    "Kelayakan Bangunan", "Kelayakan Tools", "Kelengkapan Tanggap Darurat",
-                    "Kondisi Fisik Pekerja", "Kondisi Kendaraan/Unit", "Lingkungan Kerja",
-                    "Penandaan", "Rambu", "Tools Inspection",
-                  ]}
+                  options={[...new Set([...(Object.keys(subOptionsMap || SUB_OPTIONS)), ...Object.keys(SUB_OPTIONS)])].sort((a, b) => a.localeCompare(b, "id"))}
                   value={form.ketidaksesuaian}
                   onSelect={(val) => {
                     setForm((prev) => ({ ...prev, ketidaksesuaian: val, subKetidaksesuaian: "" }));

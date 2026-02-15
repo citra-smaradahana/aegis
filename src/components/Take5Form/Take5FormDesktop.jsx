@@ -3,37 +3,22 @@ import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
-  getLocationOptions,
   allowsCustomInput,
   shouldUseLocationSelector,
 } from "../../config/siteLocations";
 import LocationDetailSelector from "../LocationDetailSelector";
-
-const SITE_OPTIONS = [
-  "Head Office",
-  "Balikpapan",
-  "ADRO",
-  "AMMP",
-  "BSIB",
-  "GAMR",
-  "HRSB",
-  "HRSE",
-  "PABB",
-  "PBRB",
-  "PKJA",
-  "PPAB",
-  "PSMM",
-  "REBH",
-  "RMTU",
-  "PMTU",
-];
-
+import { fetchSites } from "../../utils/masterDataHelpers";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
+
+const SITE_OPTIONS_FALLBACK = [
+  "Head Office", "Balikpapan", "ADRO", "AMMP", "BSIB", "GAMR", "HRSB", "HRSE",
+  "PABB", "PBRB", "PKJA", "PPAB", "PSMM", "REBH", "RMTU", "PMTU",
+];
 
 const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const [site, setSite] = useState(user.site || "");
   const [detailLokasi, setDetailLokasi] = useState("");
-  const [, setLocationOptions] = useState([]);
+  const [siteOptions, setSiteOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [potensiBahaya, setPotensiBahaya] = useState("");
   const [q1, setQ1] = useState(null);
@@ -105,19 +90,19 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     }
   }, [hasNegativeAnswer, kondisiKerja]);
 
-  // Update location options when site changes
+  // Fetch site options dari DB, fallback ke config
   useEffect(() => {
-    if (site) {
-      const options = getLocationOptions(site);
-      setLocationOptions(options);
-      // Reset detail lokasi when site changes
-      setDetailLokasi("");
-      setShowCustomInput(false);
-    } else {
-      setLocationOptions([]);
-      setDetailLokasi("");
-      setShowCustomInput(false);
-    }
+    let cancelled = false;
+    fetchSites().then((arr) => {
+      if (!cancelled) setSiteOptions(Array.isArray(arr) && arr.length > 0 ? arr : SITE_OPTIONS_FALLBACK);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Reset detail lokasi when site changes
+  useEffect(() => {
+    setDetailLokasi("");
+    setShowCustomInput(false);
   }, [site]);
 
   // Handle detail lokasi change
@@ -566,7 +551,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                 style={inputStyle}
               >
                 <option value="">Pilih Lokasi</option>
-                {SITE_OPTIONS.map((s) => (
+                {(siteOptions.length > 0 ? siteOptions : SITE_OPTIONS_FALLBACK).map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>

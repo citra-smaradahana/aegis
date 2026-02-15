@@ -1,6 +1,7 @@
 import { supabase } from "../supabaseClient";
 import { fetchActiveMandatesForUser, isDelegatorOnsite } from "./mandateHelpers";
 import { getTodayWITA, getNowWITAISO } from "./dateTimeHelpers";
+import { fetchSitesFTWStatusMap } from "./masterDataHelpers";
 
 export { getTodayWITA };
 
@@ -10,7 +11,7 @@ export { getTodayWITA };
  * PJO, Asst PJO, SHERQ lihat semua.
  */
 function getSubordinateJabatansForValidator(jabatan, mandates, isDelegatorOnsiteMap) {
-  const j = (jabatan || "").trim();
+  const j = (jabatan || "").trim().replace(/\s+/g, " ");
 
   // PJO, Asst PJO, SHERQ, Administrator, Admin Site Project → lihat semua (return null = no filter)
   if (
@@ -49,6 +50,8 @@ function getSubordinateJabatansForValidator(jabatan, mandates, isDelegatorOnsite
   return []; // Jabatan lain tidak bisa akses
 }
 
+export { getSubordinateJabatansForValidator };
+
 /**
  * Ambil daftar user yang BELUM mengisi Fit To Work hari ini
  * dan BELUM ditandai off.
@@ -57,8 +60,13 @@ function getSubordinateJabatansForValidator(jabatan, mandates, isDelegatorOnsite
 export async function fetchUsersNotYetFilledFTW(user) {
   if (!user?.site) return [];
 
-  const jabatan = (user?.jabatan || "").trim();
   const userSite = user.site;
+
+  // Site dengan FTW disabled: tidak ada yang wajib isi, return kosong
+  const ftwStatusMap = await fetchSitesFTWStatusMap();
+  if (ftwStatusMap[userSite] === false) return [];
+
+  const jabatan = (user?.jabatan || "").trim();
   const today = getTodayWITA();
 
   // Cek jabatan validator
@@ -244,6 +252,10 @@ export async function fetchUsersMarkedOffToday(user) {
  */
 export async function userNeedsToFillFTWToday(user) {
   if (!user?.id || !user?.nrp || !user?.site) return false;
+
+  // Site dengan FTW disabled: tidak wajib mengisi (user tetap boleh mengisi)
+  const ftwStatusMap = await fetchSitesFTWStatusMap();
+  if (ftwStatusMap[user.site] === false) return false;
 
   const today = getTodayWITA();
 

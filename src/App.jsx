@@ -14,6 +14,7 @@ import HazardForm from "./components/HazardForm";
 import TasklistPage from "./components/TasklistPage";
 import UserManagement from "./components/UserManagement";
 import Campaign from "./components/Campaign";
+import AdminSettings from "./components/AdminSettings";
 import Profile from "./components/Profile";
 import Home from "./components/Home";
 import FitToWorkValidationNew from "./components/FitToWorkValidationNew";
@@ -284,6 +285,11 @@ function App() {
             return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
           }
           return <Campaign user={user} onBack={handleBackToMain} />;
+        case "pengaturan":
+          if (user?.jabatan !== "Administrator") {
+            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
+          }
+          return <AdminSettings user={user} onBack={handleBackToMain} />;
         case "user-management":
           if (user?.jabatan !== "Administrator") {
             return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
@@ -853,8 +859,9 @@ function App() {
                 </>
               )}
 
-              {/* Menu Campaign hanya untuk Administrator */}
+              {/* Menu Campaign dan Pengaturan hanya untuk Administrator */}
               {user?.jabatan === "Administrator" && (
+                <>
                 <button
                   onClick={() => handleMenuChange("campaign")}
                   style={{
@@ -874,6 +881,26 @@ function App() {
                 >
                   Campaign
                 </button>
+                <button
+                  onClick={() => handleMenuChange("pengaturan")}
+                  style={{
+                    textAlign: "left",
+                    width: "100%",
+                    padding: "8px 10px",
+                    background:
+                      activeMenu === "pengaturan"
+                        ? "rgba(0,0,0,0.15)"
+                        : "transparent",
+                    color: "#ffffff",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  Pengaturan
+                </button>
+                </>
               )}
               {/* Menu Management User hanya untuk Administrator (bukan Admin Site Project) */}
               {user?.jabatan === "Administrator" && (

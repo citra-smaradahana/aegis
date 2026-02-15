@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from './cropImageUtil';
+import { fetchSites, fetchJabatan } from '../../utils/masterDataHelpers';
 import './Dropzone.css';
 
 function sanitizeFileName(name) {
@@ -14,49 +15,23 @@ const roleOptions = [
   { value: 'admin', label: 'admin' },
 ];
 
-const jabatanOptions = [
-  {
-    value: 'Penanggung Jawab Operasional',
-    label: 'Penanggung Jawab Operasional',
-  },
-  {
-    value: 'Asst. Penanggung Jawab Operasional',
-    label: 'Asst. Penanggung Jawab Operasional',
-  },
+const jabatanOptionsFallback = [
+  { value: 'Penanggung Jawab Operasional', label: 'Penanggung Jawab Operasional' },
   { value: 'SHERQ Officer', label: 'SHERQ Officer' },
-  { value: 'SHERQ System & Compliance Officer', label: 'SHERQ System & Compliance Officer' },
-  { value: 'Technical Service', label: 'Technical Service' },
-  { value: 'Field Leading Hand', label: 'Field Leading Hand' },
-  { value: 'Plant Leading Hand', label: 'Plant Leading Hand' },
-  { value: 'Operator MMU', label: 'Operator MMU' },
-  { value: 'Operator Plant', label: 'Operator Plant' },
-  { value: 'Operator WOPP', label: 'Operator WOPP' },
-  { value: 'Mekanik', label: 'Mekanik' },
-  { value: 'Crew', label: 'Crew' },
   { value: 'Administrator', label: 'Administrator' },
   { value: 'Admin Site Project', label: 'Admin Site Project' },
+  { value: 'Field Leading Hand', label: 'Field Leading Hand' },
+  { value: 'Crew', label: 'Crew' },
   { value: 'Blaster', label: 'Blaster' },
   { value: 'Quality Controller', label: 'Quality Controller' },
-  { value: 'Training & Development Specialist', label: 'Training & Development Specialist' },
 ];
 
-const siteOptions = [
-  { value: 'Head Office', label: 'Head Office' },
-  { value: 'Balikpapan', label: 'Balikpapan' },
-  { value: 'ADRO', label: 'ADRO' },
-  { value: 'AMMP', label: 'AMMP' },
-  { value: 'BSIB', label: 'BSIB' },
-  { value: 'GAMR', label: 'GAMR' },
-  { value: 'HRSB', label: 'HRSB' },
-  { value: 'HRSE', label: 'HRSE' },
-  { value: 'PABB', label: 'PABB' },
-  { value: 'PBRB', label: 'PBRB' },
-  { value: 'PKJA', label: 'PKJA' },
-  { value: 'PPAB', label: 'PPAB' },
-  { value: 'PSMM', label: 'PSMM' },
-  { value: 'REBH', label: 'REBH' },
-  { value: 'RMTU', label: 'RMTU' },
-  { value: 'PMTU', label: 'PMTU' },
+const siteOptionsFallback = [
+  { value: 'Head Office', label: 'Head Office' }, { value: 'BSIB', label: 'BSIB' },
+  { value: 'ADRO', label: 'ADRO' }, { value: 'AMMP', label: 'AMMP' },
+  { value: 'PABB', label: 'PABB' }, { value: 'PBRB', label: 'PBRB' },
+  { value: 'PKJA', label: 'PKJA' }, { value: 'PPAB', label: 'PPAB' },
+  { value: 'PSMM', label: 'PSMM' }, { value: 'REBH', label: 'REBH' },
 ];
 
 function UploadKaryawan() {
@@ -81,6 +56,19 @@ function UploadKaryawan() {
   const [showCrop, setShowCrop] = useState(false);
   const [rawImage, setRawImage] = useState(null);
   const fileInputRef = React.useRef();
+  const [siteOptions, setSiteOptions] = useState(siteOptionsFallback);
+  const [jabatanOptions, setJabatanOptions] = useState(jabatanOptionsFallback);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchSites(), fetchJabatan()]).then(([sites, jabatan]) => {
+      if (cancelled) return;
+      if (sites?.length > 0) setSiteOptions(sites.map((s) => ({ value: s, label: s })));
+      if (jabatan?.length > 0) setJabatanOptions(jabatan);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const defaultAvatar =
     'https://ui-avatars.com/api/?name=Foto&background=ddd&color=555';
 
