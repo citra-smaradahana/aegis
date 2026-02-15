@@ -172,7 +172,8 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
           flex: 1,
           padding: "20px",
           overflowY: "auto",
-          paddingBottom: "120px", // Tambah padding bottom untuk navbar bawah
+          WebkitOverflowScrolling: "touch",
+          paddingBottom: "240px", // Ruang untuk fixed buttons (Ganti Password, Logout) + navbar agar Mandat Aktif & Nonaktifkan bisa di-scroll
         }}
       >
         {/* Profile Photo */}
@@ -343,7 +344,9 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
         </div>
 
         {/* Mandat Validasi Section */}
-        <MandatSection user={user} isMobile={true} />
+        <div style={{ marginBottom: 24 }}>
+          <MandatSection user={user} isMobile={true} />
+        </div>
       </div>
 
       {/* Fixed Buttons Container */}

@@ -8,6 +8,92 @@ import {
   MANDATE_CONFIG,
 } from "../../utils/mandateHelpers";
 
+// Modal popup Penerima Mandat - muncul dari atas navbar (bottom sheet)
+function PenerimaMandatModal({
+  show,
+  onClose,
+  recipients,
+  searchQuery,
+  onSearchChange,
+  onSelect,
+}) {
+  if (!show) return null;
+  const filtered = recipients.filter((r) =>
+    `${r.nama || ""} ${r.jabatan || ""}`.toLowerCase().includes((searchQuery || "").toLowerCase())
+  );
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 70,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        zIndex: 1100,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: "#fff",
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          maxHeight: "70vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>Penerima Mandat</div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Ketik untuk mencari..."
+            autoComplete="off"
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: 8,
+              border: "1px solid #d1d5db",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+          {filtered.map((r) => (
+            <div
+              key={r.id}
+              onClick={() => onSelect(r.id)}
+              style={{
+                padding: "14px 16px",
+                fontSize: 16,
+                color: "#1f2937",
+                cursor: "pointer",
+                borderBottom: "1px solid #f3f4f6",
+              }}
+            >
+              {r.nama} ({r.jabatan})
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div style={{ padding: 24, textAlign: "center", color: "#6b7280", fontSize: 14 }}>
+              Tidak ada yang sesuai
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MandatSection({ user, isMobile = false, embedded = false }) {
   const [recipients, setRecipients] = useState([]);
   const [mandates, setMandates] = useState([]);
@@ -17,6 +103,8 @@ function MandatSection({ user, isMobile = false, embedded = false }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [showPenerimaModal, setShowPenerimaModal] = useState(false);
+  const [penerimaSearchQuery, setPenerimaSearchQuery] = useState("");
 
   const config = user?.jabatan ? MANDATE_CONFIG[user.jabatan] : null;
   const showSection = canGiveMandate(user?.jabatan);
@@ -176,27 +264,71 @@ function MandatSection({ user, isMobile = false, embedded = false }) {
             >
               Penerima Mandat
             </label>
-            <select
-              value={selectedRecipientId}
-              onChange={(e) => setSelectedRecipientId(e.target.value)}
-              required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: `1px solid ${cardBorder}`,
-                borderRadius: 8,
-                background: inputBg,
-                color: baseTextColor,
-                fontSize: 14,
-              }}
-            >
-              <option value="">Pilih penerima...</option>
-              {recipients.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nama} ({r.jabatan})
-                </option>
-              ))}
-            </select>
+            {isMobile ? (
+              <>
+                <div
+                  onClick={() => setShowPenerimaModal(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && setShowPenerimaModal(true)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    border: `1px solid ${cardBorder}`,
+                    borderRadius: 8,
+                    background: inputBg,
+                    color: selectedRecipientId ? baseTextColor : baseLabelColor,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    minHeight: 40,
+                  }}
+                >
+                  {(() => {
+                    const r = recipients.find((x) => x.id === selectedRecipientId);
+                    return r ? `${r.nama} (${r.jabatan})` : "Pilih penerima...";
+                  })()}
+                </div>
+                {showPenerimaModal && (
+                  <PenerimaMandatModal
+                    show={showPenerimaModal}
+                    onClose={() => {
+                      setShowPenerimaModal(false);
+                      setPenerimaSearchQuery("");
+                    }}
+                    recipients={recipients}
+                    searchQuery={penerimaSearchQuery}
+                    onSearchChange={setPenerimaSearchQuery}
+                    onSelect={(id) => {
+                      setSelectedRecipientId(id || "");
+                      setShowPenerimaModal(false);
+                      setPenerimaSearchQuery("");
+                    }}
+                  />
+                )}
+              </>
+            ) : (
+              <select
+                value={selectedRecipientId}
+                onChange={(e) => setSelectedRecipientId(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: `1px solid ${cardBorder}`,
+                  borderRadius: 8,
+                  background: inputBg,
+                  color: baseTextColor,
+                  fontSize: 14,
+                }}
+              >
+                <option value="">Pilih penerima...</option>
+                {recipients.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.nama} ({r.jabatan})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label

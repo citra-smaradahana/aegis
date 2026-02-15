@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+import SelectModalWithSearch from "../SelectModalWithSearch";
 import { fetchActiveMandatesForUser, isDelegatorOnsite } from "../../utils/mandateHelpers";
 
 function FitToWorkValidationFormNew({
@@ -18,6 +19,8 @@ function FitToWorkValidationFormNew({
   const [mandateCanEditL1, setMandateCanEditL1] = useState(false);
   const [mandateCanEditL2, setMandateCanEditL2] = useState(false);
   const [permissionLoading, setPermissionLoading] = useState(true);
+  const [showTindakanModal, setShowTindakanModal] = useState(false);
+  const [tindakanSearchQuery, setTindakanSearchQuery] = useState("");
 
   // Options for validasi_tahap1
   const validasiTahap1Options = [
@@ -1038,30 +1041,69 @@ function FitToWorkValidationFormNew({
           >
             Tindakan yang Dilakukan: *
           </label>
-          <select
-            value={formData.validasi_tahap1 || ""}
-            onChange={(e) =>
-              handleInputChange("validasi_tahap1", e.target.value)
-            }
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #374151",
-              borderRadius: "8px",
-              fontSize: "14px",
-              backgroundColor: "#111827",
-              color: "#e5e7eb",
-              outline: "none",
-            }}
-            required
-          >
-            <option value="">Pilih tindakan...</option>
-            {validasiTahap1Options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          {isMobile ? (
+            <>
+              <div
+                onClick={() => setShowTindakanModal(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === "Enter" && setShowTindakanModal(true)}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid #374151",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  backgroundColor: "#111827",
+                  color: formData.validasi_tahap1 ? "#e5e7eb" : "#6b7280",
+                  outline: "none",
+                  cursor: "pointer",
+                  minHeight: 44,
+                }}
+              >
+                {formData.validasi_tahap1 || "Pilih tindakan..."}
+              </div>
+              <SelectModalWithSearch
+                title="Pilih tindakan yang dilakukan"
+                options={validasiTahap1Options}
+                searchQuery={tindakanSearchQuery}
+                onSearchChange={setTindakanSearchQuery}
+                show={showTindakanModal}
+                onClose={() => { setShowTindakanModal(false); setTindakanSearchQuery(""); }}
+                onSelect={(opt) => {
+                  handleInputChange("validasi_tahap1", opt);
+                  setShowTindakanModal(false);
+                  setTindakanSearchQuery("");
+                }}
+                placeholder="Ketik untuk mencari..."
+              />
+            </>
+          ) : (
+            <select
+              value={formData.validasi_tahap1 || ""}
+              onChange={(e) =>
+                handleInputChange("validasi_tahap1", e.target.value)
+              }
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #374151",
+                borderRadius: "8px",
+                fontSize: "14px",
+                backgroundColor: "#111827",
+                color: "#e5e7eb",
+                outline: "none",
+              }}
+              required
+            >
+              <option value="">Pilih tindakan...</option>
+              {validasiTahap1Options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div style={{ marginBottom: "20px" }}>
