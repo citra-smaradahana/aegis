@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
+import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
 function FitToWorkValidationListNew({
   validations,
@@ -59,6 +60,15 @@ function FitToWorkValidationListNew({
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+    });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   };
 
@@ -145,6 +155,16 @@ function FitToWorkValidationListNew({
   const pendingList = (validations || []).filter((v) =>
     pendingStatuses.includes(v.workflow_status)
   );
+
+  // User yang awalnya Not Fit To Work pada hari ini, menjadi Fit To Work setelah validasi
+  const todayStr = getTodayWITA();
+  const notFitBecameFitList = (validations || []).filter((v) => {
+    const tanggalMatch = (v.tanggal || (v.created_at || "").slice(0, 10)) === todayStr;
+    const wasNotFit = (v.initial_status_fatigue || "").toLowerCase().includes("not fit");
+    const nowFit = (v.status_fatigue || "").toLowerCase().includes("fit to work");
+    const isClosed = (v.workflow_status || "") === "Closed";
+    return tanggalMatch && wasNotFit && nowFit && isClosed;
+  });
 
   const renderValidationCard = (validation, index) => (
     <div
@@ -403,6 +423,99 @@ function FitToWorkValidationListNew({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Section: Not Fit To Work → Fit To Work (hari ini, sudah divalidasi) */}
+        <div style={{ marginBottom: "32px" }}>
+          <h3
+            style={{
+              margin: "0 0 12px 0",
+              color: isMobile ? "#1f2937" : "#e5e7eb",
+              fontSize: "16px",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span style={{ color: "#10b981" }}>✅</span> Not Fit To Work → Fit To Work Hari Ini ({notFitBecameFitList.length})
+          </h3>
+          <p
+            style={{
+              margin: "0 0 12px 0",
+              color: isMobile ? "#4b5563" : "#9ca3af",
+              fontSize: "13px",
+              fontWeight: "500",
+            }}
+          >
+            Karyawan yang awalnya Not Fit To Work pada hari ini dan telah divalidasi menjadi Fit To Work.
+          </p>
+          {notFitBecameFitList.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {notFitBecameFitList.map((v) => (
+                <div
+                  key={v.id}
+                  style={{
+                    background: isMobile ? "white" : "#1f2937",
+                    border: isMobile ? "1px solid #e5e7eb" : "1px solid #374151",
+                    borderRadius: "12px",
+                    padding: isMobile ? "16px" : "20px",
+                    boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <div style={{ color: isMobile ? "#1f2937" : "#e5e7eb", fontSize: "16px", fontWeight: "600", marginBottom: "4px" }}>
+                        {v.nama}
+                      </div>
+                      <div style={{ color: isMobile ? "#6b7280" : "#9ca3af", fontSize: "14px" }}>
+                        {v.jabatan} • NRP: {v.nrp} • {v.site}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "12px", fontSize: "13px" }}>
+                    <div>
+                      <div style={{ color: "#9ca3af", fontWeight: "600", marginBottom: "4px" }}>Catatan Tahap 1</div>
+                      <div style={{ color: isMobile ? "#374151" : "#e5e7eb" }}>{v.catatan_tahap1 || "—"}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: "#9ca3af", fontWeight: "600", marginBottom: "4px" }}>Catatan Tahap 2</div>
+                      <div style={{ color: isMobile ? "#374151" : "#e5e7eb" }}>{v.catatan_tahap2 || "—"}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginTop: "12px", paddingTop: "12px", borderTop: isMobile ? "1px solid #e5e7eb" : "1px solid #374151", fontSize: "12px" }}>
+                    <div>
+                      <div style={{ color: "#9ca3af", marginBottom: "2px" }}>Jam Pembuatan</div>
+                      <div style={{ color: isMobile ? "#374151" : "#e5e7eb", fontWeight: "500" }}>{formatTime(v.created_at)}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: "#9ca3af", marginBottom: "2px" }}>Jam Validasi Tahap 1</div>
+                      <div style={{ color: isMobile ? "#374151" : "#e5e7eb", fontWeight: "500" }}>{formatTime(v.reviewed_tahap1_at)}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: "#9ca3af", marginBottom: "2px" }}>Jam Validasi Tahap 2</div>
+                      <div style={{ color: isMobile ? "#374151" : "#e5e7eb", fontWeight: "500" }}>{formatTime(v.reviewed_tahap2_at)}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: "20px",
+                backgroundColor: isMobile ? "#f3f4f6" : "#1f2937",
+                borderRadius: "12px",
+                border: isMobile ? "1px dashed #9ca3af" : "1px dashed #374151",
+                color: isMobile ? "#374151" : "#d1d5db",
+                fontSize: "14px",
+                textAlign: "center",
+                fontWeight: "500",
+              }}
+            >
+              Tidak ada data. Karyawan yang awalnya Not Fit To Work dan sudah divalidasi menjadi Fit To Work akan muncul di sini.
+            </div>
+          )}
         </div>
 
         {/* Section: Belum Isi Fit To Work Hari Ini (karyawan yang belum isi FTW / belum di-off) */}

@@ -69,6 +69,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     siteStats: [],
     dailyStats: [],
     recentReports: [],
+    listData: [],
   });
 
   // Hazard Statistics State
@@ -88,6 +89,19 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     siteStats: [],
     dailyStats: [],
     recentReports: [],
+    listData: [],
+  });
+
+  // PTO Statistics State
+  const [ptoStats, setPtoStats] = useState({
+    totalReports: 0,
+    pendingReports: 0,
+    closedReports: 0,
+    completionRate: 0,
+    siteStats: {},
+    dailyStats: [],
+    recentReports: [],
+    listData: [],
   });
 
   // Individual Statistics State
@@ -95,6 +109,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     fitToWork: [],
     take5: [],
     hazard: [],
+    pto: [],
   });
 
   // Pagination untuk tabel Data Pengisian Fit To Work
@@ -112,6 +127,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   // Chart view mode untuk grafik batang: daily | weekly | monthly | yearly
   const [chartViewMode, setChartViewMode] = useState("daily");
   const [chartAggregatedData, setChartAggregatedData] = useState([]);
+  const [take5ChartAggregatedData, setTake5ChartAggregatedData] = useState([]);
+  const [ptoChartAggregatedData, setPtoChartAggregatedData] = useState([]);
 
   // Initialize based on subMenu
   useEffect(() => {
@@ -124,6 +141,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     } else if (subMenu === "Hazard") {
       setSelectedTable("hazard_stats");
       fetchHazardStats();
+    } else if (subMenu === "PTO") {
+      setSelectedTable("pto_stats");
+      fetchPtoStats();
     }
   }, [subMenu]);
 
@@ -142,6 +162,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       fetchTake5Stats();
     } else if (selectedTable === "hazard_stats") {
       fetchHazardStats();
+    } else if (selectedTable === "pto_stats") {
+      fetchPtoStats();
     }
   }, [dateFrom, dateTo, site]);
 
@@ -232,7 +254,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
             "closed",
           ];
 
-  // Fetch Fit To Work Statistics
+  // Fetch Fit To Work Statistics (limit 50000 agar semua data terambil untuk analisa lengkap)
   const fetchFitToWorkStats = async () => {
     setLoading(true);
     try {
@@ -240,6 +262,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
+      query = query.limit(50000);
 
       const startDt = dateFrom || getDateWITARelative(-6);
       const endDt = dateTo || getTodayWITA();
@@ -406,16 +429,168 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     run();
   }, [selectedTable, chartViewMode, site]);
 
-  // Fetch Take 5 Statistics
+  // Fetch Take 5 chart aggregated data (monthly/yearly)
+  useEffect(() => {
+    if (selectedTable !== "take_5_stats" || chartViewMode === "daily") {
+      setTake5ChartAggregatedData([]);
+      return;
+    }
+    const run = async () => {
+      let rangeFromStr, rangeToStr;
+      if (chartViewMode === "monthly") {
+        rangeToStr = getTodayWITA();
+        const todayStr = getTodayWITA();
+        const [y, m] = todayStr.split("-").map(Number);
+        const start = new Date(Date.UTC(y, m - 1 - 11, 1));
+        rangeFromStr = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}-01`;
+      } else if (chartViewMode === "yearly") {
+        rangeToStr = getTodayWITA();
+        const y = parseInt(getTodayWITA().split("-")[0], 10);
+        rangeFromStr = `${y - 4}-01-01`;
+      } else return;
+
+      try {
+        let query = supabase.from("take_5").select("*").gte("created_at", rangeFromStr).lte("created_at", rangeToStr);
+        if (site) query = query.eq("site", site);
+        query = query.limit(50000);
+        const { data, error } = await query;
+        if (error) throw error;
+        const list = data || [];
+
+        const daily = [];
+        let cur = new Date(rangeFromStr + "T12:00:00+08:00");
+        const endD = new Date(rangeToStr + "T12:00:00+08:00");
+        while (cur <= endD) {
+          const dateStr = cur.toISOString().slice(0, 10);
+          const dayData = list.filter((item) => (item.created_at || "").slice(0, 10) === dateStr);
+          daily.push({
+            date: dateStr,
+            total: dayData.length,
+            open: dayData.filter((i) => (i.status || "").toLowerCase() === "open").length,
+            done: dayData.filter((i) => (i.status || "").toLowerCase() === "done").length,
+            closed: dayData.filter((i) => (i.status || "").toLowerCase() === "closed").length,
+          });
+          cur.setTime(cur.getTime() + 24 * 60 * 60 * 1000);
+        }
+
+        if (chartViewMode === "monthly") {
+          const byMonth = {};
+          daily.forEach((d) => {
+            const dt = new Date(d.date + "T12:00:00");
+            const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+            if (!byMonth[key]) byMonth[key] = { label: "", total: 0, open: 0, done: 0, closed: 0 };
+            byMonth[key].total += d.total ?? 0;
+            byMonth[key].open += d.open ?? 0;
+            byMonth[key].done += d.done ?? 0;
+            byMonth[key].closed += d.closed ?? 0;
+            const names = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+            byMonth[key].label = `${names[dt.getMonth()]} ${dt.getFullYear()}`;
+          });
+          setTake5ChartAggregatedData(Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v));
+        } else if (chartViewMode === "yearly") {
+          const byYear = {};
+          daily.forEach((d) => {
+            const y = new Date(d.date + "T12:00:00").getFullYear();
+            if (!byYear[y]) byYear[y] = { label: String(y), total: 0, open: 0, done: 0, closed: 0 };
+            byYear[y].total += d.total ?? 0;
+            byYear[y].open += d.open ?? 0;
+            byYear[y].done += d.done ?? 0;
+            byYear[y].closed += d.closed ?? 0;
+          });
+          setTake5ChartAggregatedData(Object.entries(byYear).sort((a, b) => a[0] - b[0]).map(([, v]) => v));
+        }
+      } catch (err) {
+        console.error("Error fetching Take 5 chart data:", err);
+        setTake5ChartAggregatedData([]);
+      }
+    };
+    run();
+  }, [selectedTable, chartViewMode, site]);
+
+  // Fetch PTO chart aggregated data (monthly/yearly)
+  useEffect(() => {
+    if (selectedTable !== "pto_stats" || chartViewMode === "daily") {
+      setPtoChartAggregatedData([]);
+      return;
+    }
+    const run = async () => {
+      let rangeFromStr, rangeToStr;
+      if (chartViewMode === "monthly") {
+        rangeToStr = getTodayWITA();
+        const todayStr = getTodayWITA();
+        const [y, m] = todayStr.split("-").map(Number);
+        const start = new Date(Date.UTC(y, m - 1 - 11, 1));
+        rangeFromStr = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}-01`;
+      } else if (chartViewMode === "yearly") {
+        rangeToStr = getTodayWITA();
+        const y = parseInt(getTodayWITA().split("-")[0], 10);
+        rangeFromStr = `${y - 4}-01-01`;
+      } else return;
+
+      try {
+        let query = supabase.from("planned_task_observation").select("*").gte("tanggal", rangeFromStr).lte("tanggal", rangeToStr);
+        if (site) query = query.eq("site", site);
+        query = query.limit(50000);
+        const { data, error } = await query;
+        if (error) throw error;
+        const list = data || [];
+
+        const daily = [];
+        let cur = new Date(rangeFromStr + "T12:00:00+08:00");
+        const endD = new Date(rangeToStr + "T12:00:00+08:00");
+        while (cur <= endD) {
+          const dateStr = cur.toISOString().slice(0, 10);
+          const dayData = list.filter((item) => (item.tanggal || "") === dateStr);
+          daily.push({
+            date: dateStr,
+            total: dayData.length,
+            pending: dayData.filter((i) => (i.status || "").toLowerCase() === "pending").length,
+            closed: dayData.filter((i) => (i.status || "").toLowerCase() === "closed").length,
+          });
+          cur.setTime(cur.getTime() + 24 * 60 * 60 * 1000);
+        }
+
+        if (chartViewMode === "monthly") {
+          const byMonth = {};
+          daily.forEach((d) => {
+            const dt = new Date(d.date + "T12:00:00");
+            const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+            if (!byMonth[key]) byMonth[key] = { label: "", total: 0, pending: 0, closed: 0 };
+            byMonth[key].total += d.total ?? 0;
+            byMonth[key].pending += d.pending ?? 0;
+            byMonth[key].closed += d.closed ?? 0;
+            const names = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+            byMonth[key].label = `${names[dt.getMonth()]} ${dt.getFullYear()}`;
+          });
+          setPtoChartAggregatedData(Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v));
+        } else if (chartViewMode === "yearly") {
+          const byYear = {};
+          daily.forEach((d) => {
+            const y = new Date(d.date + "T12:00:00").getFullYear();
+            if (!byYear[y]) byYear[y] = { label: String(y), total: 0, pending: 0, closed: 0 };
+            byYear[y].total += d.total ?? 0;
+            byYear[y].pending += d.pending ?? 0;
+            byYear[y].closed += d.closed ?? 0;
+          });
+          setPtoChartAggregatedData(Object.entries(byYear).sort((a, b) => a[0] - b[0]).map(([, v]) => v));
+        }
+      } catch (err) {
+        console.error("Error fetching PTO chart data:", err);
+        setPtoChartAggregatedData([]);
+      }
+    };
+    run();
+  }, [selectedTable, chartViewMode, site]);
+
+  // Fetch Take 5 Statistics (limit 50000 agar semua data terambil untuk analisa lengkap)
   const fetchTake5Stats = async () => {
     setLoading(true);
     try {
       let query = supabase.from("take_5").select("*");
-
       if (dateFrom) query = query.gte("created_at", dateFrom);
       if (dateTo) query = query.lte("created_at", dateTo);
-      // Use site field for filtering, as it contains the correct site names
       if (site) query = query.eq("site", site);
+      query = query.limit(50000);
 
       console.log("=== TAKE 5 QUERY DEBUG ===");
       console.log("Site filter:", site);
@@ -473,16 +648,16 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     }
   };
 
-  // Fetch Hazard Statistics
+  // Fetch Hazard Statistics (limit 50000 agar semua data terambil untuk analisa lengkap)
   const fetchHazardStats = async () => {
     setLoading(true);
     try {
       // Fetch dari tabel tasklist (Hazard)
       let query = supabase.from("tasklist").select("*");
-
       if (dateFrom) query = query.gte("created_at", dateFrom);
       if (dateTo) query = query.lte("created_at", dateTo);
       if (site) query = query.eq("lokasi", site);
+      query = query.limit(50000);
 
       const { data: tasklistData, error: tasklistError } = await query;
 
@@ -506,10 +681,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
       // Fetch dari tabel hazard_report (bukan hazard)
       let hazardQuery = supabase.from("hazard_report").select("*");
-
       if (dateFrom) hazardQuery = hazardQuery.gte("created_at", dateFrom);
       if (dateTo) hazardQuery = hazardQuery.lte("created_at", dateTo);
       if (site) hazardQuery = hazardQuery.eq("lokasi", site);
+      hazardQuery = hazardQuery.limit(50000);
 
       const { data: hazardData, error: hazardError } = await hazardQuery;
 
@@ -588,6 +763,36 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       setIndividualStats((prev) => ({ ...prev, hazard: individualData }));
     } catch (error) {
       console.error("Error in fetchHazardStats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch PTO Statistics (limit 50000 agar semua data terambil untuk analisa lengkap)
+  const fetchPtoStats = async () => {
+    setLoading(true);
+    try {
+      let query = supabase.from("planned_task_observation").select("*");
+      if (dateFrom) query = query.gte("tanggal", dateFrom);
+      if (dateTo) query = query.lte("tanggal", dateTo);
+      if (site) query = query.eq("site", site);
+      query = query.limit(50000);
+
+      const { data: ptoData, error } = await query;
+
+      if (error) {
+        console.error("Error fetching PTO data:", error);
+        setLoading(false);
+        return;
+      }
+
+      const stats = calculatePtoStats(ptoData || []);
+      setPtoStats(stats);
+
+      const individualData = calculateIndividualStats(ptoData || [], "pto");
+      setIndividualStats((prev) => ({ ...prev, pto: individualData }));
+    } catch (error) {
+      console.error("Error in fetchPtoStats:", error);
     } finally {
       setLoading(false);
     }
@@ -767,8 +972,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }
     }
 
-    // Status changes tracking untuk hari tersebut
-    const statusChanges = summaryData
+    // Status changes tracking - seluruh data dalam rentang filter (untuk download lengkap)
+    const statusChanges = filteredData
       .filter((item) => item.workflow_status === "Closed")
       .map((item) => ({
         nama: item.nama,
@@ -781,8 +986,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
             ? "Fit To Work"
             : "Not Fit To Work",
       }))
-      .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
-      .slice(0, 10);
+      .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
 
     return {
       totalSubmissions,
@@ -961,6 +1165,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, 10);
 
+    // Semua data (untuk download/analisa lengkap)
+    const listData = [...filteredData].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+
     return {
       totalReports,
       openReports,
@@ -970,6 +1179,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       siteStats,
       dailyStats,
       recentReports,
+      listData,
     };
   };
 
@@ -1042,21 +1252,25 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     let overdueReports = 0;
     let closedOverdue = 0;
 
-    // Pendekatan sederhana: Semua hazard closed dianggap selesai tepat waktu
-    // Karena jika sudah closed, berarti sudah selesai sebelum atau pada due date
     filteredData.forEach((item) => {
       if (item.due_date) {
+        const dueDate = new Date(item.due_date);
+        const dueEndOfDay = new Date(dueDate);
+        dueEndOfDay.setHours(23, 59, 59, 999);
+
         if (item.status?.toLowerCase() === "closed") {
-          // Semua hazard yang closed dianggap selesai tepat waktu
-          closedOnTime++;
-          console.log(
-            `Hazard ${item.id} - Status: ${item.status}, Due: ${item.due_date} -> Closed On Time ✅`
-          );
+          // Gunakan updated_at sebagai tanggal penutupan; fallback ke created_at
+          const closedAt = item.updated_at
+            ? new Date(item.updated_at)
+            : new Date(item.created_at);
+          if (closedAt > dueEndOfDay) {
+            closedOverdue++;
+          } else {
+            closedOnTime++;
+          }
         } else {
-          // Untuk status lain, cek apakah sudah melewati due date
-          const dueDate = new Date(item.due_date);
-          const isOverdue = today > dueDate;
-          if (isOverdue) {
+          // Belum closed: cek apakah sudah melewati due date
+          if (today > dueEndOfDay) {
             overdueReports++;
           }
         }
@@ -1197,6 +1411,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, 10);
 
+    // Semua data (untuk download/analisa lengkap)
+    const listData = [...filteredData].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+
     console.log("calculateHazardStats - Recent reports:", recentReports);
 
     const result = {
@@ -1215,10 +1434,109 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       siteStats,
       dailyStats,
       recentReports,
+      listData,
     };
 
     console.log("calculateHazardStats - Final result:", result);
     return result;
+  };
+
+  // Calculate PTO Statistics
+  const calculatePtoStats = (data) => {
+    let filteredData = [...data];
+
+    if (dateFrom) {
+      filteredData = filteredData.filter((item) => item.tanggal >= dateFrom);
+    }
+    if (dateTo) {
+      filteredData = filteredData.filter((item) => item.tanggal <= dateTo);
+    }
+    if (site) {
+      filteredData = filteredData.filter((item) => item.site === site);
+    }
+
+    const totalReports = filteredData.length;
+    const pendingReports = filteredData.filter(
+      (item) => (item.status || "").toLowerCase() === "pending"
+    ).length;
+    const closedReports = filteredData.filter(
+      (item) => (item.status || "").toLowerCase() === "closed"
+    ).length;
+    const completionRate =
+      totalReports > 0 ? ((closedReports / totalReports) * 100).toFixed(1) : 0;
+
+    // Site statistics
+    const siteStats = {};
+    filteredData.forEach((item) => {
+      const siteName = item.site || "Unknown";
+      if (!siteStats[siteName]) {
+        siteStats[siteName] = { total: 0, pending: 0, closed: 0 };
+      }
+      siteStats[siteName].total++;
+      if ((item.status || "").toLowerCase() === "pending")
+        siteStats[siteName].pending++;
+      if ((item.status || "").toLowerCase() === "closed")
+        siteStats[siteName].closed++;
+    });
+
+    // Daily statistics
+    const dailyStats = [];
+    const startDateStr = dateFrom || getDateWITARelative(-6);
+    const endDateStr = dateTo || getTodayWITA();
+
+    if (!dateFrom && !dateTo) {
+      for (let i = 6; i >= 0; i--) {
+        const dateStr = getDateWITARelative(-i);
+        const dayData = filteredData.filter((item) => item.tanggal === dateStr);
+        dailyStats.push({
+          date: dateStr,
+          total: dayData.length,
+          pending: dayData.filter(
+            (item) => (item.status || "").toLowerCase() === "pending"
+          ).length,
+          closed: dayData.filter(
+            (item) => (item.status || "").toLowerCase() === "closed"
+          ).length,
+        });
+      }
+    } else {
+      let currentDate = new Date(startDateStr + "T12:00:00+08:00");
+      const endDate = new Date(endDateStr + "T12:00:00+08:00");
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().slice(0, 10);
+        const dayData = filteredData.filter((item) => item.tanggal === dateStr);
+        dailyStats.push({
+          date: dateStr,
+          total: dayData.length,
+          pending: dayData.filter(
+            (item) => (item.status || "").toLowerCase() === "pending"
+          ).length,
+          closed: dayData.filter(
+            (item) => (item.status || "").toLowerCase() === "closed"
+          ).length,
+        });
+        currentDate.setTime(currentDate.getTime() + 24 * 60 * 60 * 1000);
+      }
+    }
+
+    const recentReports = filteredData
+      .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+      .slice(0, 10);
+
+    const listData = [...filteredData].sort(
+      (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
+    );
+
+    return {
+      totalReports,
+      pendingReports,
+      closedReports,
+      completionRate,
+      siteStats,
+      dailyStats,
+      recentReports,
+      listData,
+    };
   };
 
   // Set default table and fetch data based on subMenu
@@ -1247,14 +1565,20 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       setTimeout(() => {
         fetchHazardStats();
       }, 100);
+    } else if (subMenu === "PTO") {
+      console.log("MonitoringPage - Setting selectedTable to pto_stats");
+      setSelectedTable("pto_stats");
+      setTimeout(() => {
+        fetchPtoStats();
+      }, 100);
     }
   }, [subMenu]);
 
   // Fetch data dari Supabase sesuai filter (for other tables)
   useEffect(() => {
     console.log("MonitoringPage - selectedTable:", selectedTable);
-    if (!selectedTable || selectedTable === "fit_to_work_stats") {
-      return; // Skip for fit_to_work_stats as it's handled above
+    if (!selectedTable || selectedTable === "fit_to_work_stats" || selectedTable === "take_5_stats" || selectedTable === "hazard_stats" || selectedTable === "pto_stats") {
+      return; // Skip for stats dashboards - they have their own fetch
     }
 
     setLoading(true);
@@ -1359,6 +1683,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }));
       const changesSheet = XLSX.utils.json_to_sheet(changesData);
       XLSX.utils.book_append_sheet(workbook, changesSheet, "Status Changes");
+    }
+
+    // Data Lengkap - Semua data mentah untuk analisa mendalam (tanpa id, user_id)
+    if (fitToWorkStats.listData && fitToWorkStats.listData.length > 0) {
+      const rawData = fitToWorkStats.listData.map(({ id, user_id, ...rest }) => rest);
+      const rawSheet = XLSX.utils.json_to_sheet(rawData);
+      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
     }
 
     XLSX.writeFile(
@@ -1551,6 +1882,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       XLSX.utils.book_append_sheet(workbook, dailySheet, "Daily Statistics");
     }
 
+    // Data Lengkap - Semua data mentah untuk analisa mendalam (tanpa id, user_id)
+    if (take5Stats.listData && take5Stats.listData.length > 0) {
+      const rawData = take5Stats.listData.map(({ id, user_id, ...rest }) => rest);
+      const rawSheet = XLSX.utils.json_to_sheet(rawData);
+      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
+    }
+
     XLSX.writeFile(workbook, "statistik-take5.xlsx");
   }
 
@@ -1640,6 +1978,133 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     doc.save("statistik-take5.pdf");
   }
 
+  // Download PTO Excel
+  function handleDownloadPtoExcel() {
+    if (!ptoStats) return;
+
+    const workbook = XLSX.utils.book_new();
+
+    const summaryData = [
+      ["Metrik", "Nilai"],
+      ["Total Laporan", ptoStats.totalReports],
+      ["Pending", ptoStats.pendingReports],
+      ["Closed", ptoStats.closedReports],
+      ["Tingkat Penyelesaian", `${ptoStats.completionRate}%`],
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+
+    if (Object.keys(ptoStats.siteStats || {}).length > 0) {
+      const siteData = [
+        ["Site", "Total", "Pending", "Closed"],
+        ...Object.entries(ptoStats.siteStats).map(([s, st]) => [
+          s,
+          st.total,
+          st.pending,
+          st.closed,
+        ]),
+      ];
+      const siteSheet = XLSX.utils.aoa_to_sheet(siteData);
+      XLSX.utils.book_append_sheet(workbook, siteSheet, "Site Statistics");
+    }
+
+    if ((ptoStats.dailyStats || []).length > 0) {
+      const dailyData = [
+        ["Tanggal", "Total", "Pending", "Closed"],
+        ...ptoStats.dailyStats.map((d) => [
+          new Date(d.date).toLocaleDateString("id-ID"),
+          d.total,
+          d.pending,
+          d.closed,
+        ]),
+      ];
+      const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
+      XLSX.utils.book_append_sheet(workbook, dailySheet, "Daily Statistics");
+    }
+
+    if (ptoStats.listData && ptoStats.listData.length > 0) {
+      const rawData = ptoStats.listData.map(({ id, observer_id, observee_id, observer_tambahan_id, pic_tindak_lanjut_id, created_by, prosedur_id, ...rest }) => rest);
+      const rawSheet = XLSX.utils.json_to_sheet(rawData);
+      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
+    }
+
+    XLSX.writeFile(workbook, `statistik-pto_${getTodayWITA()}.xlsx`);
+  }
+
+  // Download PTO PDF
+  function handleDownloadPtoPdf() {
+    if (!ptoStats) return;
+
+    const doc = new jsPDF();
+    let yPos = 20;
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Dashboard Statistik PTO", 20, yPos);
+    yPos += 20;
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Ringkasan:", 20, yPos);
+    yPos += 10;
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Laporan: ${ptoStats.totalReports}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Pending: ${ptoStats.pendingReports}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Closed: ${ptoStats.closedReports}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Tingkat Penyelesaian: ${ptoStats.completionRate}%`, 20, yPos);
+    yPos += 15;
+
+    if (Object.keys(ptoStats.siteStats || {}).length > 0) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Statistik per Site:", 20, yPos);
+      yPos += 10;
+
+      const siteData = Object.entries(ptoStats.siteStats).map(([s, st]) => [
+        s,
+        st.total.toString(),
+        st.pending.toString(),
+        st.closed.toString(),
+      ]);
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Site", "Total", "Pending", "Closed"]],
+        body: siteData,
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+      yPos = doc.lastAutoTable.finalY + 10;
+    }
+
+    if ((ptoStats.dailyStats || []).length > 0) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Statistik Harian:", 20, yPos);
+      yPos += 10;
+
+      const dailyData = ptoStats.dailyStats.map((d) => [
+        new Date(d.date).toLocaleDateString("id-ID"),
+        d.total.toString(),
+        d.pending.toString(),
+        d.closed.toString(),
+      ]);
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Tanggal", "Total", "Pending", "Closed"]],
+        body: dailyData,
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+
+    doc.save("statistik-pto.pdf");
+  }
+
   // Download Hazard Excel
   function handleDownloadHazardExcel() {
     if (!hazardStats) return;
@@ -1725,6 +2190,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       ];
       const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
       XLSX.utils.book_append_sheet(workbook, dailySheet, "Daily Statistics");
+    }
+
+    // Data Lengkap - Semua data mentah untuk analisa mendalam (tanpa id, user_id)
+    if (hazardStats.listData && hazardStats.listData.length > 0) {
+      const rawData = hazardStats.listData.map(({ id, user_id, ...rest }) => rest);
+      const rawSheet = XLSX.utils.json_to_sheet(rawData);
+      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
     }
 
     XLSX.writeFile(workbook, "statistik-hazard.xlsx");
@@ -2016,6 +2488,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         userName = item.pelapor_nama || item.pic || "Unknown";
       } else if (type === "hazard") {
         userName = item.pelapor_nama || item.pic || "Unknown";
+      } else if (type === "pto") {
+        userName = item.nama_observer || "Unknown";
       }
 
       if (!userStats[userName]) {
@@ -2033,6 +2507,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           // Fit To Work specific
           fitToWork: 0,
           notFitToWork: 0,
+          // PTO specific
+          pending: 0,
           // Completion rate
           completionRate: 0,
         };
@@ -2046,6 +2522,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           userStats[userName].fitToWork++;
         if (item.status_fatigue === "Not Fit To Work")
           userStats[userName].notFitToWork++;
+      } else if (type === "pto") {
+        const status = (item.status || "").toLowerCase();
+        if (status === "pending") userStats[userName].pending++;
+        if (status === "closed") userStats[userName].closed++;
       } else {
         // Hazard & Take 5 statuses
         const status = item.status?.toLowerCase();
@@ -2064,6 +2544,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (type === "fit_to_work") {
         user.completionRate =
           user.total > 0 ? ((user.fitToWork / user.total) * 100).toFixed(1) : 0;
+      } else if (type === "pto") {
+        user.completionRate =
+          user.total > 0 ? ((user.closed / user.total) * 100).toFixed(1) : 0;
       } else {
         user.completionRate =
           user.total > 0 ? ((user.closed / user.total) * 100).toFixed(1) : 0;
@@ -3166,39 +3649,41 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     return (
       <div style={{ padding: "0" }}>
-        {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: isMobile ? 0 : 240,
-            right: 0,
-            zIndex: 100,
-            background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
-            padding: "20px 0",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-          }}
-        >
+        {/* Content Container - Centered (lebar sama dengan Fit To Work) */}
+        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+          {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
           <div
             style={{
-              maxWidth: "1400px",
-              margin: "0 auto",
-              padding: "0 20px",
-              display: "flex",
-              gap: "16px",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
+              position: "fixed",
+              top: 0,
+              left: isMobile ? 0 : 240,
+              right: 0,
+              zIndex: 100,
+              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
+              padding: "20px 0",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             }}
           >
-          <div
-            style={{
-              display: "flex",
-              gap: "16px",
-              flexWrap: "wrap",
-              alignItems: "flex-end",
-            }}
-          >
+            <div
+              style={{
+                maxWidth: "1400px",
+                margin: "0 auto",
+                padding: "0 20px",
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "flex-end",
+              }}
+            >
             <div
               style={{ display: "flex", flexDirection: "column", gap: "4px" }}
             >
@@ -3209,7 +3694,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   color: "#e5e7eb",
                 }}
               >
-                Tanggal Dari:
+                Dari:
               </label>
               <input
                 type="date"
@@ -3222,6 +3707,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
+                  minWidth: "180px",
                 }}
               />
             </div>
@@ -3235,7 +3721,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   color: "#e5e7eb",
                 }}
               >
-                Tanggal Sampai:
+                Sampai:
               </label>
               <input
                 type="date"
@@ -3248,6 +3734,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
+                  minWidth: "180px",
                 }}
               />
             </div>
@@ -3277,24 +3764,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                 }}
               >
                 <option value="">Semua Site</option>
-                <option value="Head Office">Head Office</option>
-                  <option value="Balikpapan">Balikpapan</option>
-                  <option value="ADRO">ADRO</option>
-                  <option value="AMMP">AMMP</option>
-                  <option value="BSIB">BSIB</option>
-                  <option value="GAMR">GAMR</option>
-                  <option value="HRSB">HRSB</option>
-                  <option value="HRSE">HRSE</option>
-                  <option value="PABB">PABB</option>
-                  <option value="PBRB">PBRB</option>
-                  <option value="PKJA">PKJA</option>
-                  <option value="PPAB">PPAB</option>
-                  <option value="PSMM">PSMM</option>
-                  <option value="REBH">REBH</option>
-                  <option value="RMTU">RMTU</option>
-                  <option value="PMTU">PMTU</option>
-                </select>
-              </div>
+                {CUSTOM_INPUT_SITES.map((siteOption) => (
+                  <option key={siteOption} value={siteOption}>
+                    {siteOption}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Reset & Download Buttons */}
@@ -3363,10 +3839,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         <div style={{ height: 100 }} />
         {/* Header */}
         <div style={{ marginBottom: "30px" }}>
-          <h2 style={{ color: "#232946", marginBottom: "10px" }}>
+          <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
             📊 Dashboard Statistik Take 5
           </h2>
-          <p style={{ color: "#666", fontSize: "14px" }}>
+          <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
             Monitoring pelaporan Take 5 dan status penyelesaian
           </p>
         </div>
@@ -3461,7 +3937,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
         {/* Site Statistics */}
         <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#232946", marginBottom: "20px" }}>
+          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
             📈 Statistik per Site {site && `- ${site}`}
           </h3>
           <div
@@ -3554,7 +4030,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
         {/* Daily Statistics */}
         <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#232946", marginBottom: "20px" }}>
+          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
             📅 Statistik{" "}
             {dateFrom && dateTo
               ? `${dateFrom} s/d ${dateTo}`
@@ -3684,8 +4160,163 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           </div>
         </div>
 
+        {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
+        {(() => {
+          const isDaily = chartViewMode === "daily";
+          const agg = take5ChartAggregatedData;
+          let totalOpen = 0, totalDone = 0, totalClosed = 0;
+          if (isDaily || agg.length === 0) {
+            (take5Stats.dailyStats || []).forEach((d) => {
+              totalOpen += d.open ?? 0;
+              totalDone += d.done ?? 0;
+              totalClosed += d.closed ?? 0;
+            });
+          } else {
+            agg.forEach((d) => {
+              totalOpen += d.open ?? 0;
+              totalDone += d.done ?? 0;
+              totalClosed += d.closed ?? 0;
+            });
+          }
+          const pieData = [
+            { name: "Terbuka", value: totalOpen, color: "#f59e0b" },
+            { name: "Selesai", value: totalDone, color: "#10b981" },
+            { name: "Tertutup", value: totalClosed, color: "#6b7280" },
+          ].filter((d) => d.value > 0);
+          const barData = isDaily || agg.length === 0
+            ? (take5Stats.dailyStats || []).map((d) => ({
+                tanggal: new Date(d.date + "T12:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" }),
+                Total: d.total ?? 0,
+                Terbuka: d.open ?? 0,
+                Selesai: d.done ?? 0,
+                Tertutup: d.closed ?? 0,
+              }))
+            : agg.map((d) => ({
+                tanggal: d.label ?? "-",
+                Total: d.total ?? 0,
+                Terbuka: d.open ?? 0,
+                Selesai: d.done ?? 0,
+                Tertutup: d.closed ?? 0,
+              }));
+          const hasCharts = pieData.length > 0 || barData.length > 0;
+          if (!hasCharts && isDaily) return null;
+          return (
+            <div
+              style={{
+                marginBottom: "30px",
+                background: "white",
+                padding: "24px",
+                borderRadius: "12px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                border: "1px solid #e5e7eb",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+                <h3 style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}>
+                  📊 Distribusi Laporan
+                </h3>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {["daily", "monthly", "yearly"].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setChartViewMode(m)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: chartViewMode === m ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                        background: chartViewMode === m ? "#eff6ff" : "#fff",
+                        color: chartViewMode === m ? "#1d4ed8" : "#374151",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {m === "daily" && "Harian"}
+                      {m === "monthly" && "Bulanan"}
+                      {m === "yearly" && "Tahunan"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                  gap: "24px",
+                }}
+              >
+                {pieData.length > 0 && (
+                  <div>
+                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
+                      Distribusi Status Laporan
+                      {chartViewMode === "daily" && " (7 Hari)"}
+                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
+                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
+                    </h4>
+                    <div style={{ width: "100%", maxWidth: 380, height: 300, margin: "0 auto" }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {pieData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => [v, ""]} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+                {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
+                  <div>
+                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
+                      Statistik {chartViewMode === "daily" ? "Harian" : chartViewMode === "monthly" ? "Bulanan" : "Tahunan"}
+                      {chartViewMode === "daily" && " (7 Hari)"}
+                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
+                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
+                    </h4>
+                    <div style={{ width: "100%", height: 300 }}>
+                      {barData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={barData} margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="tanggal" tick={{ fontSize: 11 }} height={40} />
+                            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="Total" fill="#3b82f6" name="Total" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Terbuka" fill="#f59e0b" name="Terbuka" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Selesai" fill="#10b981" name="Selesai" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Tertutup" fill="#6b7280" name="Tertutup" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div style={{ textAlign: "center", color: "#6b7280", fontSize: "13px", paddingTop: "80px" }}>
+                          Memuat data...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Individual Statistics */}
         {renderIndividualStatsTable(individualStats.take5, "take_5")}
+        </div>
       </div>
     );
   };
@@ -3702,39 +4333,41 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     return (
       <div style={{ padding: "0" }}>
-        {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: isMobile ? 0 : 240,
-            right: 0,
-            zIndex: 100,
-            background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
-            padding: "20px 0",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-          }}
-        >
+        {/* Content Container - Centered (lebar sama dengan Fit To Work) */}
+        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+          {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
           <div
             style={{
-              maxWidth: "1400px",
-              margin: "0 auto",
-              padding: "0 20px",
-              display: "flex",
-              gap: "16px",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
+              position: "fixed",
+              top: 0,
+              left: isMobile ? 0 : 240,
+              right: 0,
+              zIndex: 100,
+              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
+              padding: "20px 0",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             }}
           >
-          <div
-            style={{
-              display: "flex",
-              gap: "16px",
-              flexWrap: "wrap",
-              alignItems: "flex-end",
-            }}
-          >
+            <div
+              style={{
+                maxWidth: "1400px",
+                margin: "0 auto",
+                padding: "0 20px",
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "flex-end",
+              }}
+            >
             <div
               style={{ display: "flex", flexDirection: "column", gap: "4px" }}
             >
@@ -3745,7 +4378,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   color: "#e5e7eb",
                 }}
               >
-                Tanggal Dari:
+                Dari:
               </label>
               <input
                 type="date"
@@ -3758,6 +4391,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
+                  minWidth: "180px",
                 }}
               />
             </div>
@@ -3771,7 +4405,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   color: "#e5e7eb",
                 }}
               >
-                Tanggal Sampai:
+                Sampai:
               </label>
               <input
                 type="date"
@@ -3784,6 +4418,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   borderRadius: "6px",
                   border: "1px solid #ddd",
                   fontSize: "14px",
+                  minWidth: "180px",
                 }}
               />
             </div>
@@ -3881,25 +4516,6 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
             >
               📄 PDF
             </button>
-            <button
-              onClick={() => handleDownloadHazardPDF(true)}
-              disabled={!hazardStats}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-                background: "#8b5cf6",
-                color: "#fff",
-                fontSize: "14px",
-                cursor: "pointer",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              📷 PDF + Gambar
-            </button>
           </div>
           </div>
         </div>
@@ -3907,10 +4523,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         <div style={{ height: 100 }} />
         {/* Header */}
         <div style={{ marginBottom: "30px" }}>
-          <h2 style={{ color: "#232946", marginBottom: "10px" }}>
+          <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
             📊 Dashboard Statistik Hazard
           </h2>
-          <p style={{ color: "#666", fontSize: "14px" }}>
+          <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
             Monitoring pelaporan Hazard dan status penyelesaian
           </p>
         </div>
@@ -4046,9 +4662,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         >
           <h3
             style={{
-              color: "#232946",
+              color: "#ffffff",
               marginBottom: "20px",
               gridColumn: "1 / -1",
+              fontWeight: "600",
             }}
           >
             ⏰ Statistik Ketepatan Penyelesaian
@@ -4122,7 +4739,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
         {/* Site Statistics */}
         <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#232946", marginBottom: "20px" }}>
+          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
             📈 Statistik per Site {site && `- ${site}`}
           </h3>
           <div
@@ -4239,7 +4856,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
         {/* Daily Statistics */}
         <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#232946", marginBottom: "20px" }}>
+          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
             📅 Statistik{" "}
             {dateFrom && dateTo
               ? `${dateFrom} s/d ${dateTo}`
@@ -4436,8 +5053,415 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           </div>
         </div>
 
+        {/* Distribusi Laporan - Satu container, dua chart kiri kanan */}
+        {(() => {
+          const pieData = [
+            { name: "Submit", value: hazardStats.submitReports || 0, color: "#6b7280" },
+            { name: "Open", value: hazardStats.openReports || 0, color: "#f59e0b" },
+            { name: "Progress", value: hazardStats.progressReports || 0, color: "#8b5cf6" },
+            { name: "Done", value: hazardStats.doneReports || 0, color: "#10b981" },
+            { name: "Reject Open", value: hazardStats.rejectOpenReports || 0, color: "#ef4444" },
+            { name: "Reject Done", value: hazardStats.rejectDoneReports || 0, color: "#f97316" },
+            { name: "Closed", value: hazardStats.closedReports || 0, color: "#3b82f6" },
+          ].filter((d) => d.value > 0);
+          const timelinessData = [
+            { name: "Closed On Time", value: hazardStats.closedOnTime || 0, color: "#10b981" },
+            { name: "Overdue", value: hazardStats.overdueReports || 0, color: "#f59e0b" },
+            { name: "Closed Over Due", value: hazardStats.closedOverdue || 0, color: "#ef4444" },
+          ].filter((d) => d.value > 0);
+          const hasCharts = pieData.length > 0 || timelinessData.length > 0;
+          if (!hasCharts) return null;
+          return (
+            <div
+              style={{
+                marginBottom: "30px",
+                background: "white",
+                padding: "24px",
+                borderRadius: "12px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                border: "1px solid #e5e7eb",
+              }}
+            >
+              <h3 style={{ color: "#1a1a1a", marginBottom: "20px", fontWeight: "600" }}>
+                📊 Distribusi Laporan
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                  gap: "24px",
+                }}
+              >
+                {pieData.length > 0 && (
+                  <div>
+                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
+                      Distribusi Status Laporan
+                    </h4>
+                    <div style={{ width: "100%", maxWidth: 420, height: 300, margin: "0 auto" }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {pieData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => [v, ""]} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+                {timelinessData.length > 0 && (
+                  <div>
+                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
+                      Ketepatan Penyelesaian
+                    </h4>
+                    <div style={{ width: "100%", maxWidth: 420, height: 300, margin: "0 auto" }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={timelinessData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {timelinessData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => [v, ""]} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Individual Statistics */}
         {renderIndividualStatsTable(individualStats.hazard, "hazard")}
+        </div>
+      </div>
+    );
+  };
+
+  // Render PTO Statistics Dashboard
+  const renderPtoStats = () => {
+    if (loading) {
+      return (
+        <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+          Memuat statistik PTO...
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ padding: "0" }}>
+        {/* Content Container - Centered (lebar sama dengan Fit To Work) */}
+        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+          {/* Filter Panel */}
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: isMobile ? 0 : 240,
+              right: 0,
+              zIndex: 100,
+              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
+              padding: "20px 0",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            <div
+              style={{
+                maxWidth: "1400px",
+                margin: "0 auto",
+                padding: "0 20px",
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "bold", color: "#e5e7eb" }}>Dari:</label>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                style={{ padding: "8px 12px", height: 38, boxSizing: "border-box", borderRadius: "6px", border: "1px solid #ddd", fontSize: "14px", minWidth: "180px" }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "bold", color: "#e5e7eb" }}>Sampai:</label>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                style={{ padding: "8px 12px", height: 38, boxSizing: "border-box", borderRadius: "6px", border: "1px solid #ddd", fontSize: "14px", minWidth: "180px" }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "bold", color: "#e5e7eb" }}>Site:</label>
+              <select value={site} onChange={(e) => setSite(e.target.value)}
+                style={{ padding: "8px 12px", height: 38, boxSizing: "border-box", borderRadius: "6px", border: "1px solid #ddd", fontSize: "14px", minWidth: "150px" }}>
+                <option value="">Semua Site</option>
+                {CUSTOM_INPUT_SITES.map((siteOption) => (
+                  <option key={siteOption} value={siteOption}>{siteOption}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button onClick={() => { setDateFrom(""); setDateTo(""); setSite(""); }}
+              style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid #ddd", background: "#f8f9fa", color: "#374151", fontSize: "14px", cursor: "pointer", fontWeight: "500" }}>
+              Reset Filter
+            </button>
+            <button onClick={handleDownloadPtoExcel} disabled={!ptoStats}
+              style={{ padding: "8px 16px", borderRadius: "6px", border: "none", background: "#10b981", color: "#fff", fontSize: "14px", cursor: "pointer", fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
+              📊 Excel
+            </button>
+            <button onClick={handleDownloadPtoPdf} disabled={!ptoStats}
+              style={{ padding: "8px 16px", borderRadius: "6px", border: "none", background: "#ef4444", color: "#fff", fontSize: "14px", cursor: "pointer", fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
+              📄 PDF
+            </button>
+          </div>
+            </div>
+          </div>
+        <div style={{ height: 100 }} />
+        <div style={{ marginBottom: "30px" }}>
+          <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>📊 Dashboard Statistik PTO</h2>
+          <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>Monitoring Planned Task Observation (PTO) dan status penyelesaian</p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "30px" }}>
+          <div style={{ background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}>
+            <div style={{ fontSize: "14px", opacity: 0.9 }}>Total Laporan</div>
+            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.totalReports}</div>
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)" }}>
+            <div style={{ fontSize: "14px", opacity: 0.9 }}>Pending</div>
+            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.pendingReports}</div>
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)" }}>
+            <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed</div>
+            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.closedReports}</div>
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)" }}>
+            <div style={{ fontSize: "14px", opacity: 0.9 }}>Tingkat Penyelesaian</div>
+            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.completionRate}%</div>
+          </div>
+        </div>
+        <div style={{ marginBottom: "30px" }}>
+          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>📈 Statistik per Site {site && `- ${site}`}</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "16px" }}>
+            {Object.entries(ptoStats.siteStats || {}).map(([siteName, stats]) => (
+              <div key={siteName} style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "1px solid #e5e7eb" }}>
+                <h4 style={{ color: "#232946", marginBottom: "15px" }}>{siteName}</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", color: "#666" }}>Total</div>
+                    <div style={{ fontSize: "18px", fontWeight: "bold", color: "#232946" }}>{stats.total}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "12px", color: "#666" }}>Pending</div>
+                    <div style={{ fontSize: "18px", fontWeight: "bold", color: "#f59e0b" }}>{stats.pending}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "12px", color: "#666" }}>Closed</div>
+                    <div style={{ fontSize: "18px", fontWeight: "bold", color: "#10b981" }}>{stats.closed}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom: "30px" }}>
+          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>📅 Statistik {dateFrom && dateTo ? `${dateFrom} s/d ${dateTo}` : "7 Hari Terakhir"}</h3>
+          <div style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "1px solid #e5e7eb" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                  <th style={{ textAlign: "left", padding: "12px", color: "#232946", fontWeight: "bold" }}>Tanggal</th>
+                  <th style={{ textAlign: "center", padding: "12px", color: "#232946", fontWeight: "bold" }}>Total</th>
+                  <th style={{ textAlign: "center", padding: "12px", color: "#f59e0b", fontWeight: "bold" }}>Pending</th>
+                  <th style={{ textAlign: "center", padding: "12px", color: "#10b981", fontWeight: "bold" }}>Closed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(ptoStats.dailyStats || []).map((day) => (
+                  <tr key={day.date} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    <td style={{ padding: "12px", color: "#232946" }}>{new Date(day.date).toLocaleDateString("id-ID", { weekday: "short", month: "short", day: "numeric" })}</td>
+                    <td style={{ textAlign: "center", padding: "12px", color: "#232946", fontWeight: "bold" }}>{day.total}</td>
+                    <td style={{ textAlign: "center", padding: "12px", color: "#f59e0b", fontWeight: "bold" }}>{day.pending}</td>
+                    <td style={{ textAlign: "center", padding: "12px", color: "#10b981", fontWeight: "bold" }}>{day.closed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
+        {(() => {
+          const isDaily = chartViewMode === "daily";
+          const agg = ptoChartAggregatedData;
+          let totalPending = 0, totalClosed = 0;
+          if (isDaily || agg.length === 0) {
+            (ptoStats.dailyStats || []).forEach((d) => {
+              totalPending += d.pending ?? 0;
+              totalClosed += d.closed ?? 0;
+            });
+          } else {
+            agg.forEach((d) => {
+              totalPending += d.pending ?? 0;
+              totalClosed += d.closed ?? 0;
+            });
+          }
+          const pieData = [
+            { name: "Pending", value: totalPending, color: "#f59e0b" },
+            { name: "Closed", value: totalClosed, color: "#10b981" },
+          ].filter((d) => d.value > 0);
+          const barData = isDaily || agg.length === 0
+            ? (ptoStats.dailyStats || []).map((d) => ({
+                tanggal: new Date(d.date + "T12:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" }),
+                Total: d.total ?? 0,
+                Pending: d.pending ?? 0,
+                Closed: d.closed ?? 0,
+              }))
+            : agg.map((d) => ({
+                tanggal: d.label ?? "-",
+                Total: d.total ?? 0,
+                Pending: d.pending ?? 0,
+                Closed: d.closed ?? 0,
+              }));
+          const hasCharts = pieData.length > 0 || barData.length > 0;
+          if (!hasCharts && isDaily) return null;
+          return (
+            <div
+              style={{
+                marginBottom: "30px",
+                background: "white",
+                padding: "24px",
+                borderRadius: "12px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                border: "1px solid #e5e7eb",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+                <h3 style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}>
+                  📊 Distribusi Laporan
+                </h3>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {["daily", "monthly", "yearly"].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setChartViewMode(m)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: chartViewMode === m ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                        background: chartViewMode === m ? "#eff6ff" : "#fff",
+                        color: chartViewMode === m ? "#1d4ed8" : "#374151",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {m === "daily" && "Harian"}
+                      {m === "monthly" && "Bulanan"}
+                      {m === "yearly" && "Tahunan"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                  gap: "24px",
+                }}
+              >
+                {pieData.length > 0 && (
+                  <div>
+                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
+                      Distribusi Status Laporan
+                      {chartViewMode === "daily" && " (7 Hari)"}
+                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
+                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
+                    </h4>
+                    <div style={{ width: "100%", maxWidth: 380, height: 300, margin: "0 auto" }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {pieData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => [v, ""]} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+                {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
+                  <div>
+                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
+                      Statistik {chartViewMode === "daily" ? "Harian" : chartViewMode === "monthly" ? "Bulanan" : "Tahunan"}
+                      {chartViewMode === "daily" && " (7 Hari)"}
+                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
+                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
+                    </h4>
+                    <div style={{ width: "100%", height: 300 }}>
+                      {barData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={barData} margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="tanggal" tick={{ fontSize: 11 }} height={40} />
+                            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="Total" fill="#3b82f6" name="Total" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Pending" fill="#f59e0b" name="Pending" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Closed" fill="#10b981" name="Closed" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div style={{ textAlign: "center", color: "#6b7280", fontSize: "13px", paddingTop: "80px" }}>
+                          Memuat data...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {renderIndividualStatsTable(individualStats.pto, "pto")}
+        </div>
       </div>
     );
   };
@@ -4446,13 +5470,22 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   const renderIndividualStatsTable = (data, type) => {
     if (!data || data.length === 0) {
       return (
-        <div style={{ textAlign: "center", padding: "20px", color: "#000000" }}>
+        <div style={{ textAlign: "center", padding: "20px", color: "#ffffff" }}>
           Tidak ada data statistik per individu
         </div>
       );
     }
 
     const getColumns = () => {
+      if (type === "pto") {
+        return [
+          { key: "name", label: "Nama Observer", width: "25%" },
+          { key: "total", label: "Total", width: "15%" },
+          { key: "pending", label: "Pending", width: "15%" },
+          { key: "closed", label: "Closed", width: "15%" },
+          { key: "completionRate", label: "Tingkat Penyelesaian (%)", width: "20%" },
+        ];
+      }
       if (type === "fit_to_work") {
         return [
           { key: "name", label: "Nama", width: "25%" },
@@ -4495,7 +5528,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
             marginBottom: "20px",
           }}
         >
-          <h3 style={{ color: "#000000", margin: 0 }}>
+          <h3 style={{ color: "#ffffff", margin: 0, fontWeight: "600" }}>
             👥 Statistik Per Individu
           </h3>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -4506,7 +5539,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                     ? "fitToWork"
                     : type === "take_5"
                       ? "take5"
-                      : "hazard"
+                      : type === "pto"
+                        ? "pto"
+                        : "hazard"
                 )
               }
               style={{
@@ -4531,7 +5566,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                     ? "fitToWork"
                     : type === "take_5"
                       ? "take5"
-                      : "hazard"
+                      : type === "pto"
+                        ? "pto"
+                        : "hazard"
                 )
               }
               style={{
@@ -4629,6 +5666,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           "Not Fit To Work",
           "Tingkat Kepatuhan (%)",
         ];
+      } else if (type === "pto") {
+        return [
+          "Nama Observer",
+          "Total",
+          "Pending",
+          "Closed",
+          "Tingkat Penyelesaian (%)",
+        ];
       } else {
         return [
           "Nama",
@@ -4656,6 +5701,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           user.notFitToWork,
           user.completionRate,
         ]);
+      } else if (type === "pto") {
+        sheetData.push([
+          user.name,
+          user.total,
+          user.pending || 0,
+          user.closed || 0,
+          user.completionRate,
+        ]);
       } else {
         sheetData.push([
           user.name,
@@ -4676,7 +5729,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         ? "Statistik Per Individu FTW"
         : type === "take5"
           ? "Statistik Per Individu Take5"
-          : "Statistik Per Individu Hazard";
+          : type === "pto"
+            ? "Statistik Per Individu PTO"
+            : "Statistik Per Individu Hazard";
 
     XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
     XLSX.writeFile(workbook, `statistik-per-individu-${type}.xlsx`);
@@ -4698,7 +5753,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         ? "Statistik Per Individu - Fit To Work"
         : type === "take5"
           ? "Statistik Per Individu - Take 5"
-          : "Statistik Per Individu - Hazard";
+          : type === "pto"
+            ? "Statistik Per Individu - PTO"
+            : "Statistik Per Individu - Hazard";
     doc.text(title, 20, yPos);
     yPos += 20;
 
@@ -4711,6 +5768,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           "Fit To Work",
           "Not Fit To Work",
           "Tingkat Kepatuhan",
+        ];
+      } else if (type === "pto") {
+        return [
+          "Nama Observer",
+          "Total",
+          "Pending",
+          "Closed",
+          "Tingkat Penyelesaian",
         ];
       } else {
         return [
@@ -4734,6 +5799,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           user.total.toString(),
           user.fitToWork.toString(),
           user.notFitToWork.toString(),
+          `${user.completionRate}%`,
+        ];
+      } else if (type === "pto") {
+        return [
+          user.name,
+          user.total.toString(),
+          (user.pending || 0).toString(),
+          (user.closed || 0).toString(),
           `${user.completionRate}%`,
         ];
       } else {
@@ -4776,6 +5849,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       {selectedTable === "fit_to_work_stats" && renderFitToWorkStats()}
       {selectedTable === "take_5_stats" && renderTake5Stats()}
       {selectedTable === "hazard_stats" && renderHazardStats()}
+      {selectedTable === "pto_stats" && renderPtoStats()}
     </div>
   );
 }
