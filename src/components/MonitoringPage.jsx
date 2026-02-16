@@ -262,7 +262,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
-      query = query.limit(50000);
+      query = query.order("created_at", { ascending: false }).limit(50000);
 
       const startDt = dateFrom || getDateWITARelative(-6);
       const endDt = dateTo || getTodayWITA();
@@ -1003,8 +1003,8 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       statusChanges,
       recentReports: summaryData.slice(0, 10),
       listData: [...filteredData].sort(
-        (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
-      ), // All-time data, sorted terbaru dulu
+        (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+      ), // Data terbaru dulu (by jam input)
     };
   };
 
@@ -3474,6 +3474,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           Tanggal Input
                         </th>
                         <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                          Jam Input
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
                           Nama Pekerja
                         </th>
                         <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
@@ -3513,6 +3516,15 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                               <td style={{ padding: "12px", color: "#1a1a1a" }}>
                                 {row.tanggal
                                   ? new Date(row.tanggal + "T12:00:00").toLocaleDateString("id-ID")
+                                  : "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                                {row.created_at
+                                  ? new Date(row.created_at).toLocaleTimeString("id-ID", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                    })
                                   : "-"}
                               </td>
                               <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.nama || "-"}</td>
