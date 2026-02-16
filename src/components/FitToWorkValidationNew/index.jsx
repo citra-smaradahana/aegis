@@ -10,6 +10,7 @@ import {
   fetchUsersMarkedOffToday,
   unmarkUserOff,
   canReviseOffStatus,
+  canMarkUserOff,
   getSubordinateJabatansForValidator,
 } from "../../utils/fitToWorkAbsentHelpers";
 import { fetchActiveMandatesForUser, isDelegatorOnsite } from "../../utils/mandateHelpers";
@@ -356,6 +357,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
           onMarkUserOff={handleMarkUserOff}
           onUnmarkUserOff={handleUnmarkUserOff}
           canReviseOff={canReviseOffStatus(user?.jabatan)}
+          canMarkUserOff={canMarkUserOff(user?.jabatan)}
           filterStatus={filterStatus}
           onFilterChange={setFilterStatus}
           onBack={onBack}

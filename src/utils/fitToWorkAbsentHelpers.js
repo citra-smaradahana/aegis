@@ -150,11 +150,15 @@ export async function fetchUsersNotYetFilledFTW(user) {
 }
 
 /**
- * Tandai user sebagai off/tidak hadir untuk hari ini
+ * Tandai user sebagai off/tidak hadir untuk hari ini.
+ * Hanya jabatan tertentu (PJO, Asst PJO, SHERQ, SHE, Administrator) yang berwenang.
  */
 export async function markUserOff(userId, validatorUser) {
   if (!userId || !validatorUser?.id) {
     return { error: "User ID dan validator wajib" };
+  }
+  if (!canMarkUserOff(validatorUser?.jabatan)) {
+    return { error: "Tidak memiliki wewenang untuk menandai off karyawan" };
   }
 
   const today = getTodayWITA();
@@ -200,18 +204,36 @@ export async function unmarkUserOff(userId) {
   return { success: true };
 }
 
-/** Jabatan yang dapat melihat dan merevisi daftar "Sudah Ditandai Off" (Tandai On / Hadir) */
+/**
+ * Jabatan yang dapat melihat dan merevisi daftar "Sudah Ditandai Off" (Tandai On / Hadir).
+ * Admin Site Project tidak termasuk - read only untuk validasi FTW.
+ */
 const CAN_REVISE_OFF_JABATANS = [
   "Penanggung Jawab Operasional",
   "Asst. Penanggung Jawab Operasional",
   "SHERQ Officer",
   "SHE",
   "Administrator",
-  "Admin Site Project",
 ];
 
 export function canReviseOffStatus(jabatan) {
   return CAN_REVISE_OFF_JABATANS.includes((jabatan || "").trim());
+}
+
+/**
+ * Jabatan yang dapat melakukan Tandai Off / Tandai On karyawan.
+ * Hanya PJO, Asst PJO, SHERQ, SHE, Administrator. Admin Site Project & Leading Hand tidak bisa.
+ */
+const CAN_MARK_USER_OFF_JABATANS = [
+  "Penanggung Jawab Operasional",
+  "Asst. Penanggung Jawab Operasional",
+  "SHERQ Officer",
+  "SHE",
+  "Administrator",
+];
+
+export function canMarkUserOff(jabatan) {
+  return CAN_MARK_USER_OFF_JABATANS.includes((jabatan || "").trim());
 }
 
 /**

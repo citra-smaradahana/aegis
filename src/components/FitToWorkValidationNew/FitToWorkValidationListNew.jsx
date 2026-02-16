@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
@@ -10,6 +10,7 @@ function FitToWorkValidationListNew({
   onMarkUserOff,
   onUnmarkUserOff,
   canReviseOff = false,
+  canMarkUserOff = false,
   filterStatus,
   onFilterChange,
   onBack,
@@ -21,6 +22,21 @@ function FitToWorkValidationListNew({
   const [selectedValidation, setSelectedValidation] = useState(null);
   const [currentPage, setCurrentPage] = useState("list"); // "list" atau "form"
   const [confirmOffUser, setConfirmOffUser] = useState(null); // { user, action: 'off'|'on' } untuk popup konfirmasi
+
+  // Tab: action | changes | outstanding | absent (absent hanya untuk canReviseOff)
+  const [activeTab, setActiveTab] = useState("action");
+
+  // Pagination state (per section)
+  const [pageSize, setPageSize] = useState(10);
+  const [pendingPage, setPendingPage] = useState(0);
+  const [perubahanPage, setPerubahanPage] = useState(0);
+  const [belumIsiPage, setBelumIsiPage] = useState(0);
+  const [userOffPage, setUserOffPage] = useState(0);
+
+  // Reset pagination saat filter berubah
+  useEffect(() => {
+    setPendingPage(0);
+  }, [filterStatus]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -104,6 +120,64 @@ function FitToWorkValidationListNew({
       default:
         return 0;
     }
+  };
+
+  /** Render pagination controls untuk suatu section */
+  const renderPagination = (totalCount, page, setPage) => {
+    if (totalCount <= pageSize) return null;
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const start = page * pageSize + 1;
+    const end = Math.min((page + 1) * pageSize, totalCount);
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: "12px",
+          flexWrap: "wrap",
+          gap: "8px",
+        }}
+      >
+        <div style={{ fontSize: "13px", color: isMobile ? "#6b7280" : "#9ca3af" }}>
+          Menampilkan {start}–{end} dari {totalCount}
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
+              background: page === 0 ? (isMobile ? "#f3f4f6" : "#374151") : isMobile ? "#fff" : "#1f2937",
+              color: page === 0 ? (isMobile ? "#9ca3af" : "#6b7280") : isMobile ? "#374151" : "#e5e7eb",
+              cursor: page === 0 ? "not-allowed" : "pointer",
+              fontSize: "13px",
+            }}
+          >
+            Sebelumnya
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage((p) => (p + 1 < totalPages ? p + 1 : p))}
+            disabled={page + 1 >= totalPages}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
+              background: page + 1 >= totalPages ? (isMobile ? "#f3f4f6" : "#374151") : isMobile ? "#fff" : "#1f2937",
+              color: page + 1 >= totalPages ? (isMobile ? "#9ca3af" : "#6b7280") : isMobile ? "#374151" : "#e5e7eb",
+              cursor: page + 1 >= totalPages ? "not-allowed" : "pointer",
+              fontSize: "13px",
+            }}
+          >
+            Berikutnya
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const handleValidationClick = (validation) => {
@@ -392,105 +466,229 @@ function FitToWorkValidationListNew({
           </div>
         )}
 
-        {/* Filter Section - center */}
+        {/* Tab Navigation - Action | Changes | Outstanding | Absent */}
+        <div
+          style={{
+            display: "flex",
+            backgroundColor: isMobile ? "white" : "#1f2937",
+            borderRadius: "12px",
+            padding: "4px",
+            marginBottom: "20px",
+            boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "0 1px 3px rgba(0,0,0,0.3)",
+          }}
+        >
+          <button
+            onClick={() => setActiveTab("action")}
+            style={{
+              flex: 1,
+              padding: isMobile ? "12px 8px" : "12px 16px",
+              border: "none",
+              borderRadius: "8px",
+              background: activeTab === "action" ? "#3b82f6" : "transparent",
+              color: activeTab === "action" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
+              fontWeight: activeTab === "action" ? 600 : 500,
+              fontSize: isMobile ? "12px" : "14px",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            ⏳ Action ({pendingList.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("changes")}
+            style={{
+              flex: 1,
+              padding: isMobile ? "12px 8px" : "12px 16px",
+              border: "none",
+              borderRadius: "8px",
+              background: activeTab === "changes" ? "#3b82f6" : "transparent",
+              color: activeTab === "changes" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
+              fontWeight: activeTab === "changes" ? 600 : 500,
+              fontSize: isMobile ? "12px" : "14px",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            ✅ Changes ({notFitBecameFitList.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("outstanding")}
+            style={{
+              flex: 1,
+              padding: isMobile ? "12px 8px" : "12px 16px",
+              border: "none",
+              borderRadius: "8px",
+              background: activeTab === "outstanding" ? "#3b82f6" : "transparent",
+              color: activeTab === "outstanding" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
+              fontWeight: activeTab === "outstanding" ? 600 : 500,
+              fontSize: isMobile ? "12px" : "14px",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            📋 Outstanding ({usersNotFilled.length})
+          </button>
+          {canReviseOff && (
+            <button
+              onClick={() => setActiveTab("absent")}
+              style={{
+                flex: 1,
+                padding: isMobile ? "12px 8px" : "12px 16px",
+                border: "none",
+                borderRadius: "8px",
+                background: activeTab === "absent" ? "#3b82f6" : "transparent",
+                color: activeTab === "absent" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
+                fontWeight: activeTab === "absent" ? 600 : 500,
+                fontSize: isMobile ? "12px" : "14px",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+            >
+              📴 Absent ({usersMarkedOff.length})
+            </button>
+          )}
+        </div>
+
+        {/* Filter & Page Size - Status filter hanya untuk Action */}
         <div
           style={{
             display: "flex",
             gap: "16px",
-            marginBottom: "28px",
+            marginBottom: "20px",
             marginTop: isMobile ? "16px" : 0,
             flexWrap: "wrap",
             justifyContent: "center",
+            alignItems: "center",
             padding: isMobile ? "0 0 16px 0" : "0",
           }}
         >
-          <select
-            value={filterStatus}
-            onChange={(e) => onFilterChange(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
-              borderRadius: "6px",
-              backgroundColor: isMobile ? "white" : "#1f2937",
-              color: isMobile ? "#374151" : "#e5e7eb",
-              fontSize: "14px",
-              outline: "none",
-              width: isMobile ? "100%" : "auto",
-            }}
-          >
-            <option value="all">Semua Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Level1_Review">Level 1 Review</option>
-            <option value="Level2_Review">Level 2 Review</option>
-            <option value="Closed">Closed</option>
-          </select>
-        </div>
-
-        {/* Section: Perlu Tindakan (Pending) */}
-        <div style={{ marginBottom: "32px" }}>
-          <h3
-            style={{
-              margin: "0 0 12px 0",
-              color: isMobile ? "#1f2937" : "#e5e7eb",
-              fontSize: "16px",
-              fontWeight: "600",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <span style={{ color: "#ff9800" }}>⏳</span> Perlu Tindakan ({pendingList.length})
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {pendingList.length > 0 ? (
-              pendingList.map((validation, index) => renderValidationCard(validation, index))
-            ) : (
-              <div
+          {activeTab === "action" && (
+            <select
+              value={filterStatus}
+              onChange={(e) => onFilterChange(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
+                borderRadius: "6px",
+                backgroundColor: isMobile ? "white" : "#1f2937",
+                color: isMobile ? "#374151" : "#e5e7eb",
+                fontSize: "14px",
+                outline: "none",
+                width: isMobile ? "100%" : "auto",
+              }}
+            >
+              <option value="all">Semua Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Level1_Review">Level 1 Review</option>
+              <option value="Level2_Review">Level 2 Review</option>
+              <option value="Closed">Closed</option>
+            </select>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "13px", color: isMobile ? "#374151" : "#9ca3af" }}>Tampilkan</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPendingPage(0);
+                  setPerubahanPage(0);
+                  setBelumIsiPage(0);
+                  setUserOffPage(0);
+                }}
                 style={{
-                  padding: "20px",
-                  backgroundColor: isMobile ? "#f3f4f6" : "#1f2937",
-                  borderRadius: "12px",
-                  border: isMobile ? "1px dashed #9ca3af" : "1px dashed #374151",
-                  color: isMobile ? "#374151" : "#d1d5db",
+                  padding: "8px 12px",
+                  border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
+                  borderRadius: "6px",
+                  backgroundColor: isMobile ? "white" : "#1f2937",
+                  color: isMobile ? "#374151" : "#e5e7eb",
                   fontSize: "14px",
-                  textAlign: "center",
-                  fontWeight: "500",
+                  outline: "none",
                 }}
               >
-                Tidak ada validasi yang perlu ditindaklanjuti
-              </div>
-            )}
-          </div>
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+              <span style={{ fontSize: "13px", color: isMobile ? "#374151" : "#9ca3af" }}>data</span>
+            </div>
         </div>
 
-        {/* Section: Not Fit To Work → Fit To Work (hari ini, sudah divalidasi) */}
-        <div style={{ marginBottom: "32px" }}>
-          <h3
-            style={{
-              margin: "0 0 12px 0",
-              color: isMobile ? "#1f2937" : "#e5e7eb",
-              fontSize: "16px",
-              fontWeight: "600",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <span style={{ color: "#10b981" }}>✅</span> Not Fit To Work → Fit To Work Hari Ini ({notFitBecameFitList.length})
-          </h3>
-          <p
-            style={{
-              margin: "0 0 12px 0",
-              color: isMobile ? "#4b5563" : "#9ca3af",
-              fontSize: "13px",
-              fontWeight: "500",
-            }}
-          >
-            Karyawan yang awalnya Not Fit To Work pada hari ini dan telah divalidasi menjadi Fit To Work.
-          </p>
-          {notFitBecameFitList.length > 0 ? (
+        {/* Section: Action - Perlu Tindakan (Pending) */}
+        {activeTab === "action" && (
+          <div style={{ marginBottom: "32px" }}>
+            <h3
+              style={{
+                margin: "0 0 12px 0",
+                color: isMobile ? "#1f2937" : "#e5e7eb",
+                fontSize: "16px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <span style={{ color: "#ff9800" }}>⏳</span> Perlu Tindakan ({pendingList.length})
+            </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {notFitBecameFitList.map((v) => (
+              {pendingList.length > 0 ? (
+                <>
+                  {pendingList
+                    .slice(pendingPage * pageSize, pendingPage * pageSize + pageSize)
+                    .map((validation, index) => renderValidationCard(validation, pendingPage * pageSize + index))}
+                  {renderPagination(pendingList.length, pendingPage, setPendingPage)}
+                </>
+              ) : (
+                <div
+                  style={{
+                    padding: "20px",
+                    backgroundColor: isMobile ? "#f3f4f6" : "#1f2937",
+                    borderRadius: "12px",
+                    border: isMobile ? "1px dashed #9ca3af" : "1px dashed #374151",
+                    color: isMobile ? "#374151" : "#d1d5db",
+                    fontSize: "14px",
+                    textAlign: "center",
+                    fontWeight: "500",
+                  }}
+                >
+                  Tidak ada validasi yang perlu ditindaklanjuti
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Section: Changes - Not Fit To Work → Fit To Work (hari ini, sudah divalidasi) */}
+        {activeTab === "changes" && (
+          <div style={{ marginBottom: "32px" }}>
+            <h3
+              style={{
+                margin: "0 0 12px 0",
+                color: isMobile ? "#1f2937" : "#e5e7eb",
+                fontSize: "16px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <span style={{ color: "#10b981" }}>✅</span> Not Fit To Work → Fit To Work Hari Ini ({notFitBecameFitList.length})
+            </h3>
+            <p
+              style={{
+                margin: "0 0 12px 0",
+                color: isMobile ? "#4b5563" : "#9ca3af",
+                fontSize: "13px",
+                fontWeight: "500",
+              }}
+            >
+              Karyawan yang awalnya Not Fit To Work pada hari ini dan telah divalidasi menjadi Fit To Work.
+            </p>
+            {notFitBecameFitList.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {notFitBecameFitList
+                .slice(perubahanPage * pageSize, perubahanPage * pageSize + pageSize)
+                .map((v) => (
                 <div
                   key={v.id}
                   style={{
@@ -553,6 +751,7 @@ function FitToWorkValidationListNew({
                   </div>
                 </div>
               ))}
+              {renderPagination(notFitBecameFitList.length, perubahanPage, setPerubahanPage)}
             </div>
           ) : (
             <div
@@ -570,9 +769,11 @@ function FitToWorkValidationListNew({
               Tidak ada data. Karyawan yang awalnya Not Fit To Work dan sudah divalidasi menjadi Fit To Work akan muncul di sini.
             </div>
           )}
-        </div>
+          </div>
+        )}
 
-        {/* Section: Belum Isi Fit To Work Hari Ini (karyawan yang belum isi FTW / belum di-off) */}
+        {/* Section: Outstanding - Belum Isi Fit To Work Hari Ini */}
+        {activeTab === "outstanding" && (
         <div>
           <h3
             style={{
@@ -599,7 +800,9 @@ function FitToWorkValidationListNew({
           </p>
           {usersNotFilled.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {usersNotFilled.map((u) => (
+              {usersNotFilled
+                .slice(belumIsiPage * pageSize, belumIsiPage * pageSize + pageSize)
+                .map((u) => (
                 <div
                   key={u.id}
                   style={{
@@ -634,25 +837,28 @@ function FitToWorkValidationListNew({
                       {u.jabatan} • NRP: {u.nrp} • {u.site}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmOffUser({ user: u, action: "off" })}
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: "8px",
-                      border: "1px solid #f59e0b",
-                      background: "#f59e0b20",
-                      color: "#f59e0b",
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Tandai Off / Tidak Hadir
-                  </button>
+                  {canMarkUserOff && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmOffUser({ user: u, action: "off" })}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "1px solid #f59e0b",
+                        background: "#f59e0b20",
+                        color: "#f59e0b",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Tandai Off / Tidak Hadir
+                    </button>
+                  )}
                 </div>
               ))}
+              {renderPagination(usersNotFilled.length, belumIsiPage, setBelumIsiPage)}
             </div>
           ) : (
             <div
@@ -671,9 +877,10 @@ function FitToWorkValidationListNew({
             </div>
           )}
         </div>
+        )}
 
-        {/* Section: Sudah Ditandai Off Hari Ini (hanya PJO, Asst PJO, SHERQ - untuk revisi) */}
-        {canReviseOff && (
+        {/* Section: Absent - Sudah Ditandai Off Hari Ini (hanya PJO, Asst PJO, SHERQ) */}
+        {canReviseOff && activeTab === "absent" && (
           <div>
             <h3
               style={{
@@ -686,7 +893,7 @@ function FitToWorkValidationListNew({
                 gap: "8px",
               }}
             >
-              <span style={{ color: "#6b7280" }}>📴</span> Sudah Ditandai Off Hari Ini ({usersMarkedOff.length})
+              <span style={{ color: "#6b7280" }}>📴</span> Absent – Sudah Ditandai Off Hari Ini ({usersMarkedOff.length})
             </h3>
             <p
               style={{
@@ -700,7 +907,9 @@ function FitToWorkValidationListNew({
             </p>
             {usersMarkedOff.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {usersMarkedOff.map((u) => (
+                {usersMarkedOff
+                  .slice(userOffPage * pageSize, userOffPage * pageSize + pageSize)
+                  .map((u) => (
                   <div
                     key={u.id}
                     style={{
@@ -754,6 +963,7 @@ function FitToWorkValidationListNew({
                     </button>
                   </div>
                 ))}
+                {renderPagination(usersMarkedOff.length, userOffPage, setUserOffPage)}
               </div>
             ) : (
               <div
@@ -767,9 +977,9 @@ function FitToWorkValidationListNew({
                   textAlign: "center",
                   fontWeight: "500",
                 }}
-              >
-                Tidak ada karyawan yang ditandai off hari ini
-              </div>
+            >
+              Tidak ada karyawan yang ditandai off hari ini
+            </div>
             )}
           </div>
         )}
@@ -871,33 +1081,6 @@ function FitToWorkValidationListNew({
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Empty placeholder when no pending, no users not filled, and no users marked off (when can revise) */}
-        {validations && validations.length === 0 && (!usersNotFilled || usersNotFilled.length === 0) && (!canReviseOff || !usersMarkedOff || usersMarkedOff.length === 0) && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "300px",
-              color: "#9ca3af",
-              textAlign: "center",
-              padding: "40px",
-              backgroundColor: "#1f2937",
-              borderRadius: "12px",
-              border: "2px dashed #374151",
-            }}
-          >
-            <div style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.5 }}>📋</div>
-            <h3 style={{ margin: 0, marginBottom: "8px", color: "#e5e7eb", fontSize: "20px", fontWeight: "600" }}>
-              Tidak ada validasi
-            </h3>
-            <p style={{ margin: 0, color: "#9ca3af", fontSize: "14px" }}>
-              Semua validasi Fit To Work telah selesai diproses
-            </p>
           </div>
         )}
       </div>
