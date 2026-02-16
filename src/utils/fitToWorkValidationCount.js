@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient";
-import { fetchActiveMandatesForUser, isDelegatorOnsite } from "./mandateHelpers";
+import { fetchActiveMandatesForUser } from "./mandateHelpers";
 
 /**
  * Mengambil jumlah validasi Fit To Work yang perlu ditindaklanjuti oleh user (berdasarkan jabatan + mandat).
@@ -46,7 +46,7 @@ export async function fetchValidationCountForUser(user) {
     // Mandat PLH->FLH: tambah Mekanik/Operator Plant jika PLH tidak onsite
     const mandates = await fetchActiveMandatesForUser(user.id, userSite);
     const plhMandate = mandates.find((m) => m.mandate_type === "PLH_TO_FLH");
-    if (plhMandate && !(await isDelegatorOnsite(plhMandate.delegated_by_user_id, userSite))) {
+    if (plhMandate) {
       await addFromQuery(
         baseQuery().in("jabatan", ["Mekanik", "Operator Plant"]).eq("workflow_status", "Pending")
       );
@@ -59,7 +59,6 @@ export async function fetchValidationCountForUser(user) {
     );
     const mandates = await fetchActiveMandatesForUser(user.id, userSite);
     for (const m of mandates) {
-      if (await isDelegatorOnsite(m.delegated_by_user_id, userSite)) continue;
       if (m.mandate_type === "SHERQ_TO_ASST_PJO_OR_PJO") {
         await addFromQuery(baseQuery().in("workflow_status", ["Level1_Review", "Level1 Review"]));
       } else if (m.mandate_type === "PJO_TO_ASST_PJO") {
@@ -90,7 +89,7 @@ export async function fetchValidationCountForUser(user) {
     );
     const mandates = await fetchActiveMandatesForUser(user.id, userSite);
     const sherqMandate = mandates.find((m) => m.mandate_type === "SHERQ_TO_ASST_PJO_OR_PJO");
-    if (sherqMandate && !(await isDelegatorOnsite(sherqMandate.delegated_by_user_id, userSite))) {
+    if (sherqMandate) {
       await addFromQuery(baseQuery().in("workflow_status", ["Level1_Review", "Level1 Review"]));
     }
   } else if (jabatan === "SHE") {

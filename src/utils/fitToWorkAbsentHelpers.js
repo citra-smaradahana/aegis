@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient";
-import { fetchActiveMandatesForUser, isDelegatorOnsite } from "./mandateHelpers";
+import { fetchActiveMandatesForUser } from "./mandateHelpers";
 import { getTodayWITA, getNowWITAISO } from "./dateTimeHelpers";
 import { fetchSitesFTWStatusMap } from "./masterDataHelpers";
 
@@ -10,7 +10,7 @@ export { getTodayWITA };
  * Leading Hand & Plant Leading Hand hanya lihat bawahan mereka.
  * PJO, Asst PJO, SHERQ lihat semua.
  */
-function getSubordinateJabatansForValidator(jabatan, mandates, isDelegatorOnsiteMap) {
+function getSubordinateJabatansForValidator(jabatan, mandates) {
   const j = (jabatan || "").trim().replace(/\s+/g, " ");
 
   // PJO, Asst PJO, SHERQ, Administrator, Admin Site Project → lihat semua (return null = no filter)
@@ -39,9 +39,9 @@ function getSubordinateJabatansForValidator(jabatan, mandates, isDelegatorOnsite
       "Blaster",
       "Crew Blasting",
     ];
-    // Mandat PLH->FLH: tambah Mekanik/Operator Plant jika PLH tidak onsite
+    // Mandat PLH->FLH: tambah Mekanik/Operator Plant
     const plhMandate = (mandates || []).find((m) => m.mandate_type === "PLH_TO_FLH");
-    if (plhMandate && !(isDelegatorOnsiteMap || {})[plhMandate.delegated_by_user_id]) {
+    if (plhMandate) {
       return [...base, "Mekanik", "Operator Plant"];
     }
     return base;
@@ -86,23 +86,13 @@ export async function fetchUsersNotYetFilledFTW(user) {
 
   // Fetch mandates untuk Field Leading Hand (PLH->FLH)
   let mandates = [];
-  let isDelegatorOnsiteMap = {};
   if (jabatan === "Field Leading Hand") {
     mandates = await fetchActiveMandatesForUser(user.id, userSite);
-    for (const m of mandates) {
-      if (m.delegated_by_user_id) {
-        isDelegatorOnsiteMap[m.delegated_by_user_id] = await isDelegatorOnsite(
-          m.delegated_by_user_id,
-          userSite
-        );
-      }
-    }
   }
 
   const subordinateJabatans = getSubordinateJabatansForValidator(
     jabatan,
-    mandates,
-    isDelegatorOnsiteMap
+    mandates
   );
 
   // 1. Ambil semua user di site (filter jabatan jika LH/PLH)
@@ -159,6 +149,36 @@ export async function markUserOff(userId, validatorUser) {
   }
   if (!canMarkUserOff(validatorUser?.jabatan)) {
     return { error: "Tidak memiliki wewenang untuk menandai off karyawan" };
+  }
+
+  // Leading Hand hanya boleh menandai off user dalam scope tanggung jawab jabatan.
+  const validatorJabatan = (validatorUser?.jabatan || "").trim();
+  if (validatorJabatan === "Field Leading Hand" || validatorJabatan === "Plant Leading Hand") {
+    const { data: targetUser, error: targetUserError } = await supabase
+      .from("users")
+      .select("id, jabatan, site")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (targetUserError || !targetUser) {
+      return { error: "Data karyawan target tidak ditemukan" };
+    }
+    if (targetUser.site !== validatorUser.site) {
+      return { error: "Tidak memiliki wewenang lintas site" };
+    }
+
+    let mandates = [];
+    if (validatorJabatan === "Field Leading Hand") {
+      mandates = await fetchActiveMandatesForUser(validatorUser.id, validatorUser.site);
+    }
+
+    const allowedJabatans = getSubordinateJabatansForValidator(
+      validatorJabatan,
+      mandates
+    );
+    if (!allowedJabatans?.includes(targetUser.jabatan)) {
+      return { error: "Tidak memiliki wewenang untuk menandai off jabatan ini" };
+    }
   }
 
   const today = getTodayWITA();
@@ -222,7 +242,8 @@ export function canReviseOffStatus(jabatan) {
 
 /**
  * Jabatan yang dapat melakukan Tandai Off / Tandai On karyawan.
- * Hanya PJO, Asst PJO, SHERQ, SHE, Administrator. Admin Site Project & Leading Hand tidak bisa.
+ * PJO, Asst PJO, SHERQ, SHE, Administrator, Field LH, Plant LH.
+ * Untuk LH, pembatasan user per jabatan dilakukan di markUserOff().
  */
 const CAN_MARK_USER_OFF_JABATANS = [
   "Penanggung Jawab Operasional",
@@ -230,6 +251,8 @@ const CAN_MARK_USER_OFF_JABATANS = [
   "SHERQ Officer",
   "SHE",
   "Administrator",
+  "Field Leading Hand",
+  "Plant Leading Hand",
 ];
 
 export function canMarkUserOff(jabatan) {

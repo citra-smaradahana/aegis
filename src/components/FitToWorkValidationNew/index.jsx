@@ -13,7 +13,7 @@ import {
   canMarkUserOff,
   getSubordinateJabatansForValidator,
 } from "../../utils/fitToWorkAbsentHelpers";
-import { fetchActiveMandatesForUser, isDelegatorOnsite } from "../../utils/mandateHelpers";
+import { fetchActiveMandatesForUser } from "../../utils/mandateHelpers";
 
 function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -54,22 +54,12 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
 
       // Dapatkan jabatan bawahan yang boleh dilihat validator (FLH tidak lihat Mekanik/Operator Plant kecuali ada mandat PLH)
       let mandates = [];
-      let isDelegatorOnsiteMap = {};
       if (userJabatan === "Field Leading Hand") {
         mandates = await fetchActiveMandatesForUser(user.id, userSite);
-        for (const m of mandates) {
-          if (m.delegated_by_user_id) {
-            isDelegatorOnsiteMap[m.delegated_by_user_id] = await isDelegatorOnsite(
-              m.delegated_by_user_id,
-              userSite
-            );
-          }
-        }
       }
       const subordinateJabatans = getSubordinateJabatansForValidator(
         userJabatan,
-        mandates,
-        isDelegatorOnsiteMap
+        mandates
       );
 
       // null = lihat semua (PJO, Asst PJO, SHERQ, Admin). [] = tidak ada akses. [...] = filter by jabatan.

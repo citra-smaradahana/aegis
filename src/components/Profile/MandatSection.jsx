@@ -7,6 +7,7 @@ import {
   deactivateMandate,
   MANDATE_CONFIG,
 } from "../../utils/mandateHelpers";
+import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
 // Modal popup Penerima Mandat - muncul dari atas navbar (bottom sheet)
 function PenerimaMandatModal({
@@ -126,7 +127,7 @@ function MandatSection({ user, isMobile = false, embedded = false }) {
   };
 
   const setDefaultDates = () => {
-    const today = new Date();
+    const today = new Date(`${getTodayWITA()}T00:00:00+08:00`);
     const nextWeek = new Date(today);
     nextWeek.setDate(nextWeek.getDate() + 7);
     setActiveFrom(today.toISOString().split("T")[0]);

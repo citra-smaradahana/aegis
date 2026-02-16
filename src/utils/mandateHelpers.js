@@ -1,4 +1,5 @@
 import { supabase } from "../supabaseClient";
+import { getTodayWITA } from "./dateTimeHelpers";
 
 /** Tipe mandat */
 export const MANDATE_TYPES = {
@@ -113,7 +114,7 @@ export async function isDelegatorOnsite(delegatorUserId, site) {
 export async function fetchActiveMandatesForUser(userId, site) {
   if (!userId || !site) return [];
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayWITA();
 
   const { data, error } = await supabase
     .from("validation_mandate")

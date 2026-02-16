@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import SelectModalWithSearch from "../SelectModalWithSearch";
-import { fetchActiveMandatesForUser, isDelegatorOnsite } from "../../utils/mandateHelpers";
+import { fetchActiveMandatesForUser } from "../../utils/mandateHelpers";
 
 function FitToWorkValidationFormNew({
   validation,
@@ -45,8 +45,7 @@ function FitToWorkValidationFormNew({
     }
   }, [validation]);
 
-  // Cek mandat: FLH bisa validasi Mekanik/Operator Plant jika PLH beri mandat dan PLH tidak onsite
-  // Asst.PJO/PJO bisa validasi Level2 (SHERQ/PJO cases) jika dapat mandat dan pemberi tidak onsite
+  // Cek mandat: pemegang mandat dapat validasi sesuai scope mandat.
   useEffect(() => {
     let cancelled = false;
     if (!user?.id || !validation || user.site !== validation.site) {
@@ -61,16 +60,13 @@ function FitToWorkValidationFormNew({
       let ml1 = false;
       let ml2 = false;
       for (const m of mandates) {
-        const delegatorId = m.delegated_by_user_id;
-        if (!delegatorId) continue;
-        const onsite = await isDelegatorOnsite(delegatorId, user.site);
-        if (onsite) continue; // Pemberi onsite -> mandat tidak berlaku
         if (m.mandate_type === "PLH_TO_FLH" && user.jabatan === "Field Leading Hand") {
           if (validation.workflow_status === "Pending" && ["Mekanik", "Operator Plant"].includes(validation.jabatan)) {
             ml1 = true;
             break;
           }
         }
+        // Mandat SHERQ memberi otorisasi level 2 pada scope SHERQ.
         if (m.mandate_type === "SHERQ_TO_ASST_PJO_OR_PJO") {
           if ((user.jabatan === "Asst. Penanggung Jawab Operasional" || user.jabatan === "Penanggung Jawab Operasional") &&
             (validation.workflow_status === "Level1_Review" || validation.workflow_status === "Level1 Review" || validation.jabatan === "Administrator" || validation.jabatan === "Admin Site Project")) {
@@ -109,7 +105,7 @@ function FitToWorkValidationFormNew({
     // Level 1 can only edit if status is Pending
     if (validation.workflow_status !== "Pending") return false;
 
-    // Mandat: FLH bisa validasi Mekanik/Operator Plant jika PLH beri mandat dan PLH tidak onsite
+    // Mandat: FLH bisa validasi Mekanik/Operator Plant jika menerima mandat PLH.
     if (mandateCanEditL1) return true;
 
     // Check if user can validate this person based on jabatan hierarchy
@@ -144,7 +140,7 @@ function FitToWorkValidationFormNew({
     const userJabatan = user.jabatan;
     const userSite = user.site;
 
-    // Mandat: Asst.PJO/PJO bisa validasi Level2 (SHERQ/PJO cases) jika dapat mandat dan pemberi tidak onsite
+    // Mandat: Asst.PJO/PJO bisa validasi Level2 (scope SHERQ/PJO) jika menerima mandat aktif.
     if (mandateCanEditL2) return true;
 
     console.log("=== canEditLevel2 DEBUG ===");
