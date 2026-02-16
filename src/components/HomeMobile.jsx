@@ -63,7 +63,8 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
   const [campaignImageRatios, setCampaignImageRatios] = useState({});
   const resumeCampaignTimerRef = useRef(null);
 
-  const campaignCardWidth = Math.min(350, Math.max(240, viewportWidth - 60));
+  const menuContentWidth = Math.max(220, viewportWidth - 54);
+  const campaignCardWidth = Math.min(350, menuContentWidth);
   const compactViewport = viewportHeight < 760;
   const campaignImageHeight = Math.round(
     Math.min(
@@ -495,9 +496,8 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
             <div
               style={{
                 position: "relative",
-                width: "100%",
-                maxWidth: campaignCardWidth,
-                margin: "0 auto",
+                width: `min(${menuContentWidth}px, calc(100% - 14px))`,
+                margin: 0,
                 minHeight: campaignImageHeight + (compactViewport ? 70 : 78),
               }}
               onTouchStart={() => setCampaignPaused(true)}
