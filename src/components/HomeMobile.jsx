@@ -100,10 +100,17 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
   };
 
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Fallback viewport height untuk device lama yang belum stabil mendukung dvh.
+    const setLegacyViewportHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--app-vh", `${vh}px`);
+    };
+    setLegacyViewportHeight();
+    window.addEventListener("resize", setLegacyViewportHeight);
+    window.addEventListener("orientationchange", setLegacyViewportHeight);
     return () => {
-      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("resize", setLegacyViewportHeight);
+      window.removeEventListener("orientationchange", setLegacyViewportHeight);
     };
   }, []);
 
@@ -203,14 +210,14 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
     `}</style>
     <div
       style={{
-        position: "fixed",
-        inset: 0,
+        position: "relative",
         width: "100%",
-        height: "100%",
-        maxHeight: "100dvh",
+        minHeight: "calc(var(--app-vh, 1vh) * 100)",
         background: "#f8fafc",
-        overflow: "hidden",
-        overscrollBehavior: "none",
+        overflowY: "auto",
+        overflowX: "hidden",
+        WebkitOverflowScrolling: "touch",
+        overscrollBehaviorY: "contain",
         display: "flex",
         flexDirection: "column",
         paddingBottom: "calc(70px + env(safe-area-inset-bottom))", // Space untuk bottom nav
@@ -357,8 +364,8 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
         className="mobile-home-menu"
         style={{
           flex: 1,
-          minHeight: 0,
-          overflow: "hidden",
+          minHeight: "min-content",
+          overflow: "visible",
           padding: "8px 20px 8px",
           maxWidth: 1200,
           margin: "0 auto",
@@ -375,7 +382,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
             gridTemplateColumns: "1fr",
             gap: 10,
             flexShrink: 0,
-            paddingRight: 14,
+            paddingRight: 8,
             boxSizing: "border-box",
           }}
         >
