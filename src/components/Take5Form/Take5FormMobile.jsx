@@ -45,6 +45,28 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+
+  // Daftar field yang belum terisi (untuk notifikasi)
+  const getValidationErrors = () => {
+    const errors = [];
+    if (!site) errors.push("Lokasi (Site)");
+    if (!detailLokasi?.trim()) errors.push("Detail Lokasi");
+    if (!potensiBahaya?.trim()) errors.push("Potensi Bahaya");
+    if (q1 === null) errors.push("Pertanyaan 1: Apakah mengerti pekerjaan?");
+    if (q2 === null) errors.push("Pertanyaan 2: Kompetensi?");
+    if (q3 === null) errors.push("Pertanyaan 3: Izin?");
+    if (q4 === null) errors.push("Pertanyaan 4: Peralatan?");
+    if (!aman) errors.push("Kondisi kerja (Aman/Perbaikan/Stop)");
+    if (aman === "perbaikan") {
+      if (!buktiPerbaikan) errors.push("Bukti Perbaikan (Foto)");
+      if (!deskripsiPerbaikan?.trim()) errors.push("Deskripsi Perbaikan");
+    }
+    if (aman === "stop") {
+      if (!deskripsiKondisi?.trim()) errors.push("Deskripsi Kondisi");
+    }
+    return errors;
+  };
 
   // Validasi form
   const isFormValid =
@@ -149,6 +171,10 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isFormValid) {
+      setShowValidationModal(true);
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -1091,18 +1117,19 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
           >
             <button
               type="submit"
-              disabled={!isFormValid || loading}
+              disabled={loading}
               style={{
-                background: "#2563eb",
+                background: isFormValid ? "#2563eb" : "#9ca3af",
                 color: "#fff",
                 border: "none",
                 borderRadius: 12,
                 padding: "14px 0",
                 fontSize: 14,
                 fontWeight: 600,
-                cursor: "pointer",
+                cursor: loading ? "not-allowed" : "pointer",
                 width: "100%",
-                boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                boxShadow: isFormValid ? "0 2px 8px rgba(37,99,235,0.3)" : "none",
+                opacity: loading ? 0.7 : 1,
               }}
             >
               {loading ? "Menyimpan..." : "Simpan Take 5"}
@@ -1127,6 +1154,81 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
           // take5 tab tidak perlu handling karena sudah di halaman take5
         }}
       />
+
+      {/* Modal notifikasi validasi */}
+      {showValidationModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setShowValidationModal(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 20,
+              maxWidth: 340,
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 16,
+                color: "#1f2937",
+                marginBottom: 12,
+              }}
+            >
+              Lengkapi data berikut
+            </div>
+            <ul
+              style={{
+                margin: "0 0 16px 0",
+                paddingLeft: 20,
+                color: "#4b5563",
+                fontSize: 14,
+                lineHeight: 1.8,
+              }}
+            >
+              {getValidationErrors().map((err) => (
+                <li key={err}>{err}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setShowValidationModal(false)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Baik
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

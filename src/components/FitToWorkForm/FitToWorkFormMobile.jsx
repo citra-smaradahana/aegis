@@ -19,8 +19,23 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
   const [sudahIsiHariIni, setSudahIsiHariIni] = useState(false);
   const [totalJamTidurAngka, setTotalJamTidurAngka] = useState(0);
   const [dataHariIni, setDataHariIni] = useState(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   const today = getTodayWITA();
+
+  // Daftar field yang belum terisi (untuk notifikasi)
+  const getValidationErrors = () => {
+    const errors = [];
+    if (!jamTidur) errors.push("Jam Tidur");
+    if (!jamBangun) errors.push("Jam Bangun");
+    if (!tidakMengkonsumsiObat) errors.push("Konsumsi obat (Ya/Tidak)");
+    else if (tidakMengkonsumsiObat === "Tidak" && !catatanObat.trim()) {
+      errors.push("Catatan Obat");
+    }
+    if (!tidakAdaMasalahPribadi) errors.push("Masalah pribadi/keluarga (Ya/Tidak)");
+    if (!siapBekerja) errors.push("Deklarasi siap bekerja (Ya/Tidak)");
+    return errors;
+  };
 
   // Debug: Log state changes
   useEffect(() => {
@@ -187,6 +202,10 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isFormValid) {
+      setShowValidationModal(true);
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -851,18 +870,19 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
               >
                 <button
                   type="submit"
-                  disabled={!isFormValid || loading || sudahIsiHariIni}
+                  disabled={loading || sudahIsiHariIni}
                   style={{
-                    background: "#2563eb",
+                    background: isFormValid ? "#2563eb" : "#9ca3af",
                     color: "#fff",
                     border: "none",
                     borderRadius: 12,
                     padding: "14px 0",
                     fontSize: 14,
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: loading || sudahIsiHariIni ? "not-allowed" : "pointer",
                     width: "100%",
-                    boxShadow: "0 -2px 12px rgba(0,0,0,0.15)",
+                    boxShadow: isFormValid ? "0 -2px 12px rgba(0,0,0,0.15)" : "none",
+                    opacity: loading ? 0.7 : 1,
                   }}
                 >
                   {loading ? "Menyimpan..." : "Simpan Fit To Work"}
@@ -885,6 +905,79 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
           }
         }}
       />
+
+      {/* Modal notifikasi validasi */}
+      {showValidationModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setShowValidationModal(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 20,
+              maxWidth: 340,
+              width: "100%",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 16,
+                color: "#1f2937",
+                marginBottom: 12,
+              }}
+            >
+              Lengkapi data berikut
+            </div>
+            <ul
+              style={{
+                margin: "0 0 16px 0",
+                paddingLeft: 20,
+                color: "#4b5563",
+                fontSize: 14,
+                lineHeight: 1.8,
+              }}
+            >
+              {getValidationErrors().map((err) => (
+                <li key={err}>{err}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setShowValidationModal(false)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Baik
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
