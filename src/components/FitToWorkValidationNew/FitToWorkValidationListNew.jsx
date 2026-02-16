@@ -144,6 +144,21 @@ function FitToWorkValidationListNew({
   );
   console.log("FitToWorkValidationListNew - filterStatus:", filterStatus);
 
+  // Data untuk tab (dipakai di mode list dan mode form mobile)
+  const pendingStatuses = ["Pending", "Level1_Review", "Level1 Review", "Level2_Review"];
+  const pendingList = (validations || []).filter((v) =>
+    pendingStatuses.includes(v.workflow_status)
+  );
+
+  const todayStr = getTodayWITA();
+  const notFitBecameFitList = (validations || []).filter((v) => {
+    const tanggalMatch = (v.tanggal || (v.created_at || "").slice(0, 10)) === todayStr;
+    const wasNotFit = (v.initial_status_fatigue || "").toLowerCase().includes("not fit");
+    const nowFit = (v.status_fatigue || "").toLowerCase().includes("fit to work");
+    const isClosed = (v.workflow_status || "") === "Closed";
+    return tanggalMatch && wasNotFit && nowFit && isClosed;
+  });
+
   // Render form popup
   if (currentPage === "form" && selectedValidation) {
     return (
@@ -157,9 +172,141 @@ function FitToWorkValidationListNew({
           overflowY: "auto",
           overflowX: "hidden",
           paddingBottom: 80,
+          paddingTop: isMobile ? 74 : 0,
           boxSizing: "border-box",
         }}
       >
+        {isMobile && (
+          <div
+            style={{
+              position: "fixed",
+              top: 60,
+              left: 0,
+              right: 0,
+              zIndex: 150,
+              background: "#f8fafc",
+              padding: "8px 20px 10px",
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                backgroundColor: "white",
+                borderRadius: "12px",
+                padding: "4px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              }}
+            >
+              <button
+                onClick={() => {
+                  setActiveTab("action");
+                  handleBackToList();
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "action" ? "#3b82f6" : "transparent",
+                  color: activeTab === "action" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "action" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>⏳</span>
+                <span>Action</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{pendingList.length}</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("changes");
+                  handleBackToList();
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "changes" ? "#3b82f6" : "transparent",
+                  color: activeTab === "changes" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "changes" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>✅</span>
+                <span>Changes</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{notFitBecameFitList.length}</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("outstanding");
+                  handleBackToList();
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "outstanding" ? "#3b82f6" : "transparent",
+                  color: activeTab === "outstanding" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "outstanding" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>📋</span>
+                <span>Outstanding</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{usersNotFilled.length}</span>
+              </button>
+              {canReviseOff && (
+                <button
+                  onClick={() => {
+                    setActiveTab("absent");
+                    handleBackToList();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px 8px",
+                    border: "none",
+                    borderRadius: "8px",
+                    background: activeTab === "absent" ? "#3b82f6" : "transparent",
+                    color: activeTab === "absent" ? "white" : "#6b7280",
+                    fontWeight: activeTab === "absent" ? 600 : 500,
+                    fontSize: "11px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>📴</span>
+                  <span>Absent</span>
+                  <span style={{ fontSize: "13px", fontWeight: 600 }}>{usersMarkedOff.length}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <FitToWorkValidationFormNew
           validation={selectedValidation}
           user={user}
@@ -172,22 +319,6 @@ function FitToWorkValidationListNew({
       </div>
     );
   }
-
-  // Pisahkan Pending (perlu tindakan) - Selesai diganti dengan Belum Isi FTW (usersNotFilled)
-  const pendingStatuses = ["Pending", "Level1_Review", "Level1 Review", "Level2_Review"];
-  const pendingList = (validations || []).filter((v) =>
-    pendingStatuses.includes(v.workflow_status)
-  );
-
-  // User yang awalnya Not Fit To Work pada hari ini, menjadi Fit To Work setelah validasi
-  const todayStr = getTodayWITA();
-  const notFitBecameFitList = (validations || []).filter((v) => {
-    const tanggalMatch = (v.tanggal || (v.created_at || "").slice(0, 10)) === todayStr;
-    const wasNotFit = (v.initial_status_fatigue || "").toLowerCase().includes("not fit");
-    const nowFit = (v.status_fatigue || "").toLowerCase().includes("fit to work");
-    const isClosed = (v.workflow_status || "") === "Closed";
-    return tanggalMatch && wasNotFit && nowFit && isClosed;
-  });
 
   const renderValidationCard = (validation, index) => (
     <div
