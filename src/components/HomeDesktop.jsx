@@ -1,22 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
-
-const carouselKeyframes = `
-  @keyframes pushInFromRight {
-    from { opacity: 0.35; transform: translateX(250px) scale(0.54); }
-    to { opacity: 1; transform: translateX(0) scale(1); }
-  }
-  @keyframes pushOutToLeft {
-    from { opacity: 1; transform: translateX(250px) scale(1); }
-    to { opacity: 0.35; transform: translateX(0) scale(0.54); }
-  }
-  @keyframes emergeFromRight {
-    from { opacity: 0.2; transform: translateX(80px) scale(0.54); }
-    to { opacity: 0.35; transform: translateX(0) scale(0.54); }
-  }
-`;
 
 function parseTextWithLinks(text) {
   if (!text) return null;
@@ -38,13 +23,34 @@ function parseTextWithLinks(text) {
   );
 }
 
+function getPreviewText(text, maxLength = 180) {
+  if (!text) return "";
+  const cleanText = text
+    .replace(urlRegex, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*-\s*/g, " - ")
+    .trim();
+  if (cleanText.length <= maxLength) return cleanText;
+  return `${cleanText.slice(0, maxLength).trimEnd()}...`;
+}
+
+function getCircularDistance(index, activeIndex, total) {
+  if (total <= 1) return 0;
+  let diff = index - activeIndex;
+  const half = total / 2;
+  if (diff > half) diff -= total;
+  if (diff < -half) diff += total;
+  return diff;
+}
+
 function HomeDesktop({ user }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [readMoreCampaign, setReadMoreCampaign] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const prevIndexRef = useRef(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [failedImages, setFailedImages] = useState({});
+  const [imageRatios, setImageRatios] = useState({});
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -64,97 +70,30 @@ function HomeDesktop({ user }) {
   }, []);
 
   useEffect(() => {
-    if (campaigns.length <= 1) return;
+    if (campaigns.length <= 1 || isPaused) return;
     const timer = setInterval(() => {
       setCurrentIndex((i) => (i + 1) % campaigns.length);
-    }, 8000);
+    }, 12000);
     return () => clearInterval(timer);
-  }, [campaigns.length]);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      prevIndexRef.current = currentIndex;
-    }, 1900);
-    return () => clearTimeout(t);
-  }, [currentIndex]);
+  }, [campaigns.length, isPaused]);
 
   const goToNext = () => {
-    if (isAnimating || campaigns.length <= 1) return;
-    prevIndexRef.current = currentIndex;
-    setIsAnimating(true);
+    if (campaigns.length <= 1) return;
     setCurrentIndex((i) => (i + 1) % campaigns.length);
-    setTimeout(() => setIsAnimating(false), 1900);
   };
 
-  const renderCampaignCard = (c, { size = "large", opacity = 1, onClick } = {}) => {
-    const isLarge = size === "large";
-    const cardWidth = isLarge ? 480 : 260;
-    const imgHeight = isLarge ? 260 : 140;
-    const padding = isLarge ? 24 : 16;
-    const titleSize = isLarge ? 22 : 15;
-    const linkSize = isLarge ? 15 : 13;
-    return (
-      <div
-        key={c.id}
-        role={onClick ? "button" : undefined}
-        tabIndex={onClick ? 0 : undefined}
-        onClick={onClick}
-        onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
-        style={{
-          background: "#1f2937",
-          border: "1px solid #374151",
-          borderRadius: 12,
-          overflow: "hidden",
-          flexShrink: 0,
-          width: cardWidth,
-          opacity,
-          transition: "all 0.3s ease",
-          cursor: onClick ? "pointer" : "default",
-        }}
-      >
-        {c.image_url && (
-          <img
-            src={c.image_url}
-            alt={c.judul}
-            onError={(e) => { e.target.style.display = "none"; }}
-            style={{
-              width: "100%",
-              height: imgHeight,
-              objectFit: "cover",
-            }}
-          />
-        )}
-        <div style={{ padding }}>
-          <div
-            style={{
-              fontWeight: 700,
-              color: "#e5e7eb",
-              fontSize: titleSize,
-              marginBottom: c.deskripsi ? 12 : 0,
-            }}
-          >
-            {c.judul}
-          </div>
-          {c.deskripsi && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setReadMoreCampaign(c); }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#60a5fa",
-                fontSize: linkSize,
-                cursor: "pointer",
-                padding: 0,
-                textDecoration: "underline",
-              }}
-            >
-              Read more
-            </button>
-          )}
-        </div>
-      </div>
-    );
+  const goToPrev = () => {
+    if (campaigns.length <= 1) return;
+    setCurrentIndex((i) => (i - 1 + campaigns.length) % campaigns.length);
+  };
+
+  const getImageFit = (campaign) => {
+    if (campaign?.image_fit === "contain" || campaign?.image_fit === "cover") {
+      return campaign.image_fit;
+    }
+    const ratio = imageRatios[campaign?.id];
+    if (!ratio) return "cover";
+    return ratio < 1.2 ? "contain" : "cover";
   };
 
   return (
@@ -168,7 +107,6 @@ function HomeDesktop({ user }) {
         boxSizing: "border-box",
       }}
     >
-      <style>{carouselKeyframes}</style>
       <div
         style={{
           width: "100%",
@@ -232,102 +170,270 @@ function HomeDesktop({ user }) {
               alignItems: "center",
               justifyContent: "center",
               minHeight: 0,
-              overflow: "hidden",
+              overflow: "visible",
             }}
           >
             <div
               style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 20,
-                overflow: "visible",
+                width: "100%",
+                maxWidth: 980,
+                position: "relative",
+                borderRadius: 20,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "linear-gradient(135deg, rgba(31,41,55,0.96), rgba(17,24,39,0.96))",
+                boxShadow: "0 24px 80px rgba(2, 6, 23, 0.45)",
+                overflow: "hidden",
               }}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
             >
-            {campaigns.length === 1 ? (
-              renderCampaignCard(campaigns[0], {
-                size: "large",
-                onClick: () =>
-                  campaigns[0].deskripsi && setReadMoreCampaign(campaigns[0]),
-              })
-            ) : (
-              <>
-                {(() => {
-                  const prevIdx =
-                    (currentIndex - 1 + campaigns.length) % campaigns.length;
-                  const nextIdx = (currentIndex + 1) % campaigns.length;
-                  const prev = campaigns[prevIdx];
-                  const curr = campaigns[currentIndex];
-                  const next = campaigns[nextIdx];
-                  const justAdvanced =
-                    currentIndex !== prevIndexRef.current;
-                  const animDur = "1.8s";
-                  const scaleSmall = 260 / 480;
+              <div style={{ position: "relative", height: 420, perspective: 1400, transformStyle: "preserve-3d" }}>
+                {campaigns.map((c, idx) => {
+                  const distance = getCircularDistance(idx, currentIndex, campaigns.length);
+                  const absDistance = Math.abs(distance);
+                  const isActive = idx === currentIndex;
+                  const isNear = absDistance === 1;
+
                   return (
-                    <>
-                      <div
-                        key={`prev-${prevIdx}-${currentIndex}`}
-                        style={{
-                          width: 260,
-                          flexShrink: 0,
-                          display: "flex",
-                          justifyContent: "flex-end",
-                          transformOrigin: "center center",
-                          animation: justAdvanced
-                            ? `pushOutToLeft ${animDur} ease forwards`
-                            : "none",
-                          opacity: justAdvanced ? undefined : 0.35,
-                          transform: justAdvanced ? undefined : `scale(${scaleSmall})`,
-                        }}
-                      >
-                        {renderCampaignCard(prev, {
-                          size: "large",
-                          onClick: undefined,
-                        })}
+                    <article
+                      key={c.id}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "grid",
+                        gridTemplateColumns: "1.1fr 1fr",
+                        alignItems: "stretch",
+                        transform: `
+                          translateX(${isActive ? 0 : distance > 0 ? 12 : -12}%)
+                          rotateY(${isActive ? 0 : distance > 0 ? -16 : 16}deg)
+                          translateZ(${isActive ? 56 : isNear ? -40 : -120}px)
+                          scale(${isActive ? 1.02 : isNear ? 0.9 : 0.84})
+                        `,
+                        opacity: isActive ? 1 : 0,
+                        filter: isActive ? "none" : "saturate(0.88)",
+                        transition:
+                          "transform 1200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 920ms ease, filter 920ms ease",
+                        transformOrigin: "center center",
+                        zIndex: isActive ? 3 : isNear ? 2 : 1,
+                        willChange: "transform, opacity, filter",
+                        pointerEvents: isActive ? "auto" : "none",
+                      }}
+                    >
+                      <div style={{ position: "relative", minHeight: 420, background: "#0f172a" }}>
+                        {c.image_url && !failedImages[c.id] ? (
+                          <img
+                            src={c.image_url}
+                            alt={c.judul}
+                            onLoad={(e) => {
+                              const ratio = e.currentTarget.naturalWidth / e.currentTarget.naturalHeight;
+                              setImageRatios((prev) => (prev[c.id] ? prev : { ...prev, [c.id]: ratio }));
+                            }}
+                            onError={(e) => {
+                              setFailedImages((prev) => ({ ...prev, [c.id]: true }));
+                            }}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: getImageFit(c),
+                              background: "#0f172a",
+                              transform: isActive ? "scale(1.035)" : "scale(1)",
+                              transition: "transform 1300ms cubic-bezier(0.22, 1, 0.36, 1)",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              background:
+                                "linear-gradient(145deg, rgba(59,130,246,0.42), rgba(30,41,59,0.95))",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#bfdbfe",
+                              fontWeight: 700,
+                              fontSize: 14,
+                              letterSpacing: "0.02em",
+                            }}
+                          >
+                            Image preview unavailable
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background:
+                              "linear-gradient(to top, rgba(15,23,42,0.72), rgba(15,23,42,0.1) 45%, rgba(15,23,42,0))",
+                          }}
+                        />
                       </div>
+
                       <div
-                        key={`curr-${curr.id}-${currentIndex}`}
                         style={{
-                          width: 480,
-                          flexShrink: 0,
+                          padding: "28px 30px",
                           display: "flex",
+                          flexDirection: "column",
                           justifyContent: "center",
-                          transformOrigin: "center center",
-                          animation: justAdvanced
-                            ? `pushInFromRight ${animDur} ease forwards`
-                            : "none",
+                          gap: 14,
                         }}
                       >
-                        {renderCampaignCard(curr, {
-                          size: "large",
-                          onClick: () =>
-                            curr.deskripsi && setReadMoreCampaign(curr),
-                        })}
+                        <div
+                          style={{
+                            fontSize: "clamp(28px, 2.5vw, 42px)",
+                            lineHeight: 1.2,
+                            fontWeight: 800,
+                            color: "#f9fafb",
+                            letterSpacing: "-0.02em",
+                          }}
+                        >
+                          {c.judul}
+                        </div>
+                        {c.deskripsi && (
+                          <p
+                            style={{
+                              margin: 0,
+                              color: "#9ca3af",
+                              fontSize: 14,
+                              lineHeight: 1.6,
+                              maxHeight: 74,
+                              overflow: "hidden",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical",
+                            }}
+                          >
+                            {getPreviewText(c.deskripsi)}
+                          </p>
+                        )}
+                        {c.deskripsi && (
+                          <button
+                            type="button"
+                            onClick={() => setReadMoreCampaign(c)}
+                            style={{
+                              alignSelf: "flex-start",
+                              marginTop: 8,
+                              borderRadius: 999,
+                              border: "1px solid rgba(147,197,253,0.65)",
+                              background: "linear-gradient(135deg, rgba(37,99,235,0.45), rgba(59,130,246,0.28))",
+                              color: "#eff6ff",
+                              padding: "9px 15px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              letterSpacing: "0.02em",
+                              cursor: "pointer",
+                              transition: "all 200ms ease",
+                            }}
+                          >
+                            Read more
+                          </button>
+                        )}
                       </div>
-                      <div
-                        style={{
-                          width: 260,
-                          flexShrink: 0,
-                          display: "flex",
-                          justifyContent: "flex-start",
-                          transformOrigin: "center center",
-                          animation: justAdvanced
-                            ? `emergeFromRight ${animDur} ease forwards`
-                            : "none",
-                          opacity: justAdvanced ? undefined : 0.35,
-                          transform: justAdvanced ? undefined : `scale(${scaleSmall})`,
-                        }}
-                      >
-                        {renderCampaignCard(next, {
-                          size: "large",
-                          onClick: () => goToNext(),
-                        })}
-                      </div>
-                    </>
+                    </article>
                   );
-                })()}
-              </>
-            )}
+                })}
+              </div>
+
+              {campaigns.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={goToPrev}
+                    aria-label="Slide sebelumnya"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: 14,
+                      transform: "translateY(-50%)",
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      background: "rgba(15,23,42,0.55)",
+                      color: "#e5e7eb",
+                      cursor: "pointer",
+                      fontSize: 20,
+                      lineHeight: 1,
+                      backdropFilter: "blur(3px)",
+                    }}
+                  >
+                    &#8249;
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={goToNext}
+                    aria-label="Slide berikutnya"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      right: 14,
+                      transform: "translateY(-50%)",
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      background: "rgba(15,23,42,0.55)",
+                      color: "#e5e7eb",
+                      cursor: "pointer",
+                      fontSize: 20,
+                      lineHeight: 1,
+                      backdropFilter: "blur(3px)",
+                    }}
+                  >
+                    &#8250;
+                  </button>
+
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 14,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 12px",
+                      borderRadius: 999,
+                      background: "rgba(15,23,42,0.52)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {campaigns.map((_, idx) => (
+                      <button
+                        key={`dot-${idx}`}
+                        type="button"
+                        onClick={() => setCurrentIndex(idx)}
+                        aria-label={`Ke slide ${idx + 1}`}
+                        style={{
+                          width: idx === currentIndex ? 20 : 8,
+                          height: 8,
+                          borderRadius: 999,
+                          border: "none",
+                          background:
+                            idx === currentIndex
+                              ? "#60a5fa"
+                              : "rgba(255,255,255,0.38)",
+                          cursor: "pointer",
+                          transition: "all 280ms ease",
+                        }}
+                      />
+                    ))}
+                    <div
+                      style={{
+                        marginLeft: 6,
+                        color: "#cbd5e1",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: "0.02em",
+                        opacity: 0.9,
+                      }}
+                    >
+                      {currentIndex + 1}/{campaigns.length}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : (
@@ -374,10 +480,10 @@ function HomeDesktop({ user }) {
             style={{
               background: "#1f2937",
               border: "1px solid #374151",
-              borderRadius: 12,
-              padding: 24,
-              maxWidth: 500,
-              width: "100%",
+              borderRadius: 14,
+              padding: 20,
+              maxWidth: 980,
+              width: "min(96vw, 980px)",
               maxHeight: "80vh",
               overflow: "auto",
             }}
@@ -400,10 +506,11 @@ function HomeDesktop({ user }) {
                 onError={(e) => { e.target.style.display = "none"; }}
                 style={{
                   width: "100%",
-                  maxHeight: 280,
-                  objectFit: "cover",
-                  borderRadius: 8,
-                  marginBottom: 16,
+                  maxHeight: "72vh",
+                  objectFit: "contain",
+                  borderRadius: 10,
+                  marginBottom: 14,
+                  background: "#0f172a",
                 }}
               />
             )}

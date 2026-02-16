@@ -23,6 +23,13 @@ function parseTextWithLinks(text) {
   );
 }
 
+function getPreviewText(text, maxLength = 90) {
+  if (!text) return "";
+  const cleanText = text.replace(urlRegex, "").replace(/\s+/g, " ").trim();
+  if (cleanText.length <= maxLength) return cleanText;
+  return `${cleanText.slice(0, maxLength).trimEnd()}...`;
+}
+
 // Hanya jabatan validator yang boleh melihat menu Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
 function canAccessFitToWorkValidation(user) {
   if (!user) return false;
@@ -45,9 +52,51 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
   const [readMoreCampaign, setReadMoreCampaign] = useState(null);
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [campaignIndex, setCampaignIndex] = useState(0);
-  const campaignScrollRef = useRef(null);
-  const campaignIndexRef = useRef(0);
-  campaignIndexRef.current = campaignIndex;
+  const [campaignPaused, setCampaignPaused] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 400
+  );
+  const [viewportHeight, setViewportHeight] = useState(
+    typeof window !== "undefined" ? window.innerHeight : 800
+  );
+  const [failedCampaignImages, setFailedCampaignImages] = useState({});
+  const [campaignImageRatios, setCampaignImageRatios] = useState({});
+  const resumeCampaignTimerRef = useRef(null);
+
+  const campaignCardWidth = Math.min(350, Math.max(240, viewportWidth - 60));
+  const compactViewport = viewportHeight < 760;
+  const campaignImageHeight = Math.round(
+    Math.min(
+      compactViewport ? 128 : 170,
+      Math.max(compactViewport ? 98 : 120, campaignCardWidth * (compactViewport ? 0.38 : 0.46))
+    )
+  );
+
+  const getCampaignImageFit = (campaign) => {
+    const ratio = campaignImageRatios[campaign?.id];
+    if (!ratio) return "cover";
+    return ratio < 1.2 ? "contain" : "cover";
+  };
+
+  const pauseCampaignTemporarily = (ms = 5000) => {
+    setCampaignPaused(true);
+    if (resumeCampaignTimerRef.current) clearTimeout(resumeCampaignTimerRef.current);
+    resumeCampaignTimerRef.current = setTimeout(() => {
+      setCampaignPaused(false);
+    }, ms);
+  };
+
+  const goToNextCampaign = () => {
+    if (campaigns.length <= 1) return;
+    setCampaignIndex((prev) => (prev + 1) % campaigns.length);
+    pauseCampaignTemporarily(5500);
+  };
+
+  const goToPrevCampaign = () => {
+    if (campaigns.length <= 1) return;
+    setCampaignIndex((prev) => (prev - 1 + campaigns.length) % campaigns.length);
+    pauseCampaignTemporarily(5500);
+  };
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -75,50 +124,33 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
   }, []);
 
   useEffect(() => {
-    if (campaigns.length <= 1 || !campaignScrollRef.current) return;
-    const el = campaignScrollRef.current;
-    const cardWidth = Math.min(320, window.innerWidth - 48);
-    const gap = 12;
-    const stepWidth = cardWidth + gap;
-    const scrollDuration = 3200; // 3.2 detik - transisi halus seperti mendorong
-    const pauseBetween = 5000;
-
-    // Easing: ease-in-out cubic - halus di awal dan akhir, mirip gerakan mendorong
-    const easeInOutCubic = (t) =>
-      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-    let timeoutId;
-    let rafId;
-    const scrollToNext = () => {
-      const currentIdx = campaignIndexRef.current;
-      const nextIdx = (currentIdx + 1) % campaigns.length;
-      const targetLeft = nextIdx * stepWidth;
-      const startLeft = el.scrollLeft;
-      const startTime = performance.now();
-
-      const animate = (now) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / scrollDuration, 1);
-        const eased = easeInOutCubic(progress);
-        el.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
-
-        if (progress < 1) {
-          rafId = requestAnimationFrame(animate);
-        } else {
-          el.scrollLeft = targetLeft; // pastikan posisi tepat
-          setCampaignIndex(nextIdx);
-          timeoutId = setTimeout(scrollToNext, pauseBetween);
-        }
-      };
-      rafId = requestAnimationFrame(animate);
+    const onResize = () => {
+      setViewportWidth(window.innerWidth);
+      setViewportHeight(window.innerHeight);
     };
-
-    timeoutId = setTimeout(scrollToNext, pauseBetween);
+    window.addEventListener("resize", onResize);
     return () => {
-      clearTimeout(timeoutId);
-      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", onResize);
     };
-  }, [campaigns.length]);
+  }, []);
+
+  useEffect(() => {
+    if (campaigns.length <= 1 || campaignPaused) return;
+    const intervalId = setInterval(() => {
+      setCampaignIndex((prev) => (prev + 1) % campaigns.length);
+    }, 11000);
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [campaigns.length, campaignPaused]);
+
+  useEffect(() => {
+    return () => {
+      if (resumeCampaignTimerRef.current) {
+        clearTimeout(resumeCampaignTimerRef.current);
+      }
+    };
+  }, []);
   const allMenuItems = [
     {
       key: "fit-to-work",
@@ -180,7 +212,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
         overscrollBehavior: "none",
         display: "flex",
         flexDirection: "column",
-        paddingBottom: 70, // Space untuk bottom nav
+        paddingBottom: "calc(70px + env(safe-area-inset-bottom))", // Space untuk bottom nav
         boxSizing: "border-box",
       }}
     >
@@ -326,7 +358,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
           flex: 1,
           minHeight: 0,
           overflow: "hidden",
-          padding: "8px 20px 0",
+          padding: "8px 20px 8px",
           maxWidth: 1200,
           margin: "0 auto",
           width: "100%",
@@ -457,38 +489,24 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
           <div
             style={{
               flexShrink: 0,
-              padding: "12px 0 16px",
+              padding: "10px 0 8px",
             }}
           >
             <div
-              ref={campaignScrollRef}
-              className="mobile-campaign-scroll"
               style={{
-                display: "flex",
-                gap: 12,
-                overflowX: "auto",
-                overflowY: "hidden",
-                scrollSnapType: "none",
-                WebkitOverflowScrolling: "touch",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                paddingLeft: 20,
-                paddingRight: 20,
-                boxSizing: "border-box",
+                position: "relative",
+                width: "100%",
+                maxWidth: campaignCardWidth,
+                margin: "0 auto",
+                minHeight: campaignImageHeight + (compactViewport ? 70 : 78),
               }}
-              onScroll={(e) => {
-                const el = e.target;
-                const cardWidth = Math.min(320, window.innerWidth - 48);
-                const gap = 12;
-                const idx = Math.round(el.scrollLeft / (cardWidth + gap));
-                const clamped = Math.min(idx, campaigns.length - 1);
-                if (clamped >= 0) {
-                  setCampaignIndex(clamped);
-                }
-              }}
+              onTouchStart={() => setCampaignPaused(true)}
+              onTouchEnd={() => pauseCampaignTemporarily(4500)}
+              onMouseEnter={() => setCampaignPaused(true)}
+              onMouseLeave={() => setCampaignPaused(false)}
             >
-              {campaigns.map((c) => {
-                const cardWidth = Math.min(320, window.innerWidth - 48);
+              {campaigns.map((c, idx) => {
+                const isActive = idx === campaignIndex;
                 return (
                   <div
                     key={c.id}
@@ -496,56 +514,197 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
                       c.deskripsi ? setReadMoreCampaign(c) : undefined
                     }
                     style={{
-                      flexShrink: 0,
-                      width: cardWidth,
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
                       background: "#1f2937",
                       border: "1px solid #374151",
-                      borderRadius: 12,
+                      borderRadius: 14,
                       overflow: "hidden",
                       cursor: c.deskripsi ? "pointer" : "default",
+                      boxShadow: "0 8px 20px rgba(15,23,42,0.20)",
+                      opacity: isActive ? 1 : 0,
+                      transform: isActive ? "translateX(0) scale(1)" : "translateX(6px) scale(0.985)",
+                      transition:
+                        "opacity 900ms ease, transform 1150ms cubic-bezier(0.22, 1, 0.36, 1)",
+                      pointerEvents: isActive ? "auto" : "none",
                     }}
                   >
-                    {c.image_url && (
-                      <img
-                        src={c.image_url}
-                        alt={c.judul}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                        }}
-                        style={{
-                          width: "100%",
-                          height: 90,
-                          objectFit: "cover",
-                        }}
-                      />
-                    )}
-                    <div style={{ padding: 10 }}>
+                    <div style={{ position: "relative", background: "#0f172a" }}>
+                      {c.image_url && !failedCampaignImages[c.id] ? (
+                        <img
+                          src={c.image_url}
+                          alt={c.judul}
+                          onLoad={(e) => {
+                            const ratio =
+                              e.currentTarget.naturalWidth /
+                              e.currentTarget.naturalHeight;
+                            setCampaignImageRatios((prev) =>
+                              prev[c.id] ? prev : { ...prev, [c.id]: ratio }
+                            );
+                          }}
+                          onError={() =>
+                            setFailedCampaignImages((prev) => ({
+                              ...prev,
+                              [c.id]: true,
+                            }))
+                          }
+                          style={{
+                            width: "100%",
+                            height: campaignImageHeight,
+                            objectFit: getCampaignImageFit(c),
+                            background: "#0f172a",
+                            display: "block",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: campaignImageHeight,
+                            background:
+                              "linear-gradient(145deg, rgba(59,130,246,0.42), rgba(30,41,59,0.95))",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#bfdbfe",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          Image unavailable
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding: "10px 12px 12px" }}>
                       <div
                         style={{
                           fontWeight: 700,
                           color: "#e5e7eb",
-                          fontSize: 14,
-                          marginBottom: c.deskripsi ? 4 : 0,
+                          fontSize: compactViewport ? 13 : 14,
+                          marginBottom: c.deskripsi ? 3 : 0,
+                          lineHeight: 1.35,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
                         }}
                       >
                         {c.judul}
                       </div>
                       {c.deskripsi && (
-                        <span
-                          style={{
-                            color: "#60a5fa",
-                            fontSize: 12,
-                            textDecoration: "underline",
-                          }}
-                        >
-                          Read more
-                        </span>
+                        <>
+                          <div
+                            style={{
+                              color: "#9ca3af",
+                              fontSize: compactViewport ? 11 : 12,
+                              lineHeight: 1.4,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              marginBottom: 6,
+                            }}
+                          >
+                            {getPreviewText(c.deskripsi, 70)}
+                          </div>
+                          <span
+                            style={{
+                              color: "#93c5fd",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              letterSpacing: "0.02em",
+                            }}
+                          >
+                            Read more
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
+            {campaigns.length > 1 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={goToPrevCampaign}
+                  aria-label="Campaign sebelumnya"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    color: "#334155",
+                    fontSize: 16,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                  }}
+                >
+                  &#8249;
+                </button>
+                {campaigns.map((_, idx) => (
+                  <button
+                    key={`mobile-dot-${idx}`}
+                    type="button"
+                    onClick={() => {
+                      setCampaignIndex(idx);
+                      pauseCampaignTemporarily(3000);
+                    }}
+                    aria-label={`Ke campaign ${idx + 1}`}
+                    style={{
+                      width: idx === campaignIndex ? 16 : 6,
+                      height: 6,
+                      borderRadius: 999,
+                      border: "none",
+                      background:
+                        idx === campaignIndex ? "#3b82f6" : "rgba(100,116,139,0.45)",
+                      cursor: "pointer",
+                      transition: "all 220ms ease",
+                    }}
+                  />
+                ))}
+                <span
+                  style={{
+                    marginLeft: 6,
+                    color: "#64748b",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {campaignIndex + 1}/{campaigns.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={goToNextCampaign}
+                  aria-label="Campaign berikutnya"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    color: "#334155",
+                    fontSize: 16,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                  }}
+                >
+                  &#8250;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
