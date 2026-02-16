@@ -45,6 +45,7 @@ const TYPES = [
 ];
 
 function AdminSettings({ user, onBack }) {
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth <= 768);
   const [activeType, setActiveType] = useState("site");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -124,6 +125,12 @@ function AdminSettings({ user, onBack }) {
   useEffect(() => {
     loadItems();
   }, [activeType, selectedParentId]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const openAdd = () => {
     setEditingItem(null);
@@ -262,55 +269,90 @@ function AdminSettings({ user, onBack }) {
   return (
     <div
       style={{
-        maxWidth: 1000,
-        margin: "0 auto",
         width: "100%",
-        padding: "40px 20px",
+        height: isMobile ? "auto" : "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: isMobile ? "visible" : "hidden",
       }}
     >
-      <h2
-        style={{
-          fontSize: 28,
-          fontWeight: 800,
-          color: "#60a5fa",
-          margin: "0 0 24px 0",
-        }}
-      >
-        Pengaturan Master Data
-      </h2>
-
       <div
         style={{
+          maxWidth: 1000,
+          margin: "0 auto",
+          width: "100%",
+          padding: isMobile ? "40px 20px" : "24px 20px",
+          flex: isMobile ? "none" : 1,
           display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          marginBottom: 20,
-          borderBottom: "1px solid #374151",
-          paddingBottom: 12,
+          flexDirection: "column",
+          minHeight: isMobile ? "auto" : 0,
         }}
       >
-        {TYPES.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => {
-              setActiveType(t.key);
-              setShowForm(false);
-            }}
-            style={{
-              padding: "8px 14px",
-              background: activeType === t.key ? "#60a5fa" : "#374151",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+        <h2
+          style={{
+            flexShrink: 0,
+            fontSize: 28,
+            fontWeight: 800,
+            color: "#60a5fa",
+            margin: "0 0 20px 0",
+          }}
+        >
+          Pengaturan Master Data
+        </h2>
 
+        {/* Tab bar - seperti Validasi Fit To Work */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            backgroundColor: "#1f2937",
+            borderRadius: "12px",
+            padding: "4px",
+            marginBottom: "20px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            overflowX: "auto",
+            ...(isMobile && {
+              position: "sticky",
+              top: 0,
+              zIndex: 100,
+            }),
+          }}
+        >
+          {TYPES.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => {
+                setActiveType(t.key);
+                setShowForm(false);
+              }}
+              style={{
+                flex: isMobile ? "0 0 auto" : 1,
+                minWidth: 90,
+                padding: isMobile ? "10px 12px" : "12px 16px",
+                border: "none",
+                borderRadius: "8px",
+                background: activeType === t.key ? "#3b82f6" : "transparent",
+                color: activeType === t.key ? "#fff" : "#9ca3af",
+                fontWeight: activeType === t.key ? 600 : 500,
+                fontSize: isMobile ? "12px" : "13px",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content container - scrollable */}
+        <div
+          style={{
+            flex: isMobile ? "none" : 1,
+            minHeight: isMobile ? "auto" : 0,
+            overflowY: isMobile ? "visible" : "auto",
+            overflowX: "hidden",
+          }}
+        >
       {needsParent && (
         <div style={{ marginBottom: 16 }}>
           <label
@@ -613,6 +655,9 @@ function AdminSettings({ user, onBack }) {
         </div>
       )}
 
+        </div>
+        {/* End content container */}
+
       {deleteConfirmItem && (
         <div
           style={{
@@ -796,6 +841,7 @@ function AdminSettings({ user, onBack }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

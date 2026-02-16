@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
@@ -25,18 +25,6 @@ function FitToWorkValidationListNew({
 
   // Tab: action | changes | outstanding | absent (absent hanya untuk canReviseOff)
   const [activeTab, setActiveTab] = useState("action");
-
-  // Pagination state (per section)
-  const [pageSize, setPageSize] = useState(10);
-  const [pendingPage, setPendingPage] = useState(0);
-  const [perubahanPage, setPerubahanPage] = useState(0);
-  const [belumIsiPage, setBelumIsiPage] = useState(0);
-  const [userOffPage, setUserOffPage] = useState(0);
-
-  // Reset pagination saat filter berubah
-  useEffect(() => {
-    setPendingPage(0);
-  }, [filterStatus]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -120,64 +108,6 @@ function FitToWorkValidationListNew({
       default:
         return 0;
     }
-  };
-
-  /** Render pagination controls untuk suatu section */
-  const renderPagination = (totalCount, page, setPage) => {
-    if (totalCount <= pageSize) return null;
-    const totalPages = Math.ceil(totalCount / pageSize);
-    const start = page * pageSize + 1;
-    const end = Math.min((page + 1) * pageSize, totalCount);
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "12px",
-          flexWrap: "wrap",
-          gap: "8px",
-        }}
-      >
-        <div style={{ fontSize: "13px", color: isMobile ? "#6b7280" : "#9ca3af" }}>
-          Menampilkan {start}–{end} dari {totalCount}
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
-              background: page === 0 ? (isMobile ? "#f3f4f6" : "#374151") : isMobile ? "#fff" : "#1f2937",
-              color: page === 0 ? (isMobile ? "#9ca3af" : "#6b7280") : isMobile ? "#374151" : "#e5e7eb",
-              cursor: page === 0 ? "not-allowed" : "pointer",
-              fontSize: "13px",
-            }}
-          >
-            Sebelumnya
-          </button>
-          <button
-            type="button"
-            onClick={() => setPage((p) => (p + 1 < totalPages ? p + 1 : p))}
-            disabled={page + 1 >= totalPages}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
-              background: page + 1 >= totalPages ? (isMobile ? "#f3f4f6" : "#374151") : isMobile ? "#fff" : "#1f2937",
-              color: page + 1 >= totalPages ? (isMobile ? "#9ca3af" : "#6b7280") : isMobile ? "#374151" : "#e5e7eb",
-              cursor: page + 1 >= totalPages ? "not-allowed" : "pointer",
-              fontSize: "13px",
-            }}
-          >
-            Berikutnya
-          </button>
-        </div>
-      </div>
-    );
   };
 
   const handleValidationClick = (validation) => {
@@ -423,10 +353,11 @@ function FitToWorkValidationListNew({
         height: isMobile ? "auto" : "100vh",
         background: "transparent",
         display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: "flex-start",
         padding: isMobile ? "0" : "0 80px 0 24px",
-        overflow: isMobile ? "visible" : "auto",
+        overflow: isMobile ? "visible" : "hidden",
       }}
     >
       <div
@@ -438,13 +369,16 @@ function FitToWorkValidationListNew({
           maxWidth: 900,
           width: "100%",
           margin: "0 auto",
-          height: isMobile ? "auto" : "auto",
-          minHeight: isMobile ? "auto" : "calc(100vh - 100px)",
+          flex: isMobile ? "none" : 1,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: isMobile ? "auto" : 0,
         }}
       >
         {!isMobile && (
           <div
             style={{
+              flexShrink: 0,
               background: "transparent",
               border: "none",
               borderRadius: 18,
@@ -466,154 +400,208 @@ function FitToWorkValidationListNew({
           </div>
         )}
 
-        {/* Tab Navigation - Action | Changes | Outstanding | Absent */}
+        {/* Tab Navigation - Action | Changes | Outstanding | Absent (sticky di mobile) */}
         <div
           style={{
             display: "flex",
+            flexShrink: 0,
             backgroundColor: isMobile ? "white" : "#1f2937",
             borderRadius: "12px",
             padding: "4px",
             marginBottom: "20px",
             boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "0 1px 3px rgba(0,0,0,0.3)",
+            ...(isMobile && {
+              position: "sticky",
+              top: 60,
+              zIndex: 100,
+            }),
           }}
         >
-          <button
-            onClick={() => setActiveTab("action")}
-            style={{
-              flex: 1,
-              padding: isMobile ? "12px 8px" : "12px 16px",
-              border: "none",
-              borderRadius: "8px",
-              background: activeTab === "action" ? "#3b82f6" : "transparent",
-              color: activeTab === "action" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
-              fontWeight: activeTab === "action" ? 600 : 500,
-              fontSize: isMobile ? "12px" : "14px",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-          >
-            ⏳ Action ({pendingList.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("changes")}
-            style={{
-              flex: 1,
-              padding: isMobile ? "12px 8px" : "12px 16px",
-              border: "none",
-              borderRadius: "8px",
-              background: activeTab === "changes" ? "#3b82f6" : "transparent",
-              color: activeTab === "changes" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
-              fontWeight: activeTab === "changes" ? 600 : 500,
-              fontSize: isMobile ? "12px" : "14px",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-          >
-            ✅ Changes ({notFitBecameFitList.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("outstanding")}
-            style={{
-              flex: 1,
-              padding: isMobile ? "12px 8px" : "12px 16px",
-              border: "none",
-              borderRadius: "8px",
-              background: activeTab === "outstanding" ? "#3b82f6" : "transparent",
-              color: activeTab === "outstanding" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
-              fontWeight: activeTab === "outstanding" ? 600 : 500,
-              fontSize: isMobile ? "12px" : "14px",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-          >
-            📋 Outstanding ({usersNotFilled.length})
-          </button>
-          {canReviseOff && (
-            <button
-              onClick={() => setActiveTab("absent")}
-              style={{
-                flex: 1,
-                padding: isMobile ? "12px 8px" : "12px 16px",
-                border: "none",
-                borderRadius: "8px",
-                background: activeTab === "absent" ? "#3b82f6" : "transparent",
-                color: activeTab === "absent" ? "white" : isMobile ? "#6b7280" : "#9ca3af",
-                fontWeight: activeTab === "absent" ? 600 : 500,
-                fontSize: isMobile ? "12px" : "14px",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              📴 Absent ({usersMarkedOff.length})
-            </button>
-          )}
-        </div>
-
-        {/* Filter & Page Size - Status filter hanya untuk Action */}
-        <div
-          style={{
-            display: "flex",
-            gap: "16px",
-            marginBottom: "20px",
-            marginTop: isMobile ? "16px" : 0,
-            flexWrap: "wrap",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: isMobile ? "0 0 16px 0" : "0",
-          }}
-        >
-          {activeTab === "action" && (
-            <select
-              value={filterStatus}
-              onChange={(e) => onFilterChange(e.target.value)}
-              style={{
-                padding: "8px 12px",
-                border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
-                borderRadius: "6px",
-                backgroundColor: isMobile ? "white" : "#1f2937",
-                color: isMobile ? "#374151" : "#e5e7eb",
-                fontSize: "14px",
-                outline: "none",
-                width: isMobile ? "100%" : "auto",
-              }}
-            >
-              <option value="all">Semua Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Level1_Review">Level 1 Review</option>
-              <option value="Level2_Review">Level 2 Review</option>
-              <option value="Closed">Closed</option>
-            </select>
-          )}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "13px", color: isMobile ? "#374151" : "#9ca3af" }}>Tampilkan</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPendingPage(0);
-                  setPerubahanPage(0);
-                  setBelumIsiPage(0);
-                  setUserOffPage(0);
-                }}
+          {/* Mobile: Icon atas, Text tengah, Jumlah bawah */}
+          {isMobile ? (
+            <>
+              <button
+                onClick={() => setActiveTab("action")}
                 style={{
-                  padding: "8px 12px",
-                  border: isMobile ? "1px solid #d1d5db" : "1px solid #374151",
-                  borderRadius: "6px",
-                  backgroundColor: isMobile ? "white" : "#1f2937",
-                  color: isMobile ? "#374151" : "#e5e7eb",
-                  fontSize: "14px",
-                  outline: "none",
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "action" ? "#3b82f6" : "transparent",
+                  color: activeTab === "action" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "action" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
                 }}
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-              <span style={{ fontSize: "13px", color: isMobile ? "#374151" : "#9ca3af" }}>data</span>
-            </div>
+                <span style={{ fontSize: "20px" }}>⏳</span>
+                <span>Action</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{pendingList.length}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("changes")}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "changes" ? "#3b82f6" : "transparent",
+                  color: activeTab === "changes" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "changes" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>✅</span>
+                <span>Changes</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{notFitBecameFitList.length}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("outstanding")}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "outstanding" ? "#3b82f6" : "transparent",
+                  color: activeTab === "outstanding" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "outstanding" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>📋</span>
+                <span>Outstanding</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{usersNotFilled.length}</span>
+              </button>
+              {canReviseOff && (
+                <button
+                  onClick={() => setActiveTab("absent")}
+                  style={{
+                    flex: 1,
+                    padding: "12px 8px",
+                    border: "none",
+                    borderRadius: "8px",
+                    background: activeTab === "absent" ? "#3b82f6" : "transparent",
+                    color: activeTab === "absent" ? "white" : "#6b7280",
+                    fontWeight: activeTab === "absent" ? 600 : 500,
+                    fontSize: "11px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>📴</span>
+                  <span>Absent</span>
+                  <span style={{ fontSize: "13px", fontWeight: 600 }}>{usersMarkedOff.length}</span>
+                </button>
+              )}
+            </>
+          ) : (
+            /* Desktop: horizontal layout */
+            <>
+              <button
+                onClick={() => setActiveTab("action")}
+                style={{
+                  flex: 1,
+                  padding: "12px 16px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "action" ? "#3b82f6" : "transparent",
+                  color: activeTab === "action" ? "white" : "#9ca3af",
+                  fontWeight: activeTab === "action" ? 600 : 500,
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                ⏳ Action ({pendingList.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("changes")}
+                style={{
+                  flex: 1,
+                  padding: "12px 16px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "changes" ? "#3b82f6" : "transparent",
+                  color: activeTab === "changes" ? "white" : "#9ca3af",
+                  fontWeight: activeTab === "changes" ? 600 : 500,
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                ✅ Changes ({notFitBecameFitList.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("outstanding")}
+                style={{
+                  flex: 1,
+                  padding: "12px 16px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "outstanding" ? "#3b82f6" : "transparent",
+                  color: activeTab === "outstanding" ? "white" : "#9ca3af",
+                  fontWeight: activeTab === "outstanding" ? 600 : 500,
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                📋 Outstanding ({usersNotFilled.length})
+              </button>
+              {canReviseOff && (
+                <button
+                  onClick={() => setActiveTab("absent")}
+                  style={{
+                    flex: 1,
+                    padding: "12px 16px",
+                    border: "none",
+                    borderRadius: "8px",
+                    background: activeTab === "absent" ? "#3b82f6" : "transparent",
+                    color: activeTab === "absent" ? "white" : "#9ca3af",
+                    fontWeight: activeTab === "absent" ? 600 : 500,
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  📴 Absent ({usersMarkedOff.length})
+                </button>
+              )}
+            </>
+          )}
         </div>
 
+        {/* Content container - scrollable di desktop, full scroll di mobile */}
+        <div
+          style={{
+            flex: isMobile ? "none" : 1,
+            minHeight: isMobile ? "auto" : 0,
+            overflowY: isMobile ? "visible" : "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
         {/* Section: Action - Perlu Tindakan (Pending) */}
         {activeTab === "action" && (
           <div style={{ marginBottom: "32px" }}>
@@ -632,12 +620,7 @@ function FitToWorkValidationListNew({
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {pendingList.length > 0 ? (
-                <>
-                  {pendingList
-                    .slice(pendingPage * pageSize, pendingPage * pageSize + pageSize)
-                    .map((validation, index) => renderValidationCard(validation, pendingPage * pageSize + index))}
-                  {renderPagination(pendingList.length, pendingPage, setPendingPage)}
-                </>
+                pendingList.map((validation, index) => renderValidationCard(validation, index))
               ) : (
                 <div
                   style={{
@@ -686,9 +669,7 @@ function FitToWorkValidationListNew({
             </p>
             {notFitBecameFitList.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {notFitBecameFitList
-                .slice(perubahanPage * pageSize, perubahanPage * pageSize + pageSize)
-                .map((v) => (
+              {notFitBecameFitList.map((v) => (
                 <div
                   key={v.id}
                   style={{
@@ -751,7 +732,6 @@ function FitToWorkValidationListNew({
                   </div>
                 </div>
               ))}
-              {renderPagination(notFitBecameFitList.length, perubahanPage, setPerubahanPage)}
             </div>
           ) : (
             <div
@@ -800,9 +780,7 @@ function FitToWorkValidationListNew({
           </p>
           {usersNotFilled.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {usersNotFilled
-                .slice(belumIsiPage * pageSize, belumIsiPage * pageSize + pageSize)
-                .map((u) => (
+              {usersNotFilled.map((u) => (
                 <div
                   key={u.id}
                   style={{
@@ -858,7 +836,6 @@ function FitToWorkValidationListNew({
                   )}
                 </div>
               ))}
-              {renderPagination(usersNotFilled.length, belumIsiPage, setBelumIsiPage)}
             </div>
           ) : (
             <div
@@ -907,9 +884,7 @@ function FitToWorkValidationListNew({
             </p>
             {usersMarkedOff.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {usersMarkedOff
-                  .slice(userOffPage * pageSize, userOffPage * pageSize + pageSize)
-                  .map((u) => (
+                {usersMarkedOff.map((u) => (
                   <div
                     key={u.id}
                     style={{
@@ -963,7 +938,6 @@ function FitToWorkValidationListNew({
                     </button>
                   </div>
                 ))}
-                {renderPagination(usersMarkedOff.length, userOffPage, setUserOffPage)}
               </div>
             ) : (
               <div
@@ -983,6 +957,9 @@ function FitToWorkValidationListNew({
             )}
           </div>
         )}
+
+        </div>
+        {/* End content container */}
 
         {/* Popup Konfirmasi Off/On User */}
         {confirmOffUser && (
