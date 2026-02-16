@@ -12,6 +12,7 @@ const FitToWorkFormDesktop = ({ user }) => {
   const [masalahPribadi, setMasalahPribadi] = useState(""); // "Ya"/"Tidak"
   const [siapBekerja, setSiapBekerja] = useState(""); // "Ya"/"Tidak"
   const [status, setStatus] = useState("");
+  const [alasanNotFit, setAlasanNotFit] = useState(""); // Alasan user kenapa Not Fit To Work
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,6 +63,7 @@ const FitToWorkFormDesktop = ({ user }) => {
         setJenisObat(data.catatan_obat || "");
         setMasalahPribadi(data.tidak_ada_masalah_pribadi ? "Ya" : "Tidak");
         setSiapBekerja(data.siap_bekerja ? "Ya" : "Tidak");
+        setAlasanNotFit(data.alasan_not_fit_user || "");
         // Ambil status dari kolom yang tersedia di DB
         // Prioritaskan status_fatigue jika ada, fallback ke status lama
         const finalStatus = data.status_fatigue || data.status || "";
@@ -159,7 +161,8 @@ const FitToWorkFormDesktop = ({ user }) => {
     konsumsiObat &&
     masalahPribadi &&
     siapBekerja &&
-    (konsumsiObat === "Ya" || (konsumsiObat === "Tidak" && jenisObat));
+    (konsumsiObat === "Ya" || (konsumsiObat === "Tidak" && jenisObat)) &&
+    (status !== "Not Fit To Work" || (status === "Not Fit To Work" && alasanNotFit.trim()));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -216,6 +219,7 @@ const FitToWorkFormDesktop = ({ user }) => {
         status_fatigue: computedStatus, // Gunakan status_fatigue juga
         initial_status_fatigue: computedStatus, // Status saat pengisian pertama (tidak diubah saat validasi)
         workflow_status: workflowStatus, // Set workflow_status untuk validasi
+        alasan_not_fit_user: computedStatus === "Not Fit To Work" ? (alasanNotFit || "").trim() : null,
       };
 
       console.log("Submitting payload to fit_to_work:", payload);
@@ -509,6 +513,21 @@ const FitToWorkFormDesktop = ({ user }) => {
                         Status awal: {dataHariIni.initial_status_fatigue} → Saat ini: {dataHariIni?.status_fatigue || status}
                       </div>
                     )}
+                  {dataHariIni?.alasan_not_fit_user && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: 8,
+                        background: "#fef2f2",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        color: "#991b1b",
+                        textAlign: "left",
+                      }}
+                    >
+                      <strong>Alasan Not Fit saat input:</strong> {dataHariIni.alasan_not_fit_user}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -607,6 +626,26 @@ const FitToWorkFormDesktop = ({ user }) => {
                   </button>
                 </div>
               </div>
+
+              {/* Alasan Not Fit To Work - tampil saat status Not Fit */}
+              {status === "Not Fit To Work" && (
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>
+                    Alasan kenapa Anda Not Fit To Work <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <textarea
+                    value={alasanNotFit}
+                    onChange={(e) => setAlasanNotFit(e.target.value)}
+                    placeholder="Misal: Kurang tidur, mengonsumsi obat, ada masalah pribadi, dll."
+                    style={{
+                      ...inputStyle,
+                      minHeight: 80,
+                      resize: "vertical",
+                    }}
+                    disabled={sudahIsiHariIni}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Catatan Validator - tampil bila ada catatan dari perbaikan Not Fit To Work */}

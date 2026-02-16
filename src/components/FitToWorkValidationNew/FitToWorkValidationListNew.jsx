@@ -72,6 +72,25 @@ function FitToWorkValidationListNew({
     });
   };
 
+  /** Derive penyebab Not Fit To Work dari data form (jam tidur, obat, masalah pribadi, siap bekerja) */
+  const getPenyebabNotFit = (v) => {
+    const causes = [];
+    const jam = v.total_jam_tidur != null ? Number(v.total_jam_tidur) : null;
+    if (jam != null && jam < 6) {
+      causes.push(`Jam tidur ${jam.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} jam sehingga tidak mencapai minimum 6 jam`);
+    }
+    if (v.tidak_mengkonsumsi_obat === false || v.tidak_mengkonsumsi_obat === null) {
+      causes.push(v.catatan_obat ? `Mengkonsumsi obat: ${v.catatan_obat}` : "Mengkonsumsi obat");
+    }
+    if (v.tidak_ada_masalah_pribadi === false || v.tidak_ada_masalah_pribadi === null) {
+      causes.push("Ada masalah pribadi/keluarga");
+    }
+    if (v.siap_bekerja === false || v.siap_bekerja === null) {
+      causes.push("Tidak siap untuk bekerja");
+    }
+    return causes.length > 0 ? causes.join("; ") : (v.alasan_not_fit_user || "—");
+  };
+
   const getProgressPercentage = (status) => {
     switch (status) {
       case "Pending":
@@ -270,6 +289,25 @@ function FitToWorkValidationListNew({
           />
         </div>
       </div>
+      {/* Penyebab Not Fit To Work - dari data form */}
+      {(validation.initial_status_fatigue || validation.status_fatigue || "").toLowerCase().includes("not fit") && (
+        <div
+          style={{
+            marginBottom: "12px",
+            padding: "12px",
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            borderRadius: "8px",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+          }}
+        >
+          <div style={{ color: "#9ca3af", fontSize: "11px", fontWeight: "600", marginBottom: "4px" }}>
+            Penyebab Not Fit To Work
+          </div>
+          <div style={{ color: isMobile ? "#374151" : "#e5e7eb", fontSize: "13px" }}>
+            {getPenyebabNotFit(validation)}
+          </div>
+        </div>
+      )}
       {/* Details Row */}
       <div
         style={{
@@ -471,6 +509,22 @@ function FitToWorkValidationListNew({
                       <div style={{ color: isMobile ? "#6b7280" : "#9ca3af", fontSize: "14px" }}>
                         {v.jabatan} • NRP: {v.nrp} • {v.site}
                       </div>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      marginBottom: "12px",
+                      padding: "12px",
+                      backgroundColor: "rgba(239, 68, 68, 0.08)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                    }}
+                  >
+                    <div style={{ color: "#9ca3af", fontWeight: "600", marginBottom: "4px", fontSize: "12px" }}>
+                      Penyebab Not Fit To Work
+                    </div>
+                    <div style={{ color: isMobile ? "#374151" : "#e5e7eb", fontSize: "13px" }}>
+                      {getPenyebabNotFit(v)}
                     </div>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "12px", fontSize: "13px" }}>

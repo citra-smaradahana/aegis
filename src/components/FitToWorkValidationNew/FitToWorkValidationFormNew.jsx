@@ -464,6 +464,50 @@ function FitToWorkValidationFormNew({
           </div>
         </div>
 
+        {/* Penyebab Not Fit To Work - dari data form (jam tidur, obat, masalah pribadi, siap bekerja) */}
+        {((validation.initial_status_fatigue || validation.status_fatigue || "").toLowerCase().includes("not fit")) && (
+          <div
+            style={{
+              marginTop: "16px",
+              padding: "16px",
+              backgroundColor: "#7f1d1d20",
+              borderRadius: "8px",
+              border: "1px solid #991b1b",
+            }}
+          >
+            <label
+              style={{
+                color: "#fca5a5",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "8px",
+              }}
+            >
+              Penyebab Not Fit To Work
+            </label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px", lineHeight: 1.5 }}>
+              {(() => {
+                const causes = [];
+                const jam = validation.total_jam_tidur != null ? Number(validation.total_jam_tidur) : null;
+                if (jam != null && jam < 6) {
+                  causes.push(`Jam tidur ${jam.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} jam sehingga tidak mencapai minimum 6 jam`);
+                }
+                if (validation.tidak_mengkonsumsi_obat === false || validation.tidak_mengkonsumsi_obat === null) {
+                  causes.push(validation.catatan_obat ? `Mengkonsumsi obat: ${validation.catatan_obat}` : "Mengkonsumsi obat");
+                }
+                if (validation.tidak_ada_masalah_pribadi === false || validation.tidak_ada_masalah_pribadi === null) {
+                  causes.push("Ada masalah pribadi/keluarga");
+                }
+                if (validation.siap_bekerja === false || validation.siap_bekerja === null) {
+                  causes.push("Tidak siap untuk bekerja");
+                }
+                return causes.length > 0 ? causes.join("; ") : (validation.alasan_not_fit_user || "—");
+              })()}
+            </div>
+          </div>
+        )}
+
         {/* Fit To Work Questions */}
         <div style={{ marginTop: "20px" }}>
           <h4
