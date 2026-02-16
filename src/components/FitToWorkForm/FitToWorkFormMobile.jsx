@@ -13,7 +13,6 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
   const [catatanObat, setCatatanObat] = useState("");
   const [siapBekerja, setSiapBekerja] = useState(""); // "Ya"/"Tidak"
   const [status, setStatus] = useState("");
-  const [alasanNotFit, setAlasanNotFit] = useState(""); // Alasan user kenapa Not Fit To Work
   const [error, setError] = useState("");
   const [, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -79,7 +78,6 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
           data.tidak_ada_masalah_pribadi ? "Ya" : "Tidak"
         );
         setSiapBekerja(data.siap_bekerja ? "Ya" : "Tidak");
-        setAlasanNotFit(data.alasan_not_fit_user || "");
         // Ambil status dari kolom yang tersedia di DB
         // Prioritaskan status_fatigue jika ada, fallback ke status lama
         const finalStatus = data.status_fatigue || data.status || "";
@@ -185,8 +183,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
     tidakAdaMasalahPribadi &&
     siapBekerja &&
     (tidakMengkonsumsiObat === "Ya" ||
-      (tidakMengkonsumsiObat === "Tidak" && catatanObat)) &&
-    (status !== "Not Fit To Work" || (status === "Not Fit To Work" && alasanNotFit.trim()));
+      (tidakMengkonsumsiObat === "Tidak" && catatanObat));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -243,7 +240,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
         status_fatigue: computedStatus, // Gunakan format lengkap agar konsisten
         initial_status_fatigue: computedStatus, // Status saat pengisian pertama (tidak diubah saat validasi)
         workflow_status: workflowStatus, // Set workflow_status untuk validasi
-        alasan_not_fit_user: computedStatus === "Not Fit To Work" ? (alasanNotFit || "").trim() : null,
+        alasan_not_fit_user: null,
       };
 
       console.log("Data yang akan dikirim ke database:", insertData);
@@ -302,9 +299,10 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
     paddingBottom: 0,
     paddingLeft: 6,
     width: "100%",
-    maxWidth: 410, // fit untuk mobile L 425px
+    maxWidth: "100%",
     marginBottom: 0,
-    // Hapus height: 100% agar card bisa menyesuaikan konten dan tidak memaksa scroll
+    boxSizing: "border-box",
+    minWidth: 0,
   };
 
   // Tambahkan style khusus untuk card header mobile agar lebih rapat
@@ -333,11 +331,13 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
   };
 
   const fieldStyle = {
-    width: "90%", // samakan lebar
-    marginBottom: 4, // lebih rapat
+    width: "100%",
+    maxWidth: "100%",
+    marginBottom: 4,
     marginLeft: "auto",
     marginRight: "auto",
-    marginTop: 8, // jarak dari judul
+    marginTop: 8,
+    boxSizing: "border-box",
   };
 
   const labelStyle = {
@@ -350,10 +350,12 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
 
   const inputStyle = {
     width: "100%",
+    maxWidth: "100%",
     borderRadius: 8,
-    padding: 4, // lebih kecil
-    fontSize: 13, // besarkan lagi
+    padding: 4,
+    fontSize: 13,
     border: "1px solid #d1d5db",
+    boxSizing: "border-box",
   };
 
   const readOnlyInputStyle = {
@@ -373,9 +375,11 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
   const timeFieldStyle = {
     flex: 1,
     minWidth: 0,
-    width: "90%", // samakan lebar dengan field lain
+    width: "100%",
+    maxWidth: "100%",
     marginLeft: "auto",
     marginRight: "auto",
+    boxSizing: "border-box",
   };
 
   const buttonGroupStyle = {
@@ -418,10 +422,14 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
     <div
       style={{
         width: "100%",
+        maxWidth: "100vw",
+        minWidth: 0,
         height: "100vh",
         background: "#f8fafc",
         overflowY: "auto",
-        paddingBottom: 150, // Space untuk bottom nav dan submit button
+        overflowX: "hidden",
+        paddingBottom: 150,
+        boxSizing: "border-box",
       }}
     >
       {/* Mobile Header */}
@@ -434,16 +442,22 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
 
       <div
         style={{
-          marginTop: 60, // Space untuk mobile header
-          padding: "20px",
+          marginTop: 60,
+          padding: "16px",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          minWidth: 0,
         }}
       >
         <div
           style={{
             ...fitToWorkMobileCardStyle,
             marginTop: 0,
-            paddingTop: 0,
-            paddingBottom: 0,
+            paddingTop: 20,
+            paddingBottom: 24,
+            paddingLeft: 16,
+            paddingRight: 16,
             marginBottom: 0,
           }}
         >
@@ -452,16 +466,16 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
               style={{
                 color: "#2563eb",
                 fontWeight: 700,
-                marginBottom: 8,
+                marginTop: 0,
+                marginBottom: 16,
+                padding: "12px 16px",
                 background: "#dbeafe",
                 borderRadius: 8,
-                padding: 0,
                 border: "1.5px solid #2563eb",
                 textAlign: "center",
-                width: "90%",
-                fontSize: 10,
-                marginLeft: "auto",
-                marginRight: "auto",
+                width: "100%",
+                fontSize: 13,
+                boxSizing: "border-box",
               }}
             >
               Anda sudah mengisi Fit To Work hari ini. Silakan isi kembali
@@ -473,10 +487,14 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
             onSubmit={handleSubmit}
             style={{
               width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
               display: "flex",
               flexDirection: "column",
-              alignItems: "center",
+              alignItems: "stretch",
               gap: 2,
+              paddingBottom: 32,
+              boxSizing: "border-box",
             }}
           >
             {/* Tanggal */}
@@ -673,32 +691,6 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
               </div>
             </div>
 
-            {/* Alasan Not Fit To Work - tampil saat status Not Fit */}
-            {status === "Not Fit To Work" && (
-              <div style={fieldStyle}>
-                <label style={labelStyle}>
-                  Alasan kenapa Anda Not Fit To Work <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <textarea
-                  value={alasanNotFit}
-                  onChange={(e) => setAlasanNotFit(e.target.value)}
-                  placeholder="Misal: Kurang tidur, mengonsumsi obat, ada masalah pribadi, dll."
-                  style={{
-                    width: "100%",
-                    borderRadius: 8,
-                    padding: 12,
-                    fontSize: 16,
-                    border: "1px solid #334155",
-                    background: "#fff",
-                    color: "#1f2937",
-                    minHeight: 80,
-                    resize: "vertical",
-                  }}
-                  disabled={sudahIsiHariIni}
-                />
-              </div>
-            )}
-
             {/* Catatan Validator - tampil bila ada catatan dari perbaikan Not Fit To Work */}
             {sudahIsiHariIni &&
               dataHariIni &&
@@ -850,9 +842,11 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
                   right: 0,
                   bottom: 100,
                   zIndex: 1001,
-                  maxWidth: 360,
-                  margin: "0 auto",
-                  padding: "0 20px",
+                  width: "100%",
+                  maxWidth: "100vw",
+                  padding: "0 16px",
+                  margin: 0,
+                  boxSizing: "border-box",
                 }}
               >
                 <button
