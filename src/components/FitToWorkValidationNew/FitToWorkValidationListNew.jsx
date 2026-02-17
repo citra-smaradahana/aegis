@@ -861,7 +861,7 @@ function FitToWorkValidationListNew({
                     boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", marginBottom: "12px", gap: "8px" }}>
                     <div>
                       <div style={{ color: isMobile ? "#1f2937" : "#e5e7eb", fontSize: "16px", fontWeight: "600", marginBottom: "4px" }}>
                         {v.nama}
@@ -879,6 +879,7 @@ function FitToWorkValidationListNew({
                         fontSize: 12,
                         fontWeight: 700,
                         background: isMobile ? "rgba(255,255,255,0.8)" : "rgba(15,23,42,0.35)",
+                        alignSelf: "flex-start",
                       }}
                     >
                       {finalStyle.statusText}
