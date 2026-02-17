@@ -26,7 +26,8 @@ function FitToWorkValidationListNew({
   // Tab: action | changes | outstanding | absent (absent hanya untuk canReviseOff)
   const [activeTab, setActiveTab] = useState("action");
   const MOBILE_HEADER_HEIGHT = 60;
-  const MOBILE_TAB_TOP = 64;
+  const MOBILE_TAB_TOP = MOBILE_HEADER_HEIGHT + 8;
+  const MOBILE_TAB_RESERVED_HEIGHT = 98;
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -216,7 +217,7 @@ function FitToWorkValidationListNew({
           overflowY: "auto",
           overflowX: "hidden",
           paddingBottom: 80,
-          paddingTop: isMobile ? 78 : 0,
+          paddingTop: isMobile ? MOBILE_TAB_RESERVED_HEIGHT : 0,
           boxSizing: "border-box",
         }}
       >
@@ -586,9 +587,11 @@ function FitToWorkValidationListNew({
             marginBottom: "20px",
             boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "0 1px 3px rgba(0,0,0,0.3)",
             ...(isMobile && {
-              position: "sticky",
+              position: "fixed",
               top: MOBILE_TAB_TOP,
-              zIndex: 100,
+              left: 20,
+              right: 20,
+              zIndex: 150,
             }),
           }}
         >
@@ -775,6 +778,7 @@ function FitToWorkValidationListNew({
             overflowY: isMobile ? "visible" : "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
+            paddingTop: isMobile ? MOBILE_TAB_RESERVED_HEIGHT : 0,
           }}
         >
         {/* Section: Action - Perlu Tindakan (Pending) */}
