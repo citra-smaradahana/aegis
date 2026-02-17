@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import FitToWorkValidationFormNew from "./FitToWorkValidationFormNew";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
@@ -25,6 +25,8 @@ function FitToWorkValidationListNew({
 
   // Tab: action | changes | outstanding | absent (absent hanya untuk canReviseOff)
   const [activeTab, setActiveTab] = useState("action");
+  const MOBILE_HEADER_HEIGHT = 60;
+  const MOBILE_TAB_TOP = 64;
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -110,6 +112,35 @@ function FitToWorkValidationListNew({
     }
   };
 
+  const getFinalStatusStyle = (validation) => {
+    const finalStatus = (validation?.status_fatigue || validation?.status || "").toLowerCase();
+    const isNotFit = finalStatus.includes("not fit");
+    const isFit = !isNotFit && (finalStatus.includes("fit to work") || finalStatus === "fit");
+
+    if (isNotFit) {
+      return {
+        borderColor: "#ef4444",
+        bgDesktop: "rgba(127, 29, 29, 0.22)",
+        statusText: "Tetap Not Fit To Work",
+        statusColor: "#ef4444",
+      };
+    }
+    if (isFit) {
+      return {
+        borderColor: "#10b981",
+        bgDesktop: "rgba(6, 78, 59, 0.22)",
+        statusText: "Menjadi Fit To Work",
+        statusColor: "#10b981",
+      };
+    }
+    return {
+      borderColor: isMobile ? "#e5e7eb" : "#374151",
+      bgDesktop: "#1f2937",
+      statusText: "Status belum terdeteksi",
+      statusColor: "#9ca3af",
+    };
+  };
+
   const handleValidationClick = (validation) => {
     setSelectedValidation(validation);
     setCurrentPage("form");
@@ -119,6 +150,20 @@ function FitToWorkValidationListNew({
     setCurrentPage("list");
     setSelectedValidation(null);
   };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (isMobile) {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!isMobile || currentPage !== "list") return;
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [activeTab, currentPage, isMobile]);
 
   const handleUpdateSuccess = async (updatedValidation) => {
     try {
@@ -154,9 +199,8 @@ function FitToWorkValidationListNew({
   const notFitBecameFitList = (validations || []).filter((v) => {
     const tanggalMatch = (v.tanggal || (v.created_at || "").slice(0, 10)) === todayStr;
     const wasNotFit = (v.initial_status_fatigue || "").toLowerCase().includes("not fit");
-    const nowFit = (v.status_fatigue || "").toLowerCase().includes("fit to work");
     const isClosed = (v.workflow_status || "") === "Closed";
-    return tanggalMatch && wasNotFit && nowFit && isClosed;
+    return tanggalMatch && wasNotFit && isClosed;
   });
 
   // Render form popup
@@ -172,7 +216,7 @@ function FitToWorkValidationListNew({
           overflowY: "auto",
           overflowX: "hidden",
           paddingBottom: 80,
-          paddingTop: isMobile ? 74 : 0,
+          paddingTop: isMobile ? 78 : 0,
           boxSizing: "border-box",
         }}
       >
@@ -180,7 +224,7 @@ function FitToWorkValidationListNew({
           <div
             style={{
               position: "fixed",
-              top: 60,
+              top: MOBILE_TAB_TOP,
               left: 0,
               right: 0,
               zIndex: 150,
@@ -200,7 +244,7 @@ function FitToWorkValidationListNew({
             >
               <button
                 onClick={() => {
-                  setActiveTab("action");
+                  handleTabChange("action");
                   handleBackToList();
                 }}
                 style={{
@@ -226,7 +270,7 @@ function FitToWorkValidationListNew({
               </button>
               <button
                 onClick={() => {
-                  setActiveTab("changes");
+                  handleTabChange("changes");
                   handleBackToList();
                 }}
                 style={{
@@ -252,7 +296,7 @@ function FitToWorkValidationListNew({
               </button>
               <button
                 onClick={() => {
-                  setActiveTab("outstanding");
+                  handleTabChange("outstanding");
                   handleBackToList();
                 }}
                 style={{
@@ -279,7 +323,7 @@ function FitToWorkValidationListNew({
               {canReviseOff && (
                 <button
                   onClick={() => {
-                    setActiveTab("absent");
+                    handleTabChange("absent");
                     handleBackToList();
                   }}
                   style={{
@@ -543,7 +587,7 @@ function FitToWorkValidationListNew({
             boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "0 1px 3px rgba(0,0,0,0.3)",
             ...(isMobile && {
               position: "sticky",
-              top: 60,
+              top: MOBILE_TAB_TOP,
               zIndex: 100,
             }),
           }}
@@ -552,7 +596,7 @@ function FitToWorkValidationListNew({
           {isMobile ? (
             <>
               <button
-                onClick={() => setActiveTab("action")}
+                onClick={() => handleTabChange("action")}
                 style={{
                   flex: 1,
                   padding: "12px 8px",
@@ -575,7 +619,7 @@ function FitToWorkValidationListNew({
                 <span style={{ fontSize: "13px", fontWeight: 600 }}>{pendingList.length}</span>
               </button>
               <button
-                onClick={() => setActiveTab("changes")}
+                onClick={() => handleTabChange("changes")}
                 style={{
                   flex: 1,
                   padding: "12px 8px",
@@ -598,7 +642,7 @@ function FitToWorkValidationListNew({
                 <span style={{ fontSize: "13px", fontWeight: 600 }}>{notFitBecameFitList.length}</span>
               </button>
               <button
-                onClick={() => setActiveTab("outstanding")}
+                onClick={() => handleTabChange("outstanding")}
                 style={{
                   flex: 1,
                   padding: "12px 8px",
@@ -622,7 +666,7 @@ function FitToWorkValidationListNew({
               </button>
               {canReviseOff && (
                 <button
-                  onClick={() => setActiveTab("absent")}
+                  onClick={() => handleTabChange("absent")}
                   style={{
                     flex: 1,
                     padding: "12px 8px",
@@ -650,7 +694,7 @@ function FitToWorkValidationListNew({
             /* Desktop: horizontal layout */
             <>
               <button
-                onClick={() => setActiveTab("action")}
+                onClick={() => handleTabChange("action")}
                 style={{
                   flex: 1,
                   padding: "12px 16px",
@@ -667,7 +711,7 @@ function FitToWorkValidationListNew({
                 ⏳ Action ({pendingList.length})
               </button>
               <button
-                onClick={() => setActiveTab("changes")}
+                onClick={() => handleTabChange("changes")}
                 style={{
                   flex: 1,
                   padding: "12px 16px",
@@ -684,7 +728,7 @@ function FitToWorkValidationListNew({
                 ✅ Changes ({notFitBecameFitList.length})
               </button>
               <button
-                onClick={() => setActiveTab("outstanding")}
+                onClick={() => handleTabChange("outstanding")}
                 style={{
                   flex: 1,
                   padding: "12px 16px",
@@ -702,7 +746,7 @@ function FitToWorkValidationListNew({
               </button>
               {canReviseOff && (
                 <button
-                  onClick={() => setActiveTab("absent")}
+                  onClick={() => handleTabChange("absent")}
                   style={{
                     flex: 1,
                     padding: "12px 16px",
@@ -786,7 +830,7 @@ function FitToWorkValidationListNew({
                 gap: "8px",
               }}
             >
-              <span style={{ color: "#10b981" }}>✅</span> Not Fit To Work → Fit To Work Hari Ini ({notFitBecameFitList.length})
+              <span style={{ color: "#10b981" }}>✅</span> Perubahan Status Not Fit To Work Hari Ini ({notFitBecameFitList.length})
             </h3>
             <p
               style={{
@@ -796,16 +840,18 @@ function FitToWorkValidationListNew({
                 fontWeight: "500",
               }}
             >
-              Karyawan yang awalnya Not Fit To Work pada hari ini dan telah divalidasi menjadi Fit To Work.
+              Karyawan yang awalnya Not Fit To Work pada hari ini dan sudah divalidasi final (Fit atau tetap Not Fit).
             </p>
             {notFitBecameFitList.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {notFitBecameFitList.map((v) => (
+              {notFitBecameFitList.map((v) => {
+                const finalStyle = getFinalStatusStyle(v);
+                return (
                 <div
                   key={v.id}
                   style={{
-                    background: isMobile ? "white" : "#1f2937",
-                    border: isMobile ? "1px solid #e5e7eb" : "1px solid #374151",
+                    background: isMobile ? "white" : finalStyle.bgDesktop,
+                    border: `1.5px solid ${finalStyle.borderColor}`,
                     borderRadius: "12px",
                     padding: isMobile ? "16px" : "20px",
                     boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
@@ -819,6 +865,19 @@ function FitToWorkValidationListNew({
                       <div style={{ color: isMobile ? "#6b7280" : "#9ca3af", fontSize: "14px" }}>
                         {v.jabatan} • NRP: {v.nrp} • {v.site}
                       </div>
+                    </div>
+                    <div
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        border: `1px solid ${finalStyle.statusColor}`,
+                        color: finalStyle.statusColor,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        background: isMobile ? "rgba(255,255,255,0.8)" : "rgba(15,23,42,0.35)",
+                      }}
+                    >
+                      {finalStyle.statusText}
                     </div>
                   </div>
                   <div
@@ -862,7 +921,7 @@ function FitToWorkValidationListNew({
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           ) : (
             <div
@@ -877,7 +936,7 @@ function FitToWorkValidationListNew({
                 fontWeight: "500",
               }}
             >
-              Tidak ada data. Karyawan yang awalnya Not Fit To Work dan sudah divalidasi menjadi Fit To Work akan muncul di sini.
+              Tidak ada data. Karyawan yang awalnya Not Fit To Work dan sudah divalidasi final akan muncul di sini.
             </div>
           )}
           </div>
