@@ -6,6 +6,7 @@ function FitToWorkValidationListNew({
   validations,
   usersNotFilled = [],
   usersMarkedOff = [],
+  usersAttendance = [],
   onValidationSelect,
   onMarkUserOff,
   onUnmarkUserOff,
@@ -23,7 +24,7 @@ function FitToWorkValidationListNew({
   const [currentPage, setCurrentPage] = useState("list"); // "list" atau "form"
   const [confirmOffUser, setConfirmOffUser] = useState(null); // { user, action: 'off'|'on' } untuk popup konfirmasi
 
-  // Tab: action | changes | outstanding | absent (absent hanya untuk canReviseOff)
+  // Tab: action | changes | outstanding | attendance | absent (absent hanya untuk canReviseOff)
   const [activeTab, setActiveTab] = useState("action");
   const MOBILE_HEADER_HEIGHT = 60;
   const MOBILE_TAB_TOP = MOBILE_HEADER_HEIGHT + 8;
@@ -203,6 +204,9 @@ function FitToWorkValidationListNew({
     const isClosed = (v.workflow_status || "") === "Closed";
     return tanggalMatch && wasNotFit && isClosed;
   });
+  const attendanceList = usersAttendance || [];
+  const getAttendanceBorderColor = (hariMasuk) =>
+    Number(hariMasuk || 0) > 13 ? "#ef4444" : "#10b981";
 
   // Render form popup
   if (currentPage === "form" && selectedValidation) {
@@ -320,6 +324,32 @@ function FitToWorkValidationListNew({
                 <span style={{ fontSize: "20px" }}>📋</span>
                 <span>Outstanding</span>
                 <span style={{ fontSize: "13px", fontWeight: 600 }}>{usersNotFilled.length}</span>
+              </button>
+              <button
+                onClick={() => {
+                  handleTabChange("attendance");
+                  handleBackToList();
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "attendance" ? "#3b82f6" : "transparent",
+                  color: activeTab === "attendance" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "attendance" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>📅</span>
+                <span>Attendance</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{attendanceList.length}</span>
               </button>
               {canReviseOff && (
                 <button
@@ -667,6 +697,29 @@ function FitToWorkValidationListNew({
                 <span>Outstanding</span>
                 <span style={{ fontSize: "13px", fontWeight: 600 }}>{usersNotFilled.length}</span>
               </button>
+              <button
+                onClick={() => handleTabChange("attendance")}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "attendance" ? "#3b82f6" : "transparent",
+                  color: activeTab === "attendance" ? "white" : "#6b7280",
+                  fontWeight: activeTab === "attendance" ? 600 : 500,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>📅</span>
+                <span>Attendance</span>
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{attendanceList.length}</span>
+              </button>
               {canReviseOff && (
                 <button
                   onClick={() => handleTabChange("absent")}
@@ -746,6 +799,23 @@ function FitToWorkValidationListNew({
                 }}
               >
                 📋 Outstanding ({usersNotFilled.length})
+              </button>
+              <button
+                onClick={() => handleTabChange("attendance")}
+                style={{
+                  flex: 1,
+                  padding: "12px 16px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: activeTab === "attendance" ? "#3b82f6" : "transparent",
+                  color: activeTab === "attendance" ? "white" : "#9ca3af",
+                  fontWeight: activeTab === "attendance" ? 600 : 500,
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                📅 Attendance ({attendanceList.length})
               </button>
               {canReviseOff && (
                 <button
@@ -1049,6 +1119,115 @@ function FitToWorkValidationListNew({
             </div>
           )}
         </div>
+        )}
+
+        {/* Section: Attendance */}
+        {activeTab === "attendance" && (
+          <div>
+            <h3
+              style={{
+                margin: "0 0 12px 0",
+                color: isMobile ? "#1f2937" : "#e5e7eb",
+                fontSize: "16px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <span style={{ color: "#3b82f6" }}>📅</span> Attendance ({attendanceList.length})
+            </h3>
+            <p
+              style={{
+                margin: "0 0 12px 0",
+                color: isMobile ? "#4b5563" : "#9ca3af",
+                fontSize: "13px",
+                fontWeight: "500",
+              }}
+            >
+              Border hijau untuk hari masuk ≤ 13 hari, dan merah untuk hari masuk {">"} 13 hari.
+            </p>
+            {attendanceList.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {attendanceList.map((u) => {
+                  const borderColor = getAttendanceBorderColor(u.hari_masuk);
+                  return (
+                    <div
+                      key={u.id}
+                      style={{
+                        background: isMobile ? "white" : "#1f2937",
+                        border: `1.5px solid ${borderColor}`,
+                        borderRadius: "12px",
+                        padding: isMobile ? "16px" : "20px",
+                        boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: isMobile ? "flex-start" : "space-between",
+                          alignItems: isMobile ? "stretch" : "flex-start",
+                          flexDirection: isMobile ? "column" : "row",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              color: isMobile ? "#1f2937" : "#e5e7eb",
+                              fontSize: "16px",
+                              fontWeight: "600",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            {u.nama}
+                          </div>
+                          <div
+                            style={{
+                              color: isMobile ? "#6b7280" : "#9ca3af",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {u.jabatan} • NRP: {u.nrp} • {u.site}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 999,
+                            border: `1px solid ${borderColor}`,
+                            color: borderColor,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: isMobile ? "rgba(255,255,255,0.8)" : "rgba(15,23,42,0.35)",
+                            alignSelf: isMobile ? "flex-start" : "auto",
+                          }}
+                        >
+                          {u.hari_masuk || 0} hari
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: "20px",
+                  backgroundColor: isMobile ? "#f3f4f6" : "#1f2937",
+                  borderRadius: "12px",
+                  border: isMobile ? "1px dashed #9ca3af" : "1px dashed #374151",
+                  color: isMobile ? "#374151" : "#d1d5db",
+                  fontSize: "14px",
+                  textAlign: "center",
+                  fontWeight: "500",
+                }}
+              >
+                Belum ada data hari masuk pekerja untuk scope Anda.
+              </div>
+            )}
+          </div>
         )}
 
         {/* Section: Absent - Sudah Ditandai Off Hari Ini (hanya PJO, Asst PJO, SHERQ) */}

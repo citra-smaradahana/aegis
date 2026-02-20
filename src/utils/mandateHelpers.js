@@ -59,6 +59,7 @@ export async function fetchMandateRecipients(user) {
  */
 export async function fetchMandatesGivenByUser(user) {
   if (!user?.id) return [];
+  const today = getTodayWITA();
 
   const { data, error } = await supabase
     .from("validation_mandate")
@@ -73,7 +74,30 @@ export async function fetchMandatesGivenByUser(user) {
     console.error("Error fetching mandates given:", error);
     return [];
   }
-  return data || [];
+
+  const mandates = data || [];
+  const expiredActiveMandateIds = mandates
+    .filter((m) => m.is_active && m.active_until && m.active_until < today)
+    .map((m) => m.id);
+
+  if (expiredActiveMandateIds.length > 0) {
+    const { error: deactivateExpiredError } = await supabase
+      .from("validation_mandate")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", expiredActiveMandateIds)
+      .eq("delegated_by_user_id", user.id);
+
+    if (deactivateExpiredError) {
+      console.error("Error deactivating expired mandates:", deactivateExpiredError);
+    }
+  }
+
+  return mandates.map((m) =>
+    expiredActiveMandateIds.includes(m.id) ? { ...m, is_active: false } : m
+  );
 }
 
 /**

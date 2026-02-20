@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
+import {
+  fetchCurrentHariMasukForUser,
+  recordFitToWorkSubmissionAttendance,
+} from "../../utils/fitToWorkAttendanceHelpers";
 
 const FitToWorkFormDesktop = ({ user }) => {
   const [jamTidur, setJamTidur] = useState("");
@@ -17,6 +21,7 @@ const FitToWorkFormDesktop = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [sudahIsiHariIni, setSudahIsiHariIni] = useState(false);
   const [dataHariIni, setDataHariIni] = useState(null);
+  const [hariMasuk, setHariMasuk] = useState(0);
 
   const today = getTodayWITA();
 
@@ -91,6 +96,18 @@ const FitToWorkFormDesktop = ({ user }) => {
       today
     );
     if (user) cekSudahIsi();
+  }, [user, today]);
+
+  useEffect(() => {
+    const loadHariMasuk = async () => {
+      if (!user?.id) {
+        setHariMasuk(0);
+        return;
+      }
+      const count = await fetchCurrentHariMasukForUser(user, today);
+      setHariMasuk(count || 0);
+    };
+    loadHariMasuk();
   }, [user, today]);
 
   // Auto-refresh data setiap 5 detik untuk mendapatkan update dari validasi
@@ -235,6 +252,13 @@ const FitToWorkFormDesktop = ({ user }) => {
         .limit(1);
 
       if (error) throw error;
+
+      const attendanceResult = await recordFitToWorkSubmissionAttendance(user, today);
+      if (attendanceResult?.error) {
+        console.error("Attendance summary warning:", attendanceResult.error);
+      } else if (typeof attendanceResult?.currentHariMasuk === "number") {
+        setHariMasuk(attendanceResult.currentHariMasuk);
+      }
 
       console.log("Fit To Work data saved successfully");
       if (requiresValidation) {
@@ -435,6 +459,15 @@ const FitToWorkFormDesktop = ({ user }) => {
                 <input
                   type="text"
                   value={today}
+                  readOnly
+                  style={readOnlyInputStyle}
+                />
+              </div>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Hari Masuk</label>
+                <input
+                  type="text"
+                  value={`${hariMasuk} hari`}
                   readOnly
                   style={readOnlyInputStyle}
                 />

@@ -3,6 +3,10 @@ import { supabase } from "../../supabaseClient";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
+import {
+  fetchCurrentHariMasukForUser,
+  recordFitToWorkSubmissionAttendance,
+} from "../../utils/fitToWorkAttendanceHelpers";
 
 const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }) => {
   const [jamTidur, setJamTidur] = useState("");
@@ -20,6 +24,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
   const [totalJamTidurAngka, setTotalJamTidurAngka] = useState(0);
   const [dataHariIni, setDataHariIni] = useState(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
+  const [hariMasuk, setHariMasuk] = useState(0);
 
   const today = getTodayWITA();
 
@@ -124,6 +129,18 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
       today
     );
     if (user) cekSudahIsi();
+  }, [user, today]);
+
+  useEffect(() => {
+    const loadHariMasuk = async () => {
+      if (!user?.id) {
+        setHariMasuk(0);
+        return;
+      }
+      const count = await fetchCurrentHariMasukForUser(user, today);
+      setHariMasuk(count || 0);
+    };
+    loadHariMasuk();
   }, [user, today]);
 
   // Auto-refresh data setiap 5 detik untuk mendapatkan update dari validasi
@@ -273,6 +290,13 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
       const { error } = await supabase.from("fit_to_work").insert(insertData);
 
       if (error) throw error;
+
+      const attendanceResult = await recordFitToWorkSubmissionAttendance(user, today);
+      if (attendanceResult?.error) {
+        console.error("Attendance summary warning:", attendanceResult.error);
+      } else if (typeof attendanceResult?.currentHariMasuk === "number") {
+        setHariMasuk(attendanceResult.currentHariMasuk);
+      }
 
       console.log("Fit To Work data saved successfully");
       if (requiresValidation) {
@@ -522,6 +546,15 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
               <input
                 type="text"
                 value={today}
+                readOnly
+                style={readOnlyInputStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Hari Masuk</label>
+              <input
+                type="text"
+                value={`${hariMasuk} hari`}
                 readOnly
                 style={readOnlyInputStyle}
               />

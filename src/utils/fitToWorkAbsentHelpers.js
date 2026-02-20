@@ -2,6 +2,10 @@ import { supabase } from "../supabaseClient";
 import { fetchActiveMandatesForUser } from "./mandateHelpers";
 import { getTodayWITA, getNowWITAISO } from "./dateTimeHelpers";
 import { fetchSitesFTWStatusMap } from "./masterDataHelpers";
+import {
+  buildAttendanceSummaryForUsers,
+  resetHariMasukByOff,
+} from "./fitToWorkAttendanceHelpers";
 
 export { getTodayWITA };
 
@@ -140,6 +144,68 @@ export async function fetchUsersNotYetFilledFTW(user) {
 }
 
 /**
+ * Ambil daftar user beserta ringkasan hari masuk FTW sesuai scope validator.
+ * LH/PLH hanya bawahan, SHERQ/Asst PJO/PJO dapat semua user site.
+ */
+export async function fetchUsersAttendanceForValidator(user) {
+  if (!user?.site) return [];
+
+  const userSite = user.site;
+  const jabatan = (user?.jabatan || "").trim();
+
+  const validatorJabatans = [
+    "Field Leading Hand",
+    "Plant Leading Hand",
+    "Penanggung Jawab Operasional",
+    "Asst. Penanggung Jawab Operasional",
+    "SHERQ Officer",
+    "SHE",
+    "Administrator",
+    "Admin Site Project",
+  ];
+  if (!validatorJabatans.includes(jabatan)) return [];
+
+  let mandates = [];
+  if (jabatan === "Field Leading Hand") {
+    mandates = await fetchActiveMandatesForUser(user.id, userSite);
+  }
+
+  const subordinateJabatans = getSubordinateJabatansForValidator(jabatan, mandates);
+
+  let usersQuery = supabase
+    .from("users")
+    .select("id, nama, nrp, jabatan, site")
+    .eq("site", userSite)
+    .neq("id", user.id);
+
+  if (subordinateJabatans && subordinateJabatans.length > 0) {
+    usersQuery = usersQuery.in("jabatan", subordinateJabatans);
+  }
+
+  const { data: usersData, error: usersError } = await usersQuery;
+  if (usersError || !usersData || usersData.length === 0) return [];
+
+  const derivedSummary = await buildAttendanceSummaryForUsers(usersData, getTodayWITA());
+  const summaryMap = new Map((derivedSummary || []).map((s) => [s.user_id, s]));
+
+  return usersData
+    .map((u) => {
+      const summary = summaryMap.get(u.id);
+      return {
+        ...u,
+        hari_masuk: summary?.current_hari_masuk || 0,
+        attendance_last_ftw_date: summary?.last_ftw_date || null,
+      };
+    })
+    .sort((a, b) => {
+      if ((b.hari_masuk || 0) !== (a.hari_masuk || 0)) {
+        return (b.hari_masuk || 0) - (a.hari_masuk || 0);
+      }
+      return (a.nama || "").localeCompare(b.nama || "", "id");
+    });
+}
+
+/**
  * Tandai user sebagai off/tidak hadir untuk hari ini.
  * Hanya jabatan tertentu (PJO, Asst PJO, SHERQ, SHE, Administrator) yang berwenang.
  */
@@ -196,6 +262,15 @@ export async function markUserOff(userId, validatorUser) {
   if (error) {
     console.error("Error marking user off:", error);
     return { error: error.message };
+  }
+
+  const attendanceReset = await resetHariMasukByOff(
+    userId,
+    validatorUser.site,
+    "off_marked"
+  );
+  if (attendanceReset?.error) {
+    console.error("Attendance reset warning:", attendanceReset.error);
   }
 
   return { success: true };

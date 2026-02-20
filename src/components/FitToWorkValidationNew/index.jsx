@@ -6,6 +6,7 @@ import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import {
   fetchUsersNotYetFilledFTW,
+  fetchUsersAttendanceForValidator,
   markUserOff,
   fetchUsersMarkedOffToday,
   unmarkUserOff,
@@ -20,6 +21,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
   const [validations, setValidations] = useState([]);
   const [usersNotFilled, setUsersNotFilled] = useState([]);
   const [usersMarkedOff, setUsersMarkedOff] = useState([]);
+  const [usersAttendance, setUsersAttendance] = useState([]);
   const [selectedValidation, setSelectedValidation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -163,6 +165,16 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
     }
   };
 
+  const fetchUsersAttendance = async () => {
+    if (!user) return;
+    try {
+      const data = await fetchUsersAttendanceForValidator(user);
+      setUsersAttendance(data || []);
+    } catch (err) {
+      console.error("Error fetching users attendance summary:", err);
+    }
+  };
+
   useEffect(() => {
     console.log("=== FIT TO WORK VALIDATION NEW COMPONENT MOUNT ===");
     console.log("Component - userJabatan:", user?.jabatan);
@@ -179,6 +191,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
           })(),
           fetchUsersNotFilled(),
           fetchUsersMarkedOff(),
+          fetchUsersAttendance(),
         ]);
       } finally {
         setLoading(false);
@@ -239,6 +252,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
       await fetchValidations();
       await fetchUsersNotFilled();
       await fetchUsersMarkedOff();
+      await fetchUsersAttendance();
 
       return { success: true, error: null };
     } catch (error) {
@@ -257,7 +271,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
       console.error("Error marking user off:", result.error);
       return;
     }
-    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff()]);
+    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff(), fetchUsersAttendance()]);
   };
 
   const handleUnmarkUserOff = async (targetUser) => {
@@ -266,7 +280,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
       console.error("Error unmarking user off:", result.error);
       return;
     }
-    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff()]);
+    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff(), fetchUsersAttendance()]);
   };
 
   if (loading) {
@@ -291,6 +305,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
                   (async () => { await fetchValidations(); })(),
                   fetchUsersNotFilled(),
                   fetchUsersMarkedOff(),
+                  fetchUsersAttendance(),
                 ]);
               } finally {
                 setLoading(false);
@@ -343,6 +358,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
           validations={validations}
           usersNotFilled={usersNotFilled}
           usersMarkedOff={usersMarkedOff}
+          usersAttendance={usersAttendance}
           onValidationSelect={handleValidationSelect}
           onMarkUserOff={handleMarkUserOff}
           onUnmarkUserOff={handleUnmarkUserOff}
