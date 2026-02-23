@@ -16,7 +16,12 @@ import {
 } from "../../utils/fitToWorkAbsentHelpers";
 import { fetchActiveMandatesForUser } from "../../utils/mandateHelpers";
 
-function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
+function FitToWorkValidationNew({
+  user,
+  onBack,
+  onNavigate,
+  tasklistTodoCount = 0,
+}) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [validations, setValidations] = useState([]);
   const [usersNotFilled, setUsersNotFilled] = useState([]);
@@ -61,7 +66,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
       }
       const subordinateJabatans = getSubordinateJabatansForValidator(
         userJabatan,
-        mandates
+        mandates,
       );
 
       // null = lihat semua (PJO, Asst PJO, SHERQ, Admin). [] = tidak ada akses. [...] = filter by jabatan.
@@ -77,7 +82,9 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
         .from("fit_to_work")
         .select("*")
         .eq("site", userSite)
-        .or("initial_status_fatigue.eq.Not Fit To Work,status_fatigue.eq.Not Fit To Work") // Awal Not Fit ATAU saat ini masih Not Fit
+        .or(
+          "initial_status_fatigue.eq.Not Fit To Work,status_fatigue.eq.Not Fit To Work",
+        ) // Awal Not Fit ATAU saat ini masih Not Fit
         .order("created_at", { ascending: false })
         .limit(10000);
 
@@ -91,13 +98,13 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
         query = query.eq("workflow_status", filterStatus);
         console.log(
           "fetchValidations - Applied workflow status filter:",
-          filterStatus
+          filterStatus,
         );
       }
 
       console.log(
         "fetchValidations - Query conditions applied for jabatan:",
-        userJabatan
+        userJabatan,
       );
 
       const { data: validationsData, error: validationsError } = await query;
@@ -112,7 +119,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
       console.log("fetchValidations - Raw validations data:", validationsData);
       console.log(
         "fetchValidations - Number of validations found:",
-        validationsData?.length || 0
+        validationsData?.length || 0,
       );
 
       if (!validationsData || validationsData.length === 0) {
@@ -147,7 +154,18 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
   const fetchUsersNotFilled = async () => {
     if (!user) return;
     try {
-      const data = await fetchUsersNotYetFilledFTW(user);
+      // Modifikasi: Untuk Leading Hand, tambahkan "Field Leading Hand" & "Plant Leading Hand"
+      // agar bisa melihat sesama Leading Hand di tab Outstanding
+      const userJabatan = (user.jabatan || "").trim();
+      let additionalJabatans = [];
+      if (
+        userJabatan === "Field Leading Hand" ||
+        userJabatan === "Plant Leading Hand"
+      ) {
+        additionalJabatans = ["Field Leading Hand", "Plant Leading Hand"];
+      }
+
+      const data = await fetchUsersNotYetFilledFTW(user, additionalJabatans);
       setUsersNotFilled(data || []);
     } catch (err) {
       console.error("Error fetching users not filled:", err);
@@ -168,7 +186,21 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
   const fetchUsersAttendance = async () => {
     if (!user) return;
     try {
-      const data = await fetchUsersAttendanceForValidator(user);
+      // Modifikasi: Untuk Leading Hand, tambahkan "Field Leading Hand" & "Plant Leading Hand"
+      // agar bisa melihat sesama Leading Hand di tab Attendance
+      const userJabatan = (user.jabatan || "").trim();
+      let additionalJabatans = [];
+      if (
+        userJabatan === "Field Leading Hand" ||
+        userJabatan === "Plant Leading Hand"
+      ) {
+        additionalJabatans = ["Field Leading Hand", "Plant Leading Hand"];
+      }
+
+      const data = await fetchUsersAttendanceForValidator(
+        user,
+        additionalJabatans,
+      );
       setUsersAttendance(data || []);
     } catch (err) {
       console.error("Error fetching users attendance summary:", err);
@@ -210,7 +242,7 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
     try {
       console.log(
         "handleValidationUpdate - Updating validation:",
-        updatedValidation
+        updatedValidation,
       );
 
       // Pastikan status dan status_fatigue selalu sinkron
@@ -271,7 +303,11 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
       console.error("Error marking user off:", result.error);
       return;
     }
-    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff(), fetchUsersAttendance()]);
+    await Promise.all([
+      fetchUsersNotFilled(),
+      fetchUsersMarkedOff(),
+      fetchUsersAttendance(),
+    ]);
   };
 
   const handleUnmarkUserOff = async (targetUser) => {
@@ -280,7 +316,11 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
       console.error("Error unmarking user off:", result.error);
       return;
     }
-    await Promise.all([fetchUsersNotFilled(), fetchUsersMarkedOff(), fetchUsersAttendance()]);
+    await Promise.all([
+      fetchUsersNotFilled(),
+      fetchUsersMarkedOff(),
+      fetchUsersAttendance(),
+    ]);
   };
 
   if (loading) {
@@ -302,7 +342,9 @@ function FitToWorkValidationNew({ user, onBack, onNavigate, tasklistTodoCount = 
               setLoading(true);
               try {
                 await Promise.all([
-                  (async () => { await fetchValidations(); })(),
+                  (async () => {
+                    await fetchValidations();
+                  })(),
                   fetchUsersNotFilled(),
                   fetchUsersMarkedOff(),
                   fetchUsersAttendance(),

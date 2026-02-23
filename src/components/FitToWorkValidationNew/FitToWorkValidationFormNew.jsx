@@ -60,24 +60,48 @@ function FitToWorkValidationFormNew({
       let ml1 = false;
       let ml2 = false;
       for (const m of mandates) {
-        if (m.mandate_type === "PLH_TO_FLH" && user.jabatan === "Field Leading Hand") {
-          if (validation.workflow_status === "Pending" && ["Mekanik", "Operator Plant"].includes(validation.jabatan)) {
+        if (
+          m.mandate_type === "PLH_TO_FLH" &&
+          user.jabatan === "Field Leading Hand"
+        ) {
+          if (
+            validation.workflow_status === "Pending" &&
+            ["Mekanik", "Operator Plant"].includes(validation.jabatan)
+          ) {
             ml1 = true;
             break;
           }
         }
         // Mandat SHERQ memberi otorisasi level 2 pada scope SHERQ.
         if (m.mandate_type === "SHERQ_TO_ASST_PJO_OR_PJO") {
-          if ((user.jabatan === "Asst. Penanggung Jawab Operasional" || user.jabatan === "Penanggung Jawab Operasional") &&
-            (validation.workflow_status === "Level1_Review" || validation.workflow_status === "Level1 Review" || validation.jabatan === "Administrator" || validation.jabatan === "Admin Site Project")) {
+          if (
+            (user.jabatan === "Asst. Penanggung Jawab Operasional" ||
+              user.jabatan === "Penanggung Jawab Operasional") &&
+            (validation.workflow_status === "Level1_Review" ||
+              validation.workflow_status === "Level1 Review" ||
+              validation.jabatan === "Administrator" ||
+              validation.jabatan === "Admin Site Project")
+          ) {
             ml2 = true;
             break;
           }
         }
-        if (m.mandate_type === "PJO_TO_ASST_PJO" && user.jabatan === "Asst. Penanggung Jawab Operasional") {
-          const pjoJabatan = ["Asst. Penanggung Jawab Operasional", "SHERQ Officer", "Technical Service", "Field Leading Hand", "Plant Leading Hand"];
+        if (
+          m.mandate_type === "PJO_TO_ASST_PJO" &&
+          user.jabatan === "Asst. Penanggung Jawab Operasional"
+        ) {
+          const pjoJabatan = [
+            "Asst. Penanggung Jawab Operasional",
+            "SHERQ Officer",
+            "Technical Service",
+            "Field Leading Hand",
+            "Plant Leading Hand",
+          ];
           const pjoWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
-          if (pjoJabatan.includes(validation.jabatan) && pjoWorkflow.includes(validation.workflow_status)) {
+          if (
+            pjoJabatan.includes(validation.jabatan) &&
+            pjoWorkflow.includes(validation.workflow_status)
+          ) {
             ml2 = true;
             break;
           }
@@ -90,8 +114,17 @@ function FitToWorkValidationFormNew({
       setPermissionLoading(false);
     };
     run();
-    return () => { cancelled = true; };
-  }, [user?.id, user?.site, user?.jabatan, validation?.id, validation?.jabatan, validation?.workflow_status]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    user?.id,
+    user?.site,
+    user?.jabatan,
+    validation?.id,
+    validation?.jabatan,
+    validation?.workflow_status,
+  ]);
 
   const canEditLevel1 = () => {
     if (!user || !validation) return false;
@@ -111,10 +144,7 @@ function FitToWorkValidationFormNew({
     // Check if user can validate this person based on jabatan hierarchy
     if (userJabatan === "Plant Leading Hand") {
       // Plant Leading Hand hanya bisa validasi Mekanik dan Operator Plant
-      return [
-        "Mekanik",
-        "Operator Plant",
-      ].includes(validation.jabatan);
+      return ["Mekanik", "Operator Plant"].includes(validation.jabatan);
     } else if (userJabatan === "Field Leading Hand") {
       // Field Leading Hand hanya bisa validasi Operator MMU, Crew, Quality Control, dan Blaster
       const jabatanYangBisaDivalidasiFLH = [
@@ -128,7 +158,7 @@ function FitToWorkValidationFormNew({
       ];
       return jabatanYangBisaDivalidasiFLH.includes(validation.jabatan);
     } else if (userJabatan === "Asst. Penanggung Jawab Operasional") {
-      return ["Blaster", "Field Leading Hand", "Plant Leading Hand"].includes(validation.jabatan);
+      return ["Blaster"].includes(validation.jabatan);
     }
 
     return false;
@@ -183,11 +213,11 @@ function FitToWorkValidationFormNew({
       console.log("PJO validation check:");
       console.log(
         "- Valid jabatan:",
-        validJabatan.includes(validation.jabatan)
+        validJabatan.includes(validation.jabatan),
       );
       console.log(
         "- Valid workflow:",
-        validWorkflow.includes(validation.workflow_status)
+        validWorkflow.includes(validation.workflow_status),
       );
       console.log("- Final result:", canValidate);
 
@@ -276,16 +306,16 @@ function FitToWorkValidationFormNew({
           updatedValidation.status_fatigue = "Not Fit To Work";
           updatedValidation.status = "Not Fit To Work"; // Update kolom status juga
         }
-        
+
         console.log("Level 2 validation - Updated status:", {
           status_fatigue: updatedValidation.status_fatigue,
           status: updatedValidation.status,
-          validasi_tahap2: formData.validasi_tahap2
+          validasi_tahap2: formData.validasi_tahap2,
         });
       } else {
         console.log("ERROR: Neither Level 1 nor Level 2 validation is allowed");
         throw new Error(
-          "Anda tidak memiliki izin untuk melakukan validasi ini"
+          "Anda tidak memiliki izin untuk melakukan validasi ini",
         );
       }
 
@@ -461,7 +491,9 @@ function FitToWorkValidationFormNew({
         </div>
 
         {/* Penyebab Not Fit To Work - dari data form (jam tidur, obat, masalah pribadi, siap bekerja) */}
-        {((validation.initial_status_fatigue || validation.status_fatigue || "").toLowerCase().includes("not fit")) && (
+        {(validation.initial_status_fatigue || validation.status_fatigue || "")
+          .toLowerCase()
+          .includes("not fit") && (
           <div
             style={{
               marginTop: "16px",
@@ -482,23 +514,45 @@ function FitToWorkValidationFormNew({
             >
               Penyebab Not Fit To Work
             </label>
-            <div style={{ color: "#e5e7eb", fontSize: "14px", lineHeight: 1.5 }}>
+            <div
+              style={{ color: "#e5e7eb", fontSize: "14px", lineHeight: 1.5 }}
+            >
               {(() => {
                 const causes = [];
-                const jam = validation.total_jam_tidur != null ? Number(validation.total_jam_tidur) : null;
+                const jam =
+                  validation.total_jam_tidur != null
+                    ? Number(validation.total_jam_tidur)
+                    : null;
                 if (jam != null && jam < 6) {
-                  causes.push(`Jam tidur ${jam.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} jam sehingga tidak mencapai minimum 6 jam`);
+                  causes.push(
+                    `Jam tidur ${jam.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} jam sehingga tidak mencapai minimum 6 jam`,
+                  );
                 }
-                if (validation.tidak_mengkonsumsi_obat === false || validation.tidak_mengkonsumsi_obat === null) {
-                  causes.push(validation.catatan_obat ? `Mengkonsumsi obat: ${validation.catatan_obat}` : "Mengkonsumsi obat");
+                if (
+                  validation.tidak_mengkonsumsi_obat === false ||
+                  validation.tidak_mengkonsumsi_obat === null
+                ) {
+                  causes.push(
+                    validation.catatan_obat
+                      ? `Mengkonsumsi obat: ${validation.catatan_obat}`
+                      : "Mengkonsumsi obat",
+                  );
                 }
-                if (validation.tidak_ada_masalah_pribadi === false || validation.tidak_ada_masalah_pribadi === null) {
+                if (
+                  validation.tidak_ada_masalah_pribadi === false ||
+                  validation.tidak_ada_masalah_pribadi === null
+                ) {
                   causes.push("Ada masalah pribadi/keluarga");
                 }
-                if (validation.siap_bekerja === false || validation.siap_bekerja === null) {
+                if (
+                  validation.siap_bekerja === false ||
+                  validation.siap_bekerja === null
+                ) {
                   causes.push("Tidak siap untuk bekerja");
                 }
-                return causes.length > 0 ? causes.join("; ") : (validation.alasan_not_fit_user || "—");
+                return causes.length > 0
+                  ? causes.join("; ")
+                  : validation.alasan_not_fit_user || "—";
               })()}
             </div>
           </div>
@@ -516,7 +570,14 @@ function FitToWorkValidationFormNew({
           >
             Jawaban Fit To Work:
           </h4>
-          <div style={{ fontSize: "14px", lineHeight: "1.5", width: "100%", minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "14px",
+              lineHeight: "1.5",
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
             <div
               style={{
                 display: isMobile ? "flex" : "grid",
@@ -531,7 +592,16 @@ function FitToWorkValidationFormNew({
                 border: "1px solid #374151",
               }}
             >
-              <div style={{ color: "#e5e7eb", fontSize: "13px", wordBreak: "break-word", overflowWrap: "break-word", flex: "1 1 auto", minWidth: 0 }}>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                  fontSize: "13px",
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  flex: "1 1 auto",
+                  minWidth: 0,
+                }}
+              >
                 Q1: Tidak mengkonsumsi obat yang mempengaruhi kerja
               </div>
               <div
@@ -562,7 +632,16 @@ function FitToWorkValidationFormNew({
                 border: "1px solid #374151",
               }}
             >
-              <div style={{ color: "#e5e7eb", fontSize: "13px", wordBreak: "break-word", overflowWrap: "break-word", flex: "1 1 auto", minWidth: 0 }}>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                  fontSize: "13px",
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  flex: "1 1 auto",
+                  minWidth: 0,
+                }}
+              >
                 Q2: Tidak ada masalah pribadi/keluarga
               </div>
               <div
@@ -593,7 +672,16 @@ function FitToWorkValidationFormNew({
                 border: "1px solid #374151",
               }}
             >
-              <div style={{ color: "#e5e7eb", fontSize: "13px", wordBreak: "break-word", overflowWrap: "break-word", flex: "1 1 auto", minWidth: 0 }}>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                  fontSize: "13px",
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  flex: "1 1 auto",
+                  minWidth: 0,
+                }}
+              >
                 Q3: Siap bekerja dengan aman
               </div>
               <div
@@ -684,7 +772,8 @@ function FitToWorkValidationFormNew({
               >
                 {validation.catatan_tahap1 || "Tidak ada catatan"}
               </div>
-              {(validation.reviewer_tahap1_nama || validation.reviewed_tahap1_at) && (
+              {(validation.reviewer_tahap1_nama ||
+                validation.reviewed_tahap1_at) && (
                 <div
                   style={{
                     color: "#6b7280",
@@ -705,7 +794,7 @@ function FitToWorkValidationFormNew({
                           year: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        }
+                        },
                       )}
                     </span>
                   )}
@@ -734,7 +823,8 @@ function FitToWorkValidationFormNew({
               >
                 {validation.catatan_tahap2 || "Tidak ada catatan"}
               </div>
-              {(validation.reviewer_tahap2_nama || validation.reviewed_tahap2_at) && (
+              {(validation.reviewer_tahap2_nama ||
+                validation.reviewed_tahap2_at) && (
                 <div
                   style={{
                     color: "#6b7280",
@@ -755,7 +845,7 @@ function FitToWorkValidationFormNew({
                           year: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        }
+                        },
                       )}
                     </span>
                   )}
@@ -866,10 +956,10 @@ function FitToWorkValidationFormNew({
 
                       try {
                         const jamTidur = new Date(
-                          `2000-01-01T${validation.jam_tidur}`
+                          `2000-01-01T${validation.jam_tidur}`,
                         );
                         const jamBangun = new Date(
-                          `2000-01-01T${validation.jam_bangun}`
+                          `2000-01-01T${validation.jam_bangun}`,
                         );
 
                         // Jika jam bangun lebih kecil dari jam tidur, berarti tidur sampai hari berikutnya
@@ -916,10 +1006,10 @@ function FitToWorkValidationFormNew({
                     if (validation.jam_tidur && validation.jam_bangun) {
                       try {
                         const jamTidur = new Date(
-                          `2000-01-01T${validation.jam_tidur}`
+                          `2000-01-01T${validation.jam_tidur}`,
                         );
                         const jamBangun = new Date(
-                          `2000-01-01T${validation.jam_bangun}`
+                          `2000-01-01T${validation.jam_bangun}`,
                         );
 
                         if (jamBangun < jamTidur) {
@@ -936,21 +1026,21 @@ function FitToWorkValidationFormNew({
                     // Check jam tidur
                     if (totalJamTidur && totalJamTidur < 6) {
                       reasons.push(
-                        `Karyawan memiliki jam tidur kurang dari 6 jam (${totalJamTidur.toFixed(1)} jam)`
+                        `Karyawan memiliki jam tidur kurang dari 6 jam (${totalJamTidur.toFixed(1)} jam)`,
                       );
                     }
 
                     // Check obat
                     if (!validation.tidak_mengkonsumsi_obat) {
                       reasons.push(
-                        "Karyawan mengkonsumsi obat yang mempengaruhi kerja"
+                        "Karyawan mengkonsumsi obat yang mempengaruhi kerja",
                       );
                     }
 
                     // Check masalah pribadi
                     if (!validation.tidak_ada_masalah_pribadi) {
                       reasons.push(
-                        "Karyawan memiliki masalah pribadi/keluarga"
+                        "Karyawan memiliki masalah pribadi/keluarga",
                       );
                     }
 
@@ -1011,30 +1101,86 @@ function FitToWorkValidationFormNew({
           }}
         >
           <div style={{ marginBottom: "12px" }}>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Validator</label>
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Validator
+            </label>
             <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
-              {validation.reviewer_tahap1_nama || "—"} ({validation.reviewer_tahap1_jabatan || "—"})
+              {validation.reviewer_tahap1_nama || "—"} (
+              {validation.reviewer_tahap1_jabatan || "—"})
             </div>
           </div>
           <div style={{ marginBottom: "12px" }}>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Tindakan yang Dilakukan</label>
-            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>{validation.validasi_tahap1 || "—"}</div>
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Tindakan yang Dilakukan
+            </label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+              {validation.validasi_tahap1 || "—"}
+            </div>
           </div>
           <div style={{ marginBottom: "12px" }}>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Catatan</label>
-            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>{validation.catatan_tahap1 || "Tidak ada catatan"}</div>
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Catatan
+            </label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+              {validation.catatan_tahap1 || "Tidak ada catatan"}
+            </div>
           </div>
           <div>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Tanggal Validasi</label>
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Tanggal Validasi
+            </label>
             <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
               {validation.reviewed_tahap1_at
-                ? new Date(validation.reviewed_tahap1_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                ? new Date(validation.reviewed_tahap1_at).toLocaleString(
+                    "id-ID",
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )
                 : "—"}
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ color: "#9ca3af", fontSize: "14px", fontStyle: "italic" }}>
+        <div
+          style={{ color: "#9ca3af", fontSize: "14px", fontStyle: "italic" }}
+        >
           Belum divalidasi — menunggu validator yang berwenang.
         </div>
       )}
@@ -1059,14 +1205,14 @@ function FitToWorkValidationFormNew({
         }}
       >
         <h3
-        style={{
-          margin: "0 0 20px 0",
-          color: "#e5e7eb",
-          fontWeight: 600,
-          fontSize: "18px",
-        }}
-      >
-        Validasi Tahap 1 - {user.jabatan}
+          style={{
+            margin: "0 0 20px 0",
+            color: "#e5e7eb",
+            fontWeight: 600,
+            fontSize: "18px",
+          }}
+        >
+          Validasi Tahap 1 - {user.jabatan}
         </h3>
 
         <div style={{ marginBottom: "20px" }}>
@@ -1087,7 +1233,9 @@ function FitToWorkValidationFormNew({
                 onClick={() => setShowTindakanModal(true)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && setShowTindakanModal(true)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && setShowTindakanModal(true)
+                }
                 style={{
                   width: "100%",
                   padding: "12px",
@@ -1109,7 +1257,10 @@ function FitToWorkValidationFormNew({
                 searchQuery={tindakanSearchQuery}
                 onSearchChange={setTindakanSearchQuery}
                 show={showTindakanModal}
-                onClose={() => { setShowTindakanModal(false); setTindakanSearchQuery(""); }}
+                onClose={() => {
+                  setShowTindakanModal(false);
+                  setTindakanSearchQuery("");
+                }}
                 onSelect={(opt) => {
                   handleInputChange("validasi_tahap1", opt);
                   setShowTindakanModal(false);
@@ -1216,32 +1367,92 @@ function FitToWorkValidationFormNew({
           }}
         >
           <div style={{ marginBottom: "12px" }}>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Validator</label>
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Validator
+            </label>
             <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
-              {validation.reviewer_tahap2_nama || "—"} ({validation.reviewer_tahap2_jabatan || "—"})
+              {validation.reviewer_tahap2_nama || "—"} (
+              {validation.reviewer_tahap2_jabatan || "—"})
             </div>
           </div>
           <div style={{ marginBottom: "12px" }}>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Rekomendasi Final</label>
-            <div style={{ color: "#e5e7eb", fontSize: "14px", fontWeight: "600" }}>
-              {validation.validasi_tahap2 === "Fit" ? "Fit To Work" : validation.validasi_tahap2 === "Not Fit" ? "Not Fit To Work" : validation.validasi_tahap2 || "—"}
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Rekomendasi Final
+            </label>
+            <div
+              style={{ color: "#e5e7eb", fontSize: "14px", fontWeight: "600" }}
+            >
+              {validation.validasi_tahap2 === "Fit"
+                ? "Fit To Work"
+                : validation.validasi_tahap2 === "Not Fit"
+                  ? "Not Fit To Work"
+                  : validation.validasi_tahap2 || "—"}
             </div>
           </div>
           <div style={{ marginBottom: "12px" }}>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Catatan</label>
-            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>{validation.catatan_tahap2 || "Tidak ada catatan"}</div>
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Catatan
+            </label>
+            <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+              {validation.catatan_tahap2 || "Tidak ada catatan"}
+            </div>
           </div>
           <div>
-            <label style={{ color: "#9ca3af", fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Tanggal Validasi</label>
+            <label
+              style={{
+                color: "#9ca3af",
+                fontSize: "12px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Tanggal Validasi
+            </label>
             <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
               {validation.reviewed_tahap2_at
-                ? new Date(validation.reviewed_tahap2_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                ? new Date(validation.reviewed_tahap2_at).toLocaleString(
+                    "id-ID",
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )
                 : "—"}
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ color: "#9ca3af", fontSize: "14px", fontStyle: "italic" }}>
+        <div
+          style={{ color: "#9ca3af", fontSize: "14px", fontStyle: "italic" }}
+        >
           Belum divalidasi — menunggu validator yang berwenang.
         </div>
       )}
@@ -1281,7 +1492,8 @@ function FitToWorkValidationFormNew({
               fontSize: "13px",
             }}
           >
-            Validasi langsung oleh PJO (tanpa Tahap 1) — jabatan ini tidak melalui validasi tingkat satu.
+            Validasi langsung oleh PJO (tanpa Tahap 1) — jabatan ini tidak
+            melalui validasi tingkat satu.
           </div>
         )}
         {/* Laporan Validasi Tahap 1 */}
@@ -1379,7 +1591,7 @@ function FitToWorkValidationFormNew({
                           year: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        }
+                        },
                       )
                     : "Tidak diisi"}
                 </div>
@@ -1635,7 +1847,13 @@ function FitToWorkValidationFormNew({
 
           {/* Submit Button */}
           {(canEditLevel1() || canEditLevel2()) && (
-            <div style={{ textAlign: "center", marginTop: "24px", marginBottom: "40px" }}>
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: "24px",
+                marginBottom: "40px",
+              }}
+            >
               <button
                 type="submit"
                 disabled={loading || !isFormValid()}
