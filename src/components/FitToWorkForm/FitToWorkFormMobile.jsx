@@ -8,7 +8,12 @@ import {
   recordFitToWorkSubmissionAttendance,
 } from "../../utils/fitToWorkAttendanceHelpers";
 
-const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }) => {
+const FitToWorkFormMobile = ({
+  user,
+  onBack,
+  onNavigate,
+  tasklistTodoCount = 0,
+}) => {
   const [jamTidur, setJamTidur] = useState("");
   const [jamBangun, setJamBangun] = useState("");
   const [jumlahJamTidur, setJumlahJamTidur] = useState("");
@@ -37,7 +42,8 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
     else if (tidakMengkonsumsiObat === "Tidak" && !catatanObat.trim()) {
       errors.push("Catatan Obat");
     }
-    if (!tidakAdaMasalahPribadi) errors.push("Masalah pribadi/keluarga (Ya/Tidak)");
+    if (!tidakAdaMasalahPribadi)
+      errors.push("Masalah pribadi/keluarga (Ya/Tidak)");
     if (!siapBekerja) errors.push("Deklarasi siap bekerja (Ya/Tidak)");
     return errors;
   };
@@ -54,7 +60,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
         "CekSudahIsi: Checking for user.nrp:",
         user.nrp,
         "tanggal:",
-        today
+        today,
       );
       const { data, error } = await supabase
         .from("fit_to_work")
@@ -89,13 +95,13 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
         setJamTidur(data.jam_tidur || "");
         setJamBangun(data.jam_bangun || "");
         setJumlahJamTidur(
-          data.total_jam_tidur ? `${Math.floor(data.total_jam_tidur)} jam` : ""
+          data.total_jam_tidur ? `${Math.floor(data.total_jam_tidur)} jam` : "",
         );
         setTotalJamTidurAngka(data.total_jam_tidur || 0);
         setTidakMengkonsumsiObat(data.tidak_mengkonsumsi_obat ? "Ya" : "Tidak");
         setCatatanObat(data.catatan_obat || "");
         setTidakAdaMasalahPribadi(
-          data.tidak_ada_masalah_pribadi ? "Ya" : "Tidak"
+          data.tidak_ada_masalah_pribadi ? "Ya" : "Tidak",
         );
         setSiapBekerja(data.siap_bekerja ? "Ya" : "Tidak");
         // Ambil status dari kolom yang tersedia di DB
@@ -108,7 +114,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
         setStatus(finalStatus);
       } else {
         console.log(
-          "CekSudahIsi: No data found, setting sudahIsiHariIni to false"
+          "CekSudahIsi: No data found, setting sudahIsiHariIni to false",
         );
         setSudahIsiHariIni(false);
         setDataHariIni(null);
@@ -126,7 +132,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
       "Mobile useEffect triggered - user.nrp:",
       user?.nrp,
       "today WITA:",
-      today
+      today,
     );
     if (user) cekSudahIsi();
   }, [user, today]);
@@ -179,7 +185,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
       const jam = Math.floor(diff / 60);
       const menit = diff % 60;
       setJumlahJamTidur(
-        diff > 0 ? `${jam} jam${menit > 0 ? ` ${menit} menit` : ""}` : ""
+        diff > 0 ? `${jam} jam${menit > 0 ? ` ${menit} menit` : ""}` : "",
       );
       setTotalJamTidurAngka(diff > 0 ? diff / 60 : 0);
     } else {
@@ -190,7 +196,10 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
 
   // Logika status Fit To Work
   useEffect(() => {
-    if (
+    // Aturan 14 Hari: Jika hari masuk >= 14, otomatis Not Fit To Work (Fatigue/Roster Limit)
+    if (hariMasuk >= 14) {
+      setStatus("Not Fit To Work");
+    } else if (
       totalJamTidurAngka >= 6 &&
       tidakMengkonsumsiObat === "Ya" &&
       tidakAdaMasalahPribadi === "Ya" &&
@@ -205,6 +214,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
     tidakMengkonsumsiObat,
     tidakAdaMasalahPribadi,
     siapBekerja,
+    hariMasuk,
   ]);
 
   // Validasi form
@@ -276,7 +286,10 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
         status_fatigue: computedStatus, // Gunakan format lengkap agar konsisten
         initial_status_fatigue: computedStatus, // Status saat pengisian pertama (tidak diubah saat validasi)
         workflow_status: workflowStatus, // Set workflow_status untuk validasi
-        alasan_not_fit_user: null,
+        alasan_not_fit_user:
+          hariMasuk >= 14
+            ? `Mencapai batas roster ${hariMasuk} hari kerja berturut-turut`
+            : null,
       };
 
       console.log("Data yang akan dikirim ke database:", insertData);
@@ -284,14 +297,17 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
         "Validation required:",
         requiresValidation,
         "| Workflow Status:",
-        workflowStatus
+        workflowStatus,
       );
 
       const { error } = await supabase.from("fit_to_work").insert(insertData);
 
       if (error) throw error;
 
-      const attendanceResult = await recordFitToWorkSubmissionAttendance(user, today);
+      const attendanceResult = await recordFitToWorkSubmissionAttendance(
+        user,
+        today,
+      );
       if (attendanceResult?.error) {
         console.error("Attendance summary warning:", attendanceResult.error);
       } else if (typeof attendanceResult?.currentHariMasuk === "number") {
@@ -301,7 +317,7 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
       console.log("Fit To Work data saved successfully");
       if (requiresValidation) {
         console.log(
-          "Record memerlukan validasi - Leading Hand akan melihat di halaman Validasi Fit To Work"
+          "Record memerlukan validasi - Leading Hand akan melihat di halaman Validasi Fit To Work",
         );
       }
 
@@ -603,7 +619,8 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
                 <div
                   style={{
                     color: status === "Fit To Work" ? "#22c55e" : "#ef4444",
-                    background: status === "Fit To Work" ? "#dcfce7" : "#fee2e2",
+                    background:
+                      status === "Fit To Work" ? "#dcfce7" : "#fee2e2",
                     border:
                       status === "Fit To Work"
                         ? "2px solid #22c55e"
@@ -619,18 +636,20 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
                   Status: {status}
                 </div>
                 {dataHariIni?.initial_status_fatigue &&
-                  dataHariIni.initial_status_fatigue !== (dataHariIni?.status_fatigue || status) && (
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 11,
-                      color: "#64748b",
-                      textAlign: "center",
-                    }}
-                  >
-                    Status awal: {dataHariIni.initial_status_fatigue} → Saat ini: {dataHariIni?.status_fatigue || status}
-                  </div>
-                )}
+                  dataHariIni.initial_status_fatigue !==
+                    (dataHariIni?.status_fatigue || status) && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 11,
+                        color: "#64748b",
+                        textAlign: "center",
+                      }}
+                    >
+                      Status awal: {dataHariIni.initial_status_fatigue} → Saat
+                      ini: {dataHariIni?.status_fatigue || status}
+                    </div>
+                  )}
                 {dataHariIni?.alasan_not_fit_user && (
                   <div
                     style={{
@@ -643,7 +662,8 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
                       textAlign: "left",
                     }}
                   >
-                    <strong>Alasan Not Fit saat input:</strong> {dataHariIni.alasan_not_fit_user}
+                    <strong>Alasan Not Fit saat input:</strong>{" "}
+                    {dataHariIni.alasan_not_fit_user}
                   </div>
                 )}
               </div>
@@ -747,123 +767,123 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
             {sudahIsiHariIni &&
               dataHariIni &&
               (dataHariIni.catatan_tahap1 || dataHariIni.catatan_tahap2) && (
-              <div
-                style={{
-                  marginTop: 16,
-                  padding: 14,
-                  backgroundColor: "#f1f5f9",
-                  borderRadius: 10,
-                  border: "1px solid #e2e8f0",
-                }}
-              >
                 <div
                   style={{
-                    fontWeight: 700,
-                    fontSize: 14,
-                    color: "#334155",
-                    marginBottom: 12,
+                    marginTop: 16,
+                    padding: 14,
+                    backgroundColor: "#f1f5f9",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
                   }}
                 >
-                  Catatan Validator
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      color: "#334155",
+                      marginBottom: 12,
+                    }}
+                  >
+                    Catatan Validator
+                  </div>
+                  {dataHariIni.catatan_tahap1 && (
+                    <div style={{ marginBottom: 12 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#64748b",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Catatan Tahap 1
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#475569",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {dataHariIni.catatan_tahap1}
+                      </div>
+                      {(dataHariIni.reviewer_tahap1_nama ||
+                        dataHariIni.reviewed_tahap1_at) && (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#94a3b8",
+                            marginTop: 4,
+                          }}
+                        >
+                          {dataHariIni.reviewer_tahap1_nama}
+                          {dataHariIni.reviewer_tahap1_jabatan
+                            ? ` (${dataHariIni.reviewer_tahap1_jabatan})`
+                            : ""}
+                          {dataHariIni.reviewed_tahap1_at &&
+                            ` · ${new Date(
+                              dataHariIni.reviewed_tahap1_at,
+                            ).toLocaleString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {dataHariIni.catatan_tahap2 && (
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#64748b",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Catatan Tahap 2
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#475569",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {dataHariIni.catatan_tahap2}
+                      </div>
+                      {(dataHariIni.reviewer_tahap2_nama ||
+                        dataHariIni.reviewed_tahap2_at) && (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#94a3b8",
+                            marginTop: 4,
+                          }}
+                        >
+                          {dataHariIni.reviewer_tahap2_nama}
+                          {dataHariIni.reviewer_tahap2_jabatan
+                            ? ` (${dataHariIni.reviewer_tahap2_jabatan})`
+                            : ""}
+                          {dataHariIni.reviewed_tahap2_at &&
+                            ` · ${new Date(
+                              dataHariIni.reviewed_tahap2_at,
+                            ).toLocaleString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {dataHariIni.catatan_tahap1 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#64748b",
-                        marginBottom: 4,
-                      }}
-                    >
-                      Catatan Tahap 1
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#475569",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {dataHariIni.catatan_tahap1}
-                    </div>
-                    {(dataHariIni.reviewer_tahap1_nama ||
-                      dataHariIni.reviewed_tahap1_at) && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "#94a3b8",
-                          marginTop: 4,
-                        }}
-                      >
-                        {dataHariIni.reviewer_tahap1_nama}
-                        {dataHariIni.reviewer_tahap1_jabatan
-                          ? ` (${dataHariIni.reviewer_tahap1_jabatan})`
-                          : ""}
-                        {dataHariIni.reviewed_tahap1_at &&
-                          ` · ${new Date(
-                            dataHariIni.reviewed_tahap1_at
-                          ).toLocaleString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}`}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {dataHariIni.catatan_tahap2 && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#64748b",
-                        marginBottom: 4,
-                      }}
-                    >
-                      Catatan Tahap 2
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#475569",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {dataHariIni.catatan_tahap2}
-                    </div>
-                    {(dataHariIni.reviewer_tahap2_nama ||
-                      dataHariIni.reviewed_tahap2_at) && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "#94a3b8",
-                          marginTop: 4,
-                        }}
-                      >
-                        {dataHariIni.reviewer_tahap2_nama}
-                        {dataHariIni.reviewer_tahap2_jabatan
-                          ? ` (${dataHariIni.reviewer_tahap2_jabatan})`
-                          : ""}
-                        {dataHariIni.reviewed_tahap2_at &&
-                          ` · ${new Date(
-                            dataHariIni.reviewed_tahap2_at
-                          ).toLocaleString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}`}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+              )}
 
             {/* Error Message */}
             {error && (
@@ -912,9 +932,12 @@ const FitToWorkFormMobile = ({ user, onBack, onNavigate, tasklistTodoCount = 0 }
                     padding: "14px 0",
                     fontSize: 14,
                     fontWeight: 600,
-                    cursor: loading || sudahIsiHariIni ? "not-allowed" : "pointer",
+                    cursor:
+                      loading || sudahIsiHariIni ? "not-allowed" : "pointer",
                     width: "100%",
-                    boxShadow: isFormValid ? "0 -2px 12px rgba(0,0,0,0.15)" : "none",
+                    boxShadow: isFormValid
+                      ? "0 -2px 12px rgba(0,0,0,0.15)"
+                      : "none",
                     opacity: loading ? 0.7 : 1,
                   }}
                 >

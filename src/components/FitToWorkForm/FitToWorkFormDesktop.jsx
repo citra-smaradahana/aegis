@@ -60,7 +60,7 @@ const FitToWorkFormDesktop = ({ user }) => {
         setJamTidur(data.jam_tidur || "");
         setJamBangun(data.jam_bangun || "");
         setJumlahJamTidur(
-          data.total_jam_tidur ? `${Math.floor(data.total_jam_tidur)} jam` : ""
+          data.total_jam_tidur ? `${Math.floor(data.total_jam_tidur)} jam` : "",
         );
         setTotalJamTidurAngka(data.total_jam_tidur || 0);
         setKonsumsiObat(data.tidak_mengkonsumsi_obat ? "Ya" : "Tidak");
@@ -93,7 +93,7 @@ const FitToWorkFormDesktop = ({ user }) => {
       "Desktop useEffect triggered - user.nrp:",
       user?.nrp,
       "today WITA:",
-      today
+      today,
     );
     if (user) cekSudahIsi();
   }, [user, today]);
@@ -146,7 +146,7 @@ const FitToWorkFormDesktop = ({ user }) => {
       const jam = Math.floor(diff / 60);
       const menit = diff % 60;
       setJumlahJamTidur(
-        diff > 0 ? `${jam} jam${menit > 0 ? ` ${menit} menit` : ""}` : ""
+        diff > 0 ? `${jam} jam${menit > 0 ? ` ${menit} menit` : ""}` : "",
       );
       setTotalJamTidurAngka(diff > 0 ? diff / 60 : 0); // SET ANGKA
     } else {
@@ -157,7 +157,10 @@ const FitToWorkFormDesktop = ({ user }) => {
 
   // Logika status Fit To Work
   useEffect(() => {
-    if (
+    // Aturan 14 Hari: Jika hari masuk >= 14, otomatis Not Fit To Work (Fatigue/Roster Limit)
+    if (hariMasuk >= 14) {
+      setStatus("Not Fit To Work");
+    } else if (
       totalJamTidurAngka >= 6 &&
       konsumsiObat === "Ya" &&
       masalahPribadi === "Ya" &&
@@ -167,7 +170,13 @@ const FitToWorkFormDesktop = ({ user }) => {
     } else {
       setStatus("Not Fit To Work");
     }
-  }, [totalJamTidurAngka, konsumsiObat, masalahPribadi, siapBekerja]);
+  }, [
+    totalJamTidurAngka,
+    konsumsiObat,
+    masalahPribadi,
+    siapBekerja,
+    hariMasuk,
+  ]);
 
   // Validasi form
   const isFormValid =
@@ -233,7 +242,10 @@ const FitToWorkFormDesktop = ({ user }) => {
         status_fatigue: computedStatus, // Gunakan status_fatigue juga
         initial_status_fatigue: computedStatus, // Status saat pengisian pertama (tidak diubah saat validasi)
         workflow_status: workflowStatus, // Set workflow_status untuk validasi
-        alasan_not_fit_user: null,
+        alasan_not_fit_user:
+          hariMasuk >= 14
+            ? `Mencapai batas roster ${hariMasuk} hari kerja berturut-turut`
+            : null,
       };
 
       console.log("Submitting payload to fit_to_work:", payload);
@@ -241,7 +253,7 @@ const FitToWorkFormDesktop = ({ user }) => {
         "Validation required:",
         requiresValidation,
         "| Workflow Status:",
-        workflowStatus
+        workflowStatus,
       );
 
       // Insert ke tabel fit_to_work (sistem validasi membaca langsung dari sini)
@@ -253,7 +265,10 @@ const FitToWorkFormDesktop = ({ user }) => {
 
       if (error) throw error;
 
-      const attendanceResult = await recordFitToWorkSubmissionAttendance(user, today);
+      const attendanceResult = await recordFitToWorkSubmissionAttendance(
+        user,
+        today,
+      );
       if (attendanceResult?.error) {
         console.error("Attendance summary warning:", attendanceResult.error);
       } else if (typeof attendanceResult?.currentHariMasuk === "number") {
@@ -263,7 +278,7 @@ const FitToWorkFormDesktop = ({ user }) => {
       console.log("Fit To Work data saved successfully");
       if (requiresValidation) {
         console.log(
-          "Record memerlukan validasi - Leading Hand akan melihat di halaman Validasi Fit To Work"
+          "Record memerlukan validasi - Leading Hand akan melihat di halaman Validasi Fit To Work",
         );
       }
 
@@ -531,7 +546,8 @@ const FitToWorkFormDesktop = ({ user }) => {
                     Status: {status}
                   </div>
                   {dataHariIni?.initial_status_fatigue &&
-                    dataHariIni.initial_status_fatigue !== (dataHariIni?.status_fatigue || status) && (
+                    dataHariIni.initial_status_fatigue !==
+                      (dataHariIni?.status_fatigue || status) && (
                       <div
                         style={{
                           marginTop: 8,
@@ -540,7 +556,8 @@ const FitToWorkFormDesktop = ({ user }) => {
                           textAlign: "center",
                         }}
                       >
-                        Status awal: {dataHariIni.initial_status_fatigue} → Saat ini: {dataHariIni?.status_fatigue || status}
+                        Status awal: {dataHariIni.initial_status_fatigue} → Saat
+                        ini: {dataHariIni?.status_fatigue || status}
                       </div>
                     )}
                   {dataHariIni?.alasan_not_fit_user && (
@@ -555,7 +572,8 @@ const FitToWorkFormDesktop = ({ user }) => {
                         textAlign: "left",
                       }}
                     >
-                      <strong>Alasan Not Fit saat input:</strong> {dataHariIni.alasan_not_fit_user}
+                      <strong>Alasan Not Fit saat input:</strong>{" "}
+                      {dataHariIni.alasan_not_fit_user}
                     </div>
                   )}
                 </div>
@@ -656,131 +674,130 @@ const FitToWorkFormDesktop = ({ user }) => {
                   </button>
                 </div>
               </div>
-
             </div>
 
             {/* Catatan Validator - tampil bila ada catatan dari perbaikan Not Fit To Work */}
             {sudahIsiHariIni &&
               dataHariIni &&
               (dataHariIni.catatan_tahap1 || dataHariIni.catatan_tahap2) && (
-              <div
-                style={{
-                  ...fullWidthRowStyle,
-                  marginTop: 16,
-                  padding: 16,
-                  backgroundColor: "#f1f5f9",
-                  borderRadius: 10,
-                  border: "1px solid #e2e8f0",
-                }}
-              >
                 <div
                   style={{
-                    fontWeight: 700,
-                    fontSize: 15,
-                    color: "#334155",
-                    marginBottom: 12,
+                    ...fullWidthRowStyle,
+                    marginTop: 16,
+                    padding: 16,
+                    backgroundColor: "#f1f5f9",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
                   }}
                 >
-                  Catatan Validator
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 15,
+                      color: "#334155",
+                      marginBottom: 12,
+                    }}
+                  >
+                    Catatan Validator
+                  </div>
+                  {dataHariIni.catatan_tahap1 && (
+                    <div style={{ marginBottom: 12 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#64748b",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Catatan Tahap 1
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "#475569",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {dataHariIni.catatan_tahap1}
+                      </div>
+                      {(dataHariIni.reviewer_tahap1_nama ||
+                        dataHariIni.reviewed_tahap1_at) && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "#94a3b8",
+                            marginTop: 4,
+                          }}
+                        >
+                          {dataHariIni.reviewer_tahap1_nama}
+                          {dataHariIni.reviewer_tahap1_jabatan
+                            ? ` (${dataHariIni.reviewer_tahap1_jabatan})`
+                            : ""}
+                          {dataHariIni.reviewed_tahap1_at &&
+                            ` · ${new Date(
+                              dataHariIni.reviewed_tahap1_at,
+                            ).toLocaleString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {dataHariIni.catatan_tahap2 && (
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#64748b",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Catatan Tahap 2
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "#475569",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {dataHariIni.catatan_tahap2}
+                      </div>
+                      {(dataHariIni.reviewer_tahap2_nama ||
+                        dataHariIni.reviewed_tahap2_at) && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "#94a3b8",
+                            marginTop: 4,
+                          }}
+                        >
+                          {dataHariIni.reviewer_tahap2_nama}
+                          {dataHariIni.reviewer_tahap2_jabatan
+                            ? ` (${dataHariIni.reviewer_tahap2_jabatan})`
+                            : ""}
+                          {dataHariIni.reviewed_tahap2_at &&
+                            ` · ${new Date(
+                              dataHariIni.reviewed_tahap2_at,
+                            ).toLocaleString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {dataHariIni.catatan_tahap1 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#64748b",
-                        marginBottom: 4,
-                      }}
-                    >
-                      Catatan Tahap 1
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        color: "#475569",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {dataHariIni.catatan_tahap1}
-                    </div>
-                    {(dataHariIni.reviewer_tahap1_nama ||
-                      dataHariIni.reviewed_tahap1_at) && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "#94a3b8",
-                          marginTop: 4,
-                        }}
-                      >
-                        {dataHariIni.reviewer_tahap1_nama}
-                        {dataHariIni.reviewer_tahap1_jabatan
-                          ? ` (${dataHariIni.reviewer_tahap1_jabatan})`
-                          : ""}
-                        {dataHariIni.reviewed_tahap1_at &&
-                          ` · ${new Date(
-                            dataHariIni.reviewed_tahap1_at
-                          ).toLocaleString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}`}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {dataHariIni.catatan_tahap2 && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#64748b",
-                        marginBottom: 4,
-                      }}
-                    >
-                      Catatan Tahap 2
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        color: "#475569",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {dataHariIni.catatan_tahap2}
-                    </div>
-                    {(dataHariIni.reviewer_tahap2_nama ||
-                      dataHariIni.reviewed_tahap2_at) && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "#94a3b8",
-                          marginTop: 4,
-                        }}
-                      >
-                        {dataHariIni.reviewer_tahap2_nama}
-                        {dataHariIni.reviewer_tahap2_jabatan
-                          ? ` (${dataHariIni.reviewer_tahap2_jabatan})`
-                          : ""}
-                        {dataHariIni.reviewed_tahap2_at &&
-                          ` · ${new Date(
-                            dataHariIni.reviewed_tahap2_at
-                          ).toLocaleString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}`}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+              )}
 
             {/* Error / Success (Full width) */}
             {error && (
