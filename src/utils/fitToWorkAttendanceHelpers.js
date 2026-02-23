@@ -181,7 +181,14 @@ export async function fetchCurrentHariMasukForUser(
   if (!user?.id) return 0;
 
   const summary = await getAttendanceSummary(user.id);
-  if (summary && summary.current_hari_masuk > 0) {
+  // Gunakan cache hanya jika hari belum berganti (anchorDate <= last_ftw_date)
+  // Jika sudah berganti hari, re-derive agar hari kerja bertambah tanpa perlu submit FTW dulu
+  const cacheValid =
+    summary &&
+    summary.current_hari_masuk > 0 &&
+    summary.last_ftw_date &&
+    anchorDate <= summary.last_ftw_date;
+  if (cacheValid) {
     return summary.current_hari_masuk;
   }
 

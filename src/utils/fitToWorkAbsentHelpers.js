@@ -30,7 +30,13 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
   }
 
   if (j === "Plant Leading Hand") {
-    return ["Mekanik", "Operator Plant"];
+    // Termasuk sesama Leading Hand agar bisa menandai off
+    return [
+      "Mekanik",
+      "Operator Plant",
+      "Field Leading Hand",
+      "Plant Leading Hand",
+    ];
   }
 
   if (j === "Field Leading Hand") {
@@ -42,6 +48,8 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
       "Quality Control",
       "Blaster",
       "Crew Blasting",
+      "Field Leading Hand",
+      "Plant Leading Hand",
     ];
     // Mandat PLH->FLH: tambah Mekanik/Operator Plant
     const plhMandate = (mandates || []).find(
