@@ -44,7 +44,9 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
       "Crew Blasting",
     ];
     // Mandat PLH->FLH: tambah Mekanik/Operator Plant
-    const plhMandate = (mandates || []).find((m) => m.mandate_type === "PLH_TO_FLH");
+    const plhMandate = (mandates || []).find(
+      (m) => m.mandate_type === "PLH_TO_FLH",
+    );
     if (plhMandate) {
       return [...base, "Mekanik", "Operator Plant"];
     }
@@ -60,8 +62,11 @@ export { getSubordinateJabatansForValidator };
  * Ambil daftar user yang BELUM mengisi Fit To Work hari ini
  * dan BELUM ditandai off.
  * Filter berdasarkan jabatan validator.
+ *
+ * @param {Object} user - User object validator
+ * @param {Array<string>} additionalJabatans - Optional: Jabatan tambahan yang ingin dilihat (misal: sesama LH)
  */
-export async function fetchUsersNotYetFilledFTW(user) {
+export async function fetchUsersNotYetFilledFTW(user, additionalJabatans = []) {
   if (!user?.site) return [];
 
   const userSite = user.site;
@@ -96,7 +101,7 @@ export async function fetchUsersNotYetFilledFTW(user) {
 
   const subordinateJabatans = getSubordinateJabatansForValidator(
     jabatan,
-    mandates
+    mandates,
   );
 
   // 1. Ambil semua user di site (filter jabatan jika LH/PLH)
@@ -107,7 +112,16 @@ export async function fetchUsersNotYetFilledFTW(user) {
     .neq("id", user.id); // Exclude self
 
   if (subordinateJabatans && subordinateJabatans.length > 0) {
-    usersQuery = usersQuery.in("jabatan", subordinateJabatans);
+    // GABUNGKAN subordinateJabatans dengan additionalJabatans
+    // Gunakan Set untuk unique values
+    const combinedJabatans = [
+      ...new Set([...subordinateJabatans, ...(additionalJabatans || [])]),
+    ];
+    usersQuery = usersQuery.in("jabatan", combinedJabatans);
+  } else if (additionalJabatans && additionalJabatans.length > 0) {
+    // Jika subordinateJabatans null (lihat semua), kita abaikan additionalJabatans.
+    // Tapi jika subordinateJabatans kosong [] (tidak punya bawahan), kita tetap cek additionalJabatans.
+    usersQuery = usersQuery.in("jabatan", additionalJabatans);
   }
 
   const { data: usersData, error: usersError } = await usersQuery;
@@ -137,7 +151,7 @@ export async function fetchUsersNotYetFilledFTW(user) {
 
   // 4. Filter: user yang belum isi DAN belum off
   const result = usersData.filter(
-    (u) => !nrpSudahIsi.has(u.nrp) && !userIdSudahOff.has(u.id)
+    (u) => !nrpSudahIsi.has(u.nrp) && !userIdSudahOff.has(u.id),
   );
 
   return result;
@@ -146,8 +160,14 @@ export async function fetchUsersNotYetFilledFTW(user) {
 /**
  * Ambil daftar user beserta ringkasan hari masuk FTW sesuai scope validator.
  * LH/PLH hanya bawahan, SHERQ/Asst PJO/PJO dapat semua user site.
+ *
+ * @param {Object} user - User object validator
+ * @param {Array<string>} additionalJabatans - Optional: Jabatan tambahan yang ingin dilihat
  */
-export async function fetchUsersAttendanceForValidator(user) {
+export async function fetchUsersAttendanceForValidator(
+  user,
+  additionalJabatans = [],
+) {
   if (!user?.site) return [];
 
   const userSite = user.site;
@@ -170,7 +190,10 @@ export async function fetchUsersAttendanceForValidator(user) {
     mandates = await fetchActiveMandatesForUser(user.id, userSite);
   }
 
-  const subordinateJabatans = getSubordinateJabatansForValidator(jabatan, mandates);
+  const subordinateJabatans = getSubordinateJabatansForValidator(
+    jabatan,
+    mandates,
+  );
 
   let usersQuery = supabase
     .from("users")
@@ -179,13 +202,22 @@ export async function fetchUsersAttendanceForValidator(user) {
     .neq("id", user.id);
 
   if (subordinateJabatans && subordinateJabatans.length > 0) {
-    usersQuery = usersQuery.in("jabatan", subordinateJabatans);
+    // GABUNGKAN subordinateJabatans dengan additionalJabatans
+    const combinedJabatans = [
+      ...new Set([...subordinateJabatans, ...(additionalJabatans || [])]),
+    ];
+    usersQuery = usersQuery.in("jabatan", combinedJabatans);
+  } else if (additionalJabatans && additionalJabatans.length > 0) {
+    usersQuery = usersQuery.in("jabatan", additionalJabatans);
   }
 
   const { data: usersData, error: usersError } = await usersQuery;
   if (usersError || !usersData || usersData.length === 0) return [];
 
-  const derivedSummary = await buildAttendanceSummaryForUsers(usersData, getTodayWITA());
+  const derivedSummary = await buildAttendanceSummaryForUsers(
+    usersData,
+    getTodayWITA(),
+  );
   const summaryMap = new Map((derivedSummary || []).map((s) => [s.user_id, s]));
 
   return usersData
@@ -219,7 +251,10 @@ export async function markUserOff(userId, validatorUser) {
 
   // Leading Hand hanya boleh menandai off user dalam scope tanggung jawab jabatan.
   const validatorJabatan = (validatorUser?.jabatan || "").trim();
-  if (validatorJabatan === "Field Leading Hand" || validatorJabatan === "Plant Leading Hand") {
+  if (
+    validatorJabatan === "Field Leading Hand" ||
+    validatorJabatan === "Plant Leading Hand"
+  ) {
     const { data: targetUser, error: targetUserError } = await supabase
       .from("users")
       .select("id, jabatan, site")
@@ -235,15 +270,20 @@ export async function markUserOff(userId, validatorUser) {
 
     let mandates = [];
     if (validatorJabatan === "Field Leading Hand") {
-      mandates = await fetchActiveMandatesForUser(validatorUser.id, validatorUser.site);
+      mandates = await fetchActiveMandatesForUser(
+        validatorUser.id,
+        validatorUser.site,
+      );
     }
 
     const allowedJabatans = getSubordinateJabatansForValidator(
       validatorJabatan,
-      mandates
+      mandates,
     );
     if (!allowedJabatans?.includes(targetUser.jabatan)) {
-      return { error: "Tidak memiliki wewenang untuk menandai off jabatan ini" };
+      return {
+        error: "Tidak memiliki wewenang untuk menandai off jabatan ini",
+      };
     }
   }
 
@@ -256,7 +296,7 @@ export async function markUserOff(userId, validatorUser) {
       marked_by: validatorUser.id,
       created_at: getNowWITAISO(),
     },
-    { onConflict: "user_id,tanggal" }
+    { onConflict: "user_id,tanggal" },
   );
 
   if (error) {
@@ -267,7 +307,7 @@ export async function markUserOff(userId, validatorUser) {
   const attendanceReset = await resetHariMasukByOff(
     userId,
     validatorUser.site,
-    "off_marked"
+    "off_marked",
   );
   if (attendanceReset?.error) {
     console.error("Attendance reset warning:", attendanceReset.error);

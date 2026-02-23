@@ -10,8 +10,16 @@ function getPreviousDate(dateStr) {
 
 function computeHariMasukFromSets(ftwDates, absentDates, anchorDate) {
   let startDate = anchorDate;
-  if (!absentDates.has(anchorDate) && !ftwDates.has(anchorDate)) {
+  // LOGIKA BARU: Optimistic count
+  // Selalu mulai hitung dari hari ini (anchorDate), KECUALI jika hari ini sudah ditandai Absent.
+  // Walaupun hari ini belum ada di ftwDates (belum submit), kita anggap hari ini sbg hari kerja ke-1.
+  if (absentDates.has(anchorDate)) {
+    // Jika hari ini libur, maka hitungan hari ini 0.
+    // Kita cek hari sebelumnya.
     startDate = getPreviousDate(anchorDate);
+  } else {
+    // Jika hari ini TIDAK libur, kita anggap ini adalah hari kerja aktif.
+    // Lanjut hitung mundur.
   }
 
   let cursor = startDate;
@@ -20,10 +28,15 @@ function computeHariMasukFromSets(ftwDates, absentDates, anchorDate) {
 
   while (cursor) {
     if (absentDates.has(cursor)) break;
-    if (!ftwDates.has(cursor)) break;
+
+    // Khusus untuk anchorDate (Hari Ini), kita tidak cek ftwDates.
+    // Kita anggap user "sedang" bekerja hari ini.
+    if (cursor !== anchorDate && !ftwDates.has(cursor)) break;
 
     count += 1;
-    if (!lastFtwDate) lastFtwDate = cursor;
+    // Update lastFtwDate jika ditemukan record nyata di ftwDates
+    if (!lastFtwDate && ftwDates.has(cursor)) lastFtwDate = cursor;
+
     cursor = getPreviousDate(cursor);
   }
 
@@ -73,13 +86,20 @@ async function deriveHariMasukFromHistory(user, anchorDate) {
     return { count: 0, lastFtwDate: null };
   }
 
-  const ftwDates = new Set((ftwRows || []).map((r) => r.tanggal).filter(Boolean));
-  const absentDates = new Set((absentRows || []).map((r) => r.tanggal).filter(Boolean));
+  const ftwDates = new Set(
+    (ftwRows || []).map((r) => r.tanggal).filter(Boolean),
+  );
+  const absentDates = new Set(
+    (absentRows || []).map((r) => r.tanggal).filter(Boolean),
+  );
 
   return computeHariMasukFromSets(ftwDates, absentDates, anchorDate);
 }
 
-export async function buildAttendanceSummaryForUsers(users, anchorDate = getTodayWITA()) {
+export async function buildAttendanceSummaryForUsers(
+  users,
+  anchorDate = getTodayWITA(),
+) {
   if (!Array.isArray(users) || users.length === 0) return [];
 
   const validUsers = users.filter((u) => u?.id && u?.nrp && u?.site);
@@ -108,7 +128,10 @@ export async function buildAttendanceSummaryForUsers(users, anchorDate = getToda
     .lte("tanggal", anchorDate);
 
   if (absentError) {
-    console.error("Error reading absent history for bulk attendance:", absentError);
+    console.error(
+      "Error reading absent history for bulk attendance:",
+      absentError,
+    );
     return [];
   }
 
@@ -130,7 +153,7 @@ export async function buildAttendanceSummaryForUsers(users, anchorDate = getToda
     const computed = computeHariMasukFromSets(
       ftwMap.get(u.nrp) || new Set(),
       absentMap.get(u.id) || new Set(),
-      anchorDate
+      anchorDate,
     );
     return {
       user_id: u.id,
@@ -151,7 +174,10 @@ export async function buildAttendanceSummaryForUsers(users, anchorDate = getToda
   return summaries;
 }
 
-export async function fetchCurrentHariMasukForUser(user, anchorDate = getTodayWITA()) {
+export async function fetchCurrentHariMasukForUser(
+  user,
+  anchorDate = getTodayWITA(),
+) {
   if (!user?.id) return 0;
 
   const summary = await getAttendanceSummary(user.id);
@@ -205,7 +231,11 @@ export async function recordFitToWorkSubmissionAttendance(user, tanggal) {
   return { success: true, currentHariMasuk: derived.count };
 }
 
-export async function resetHariMasukByOff(userId, site, resetReason = "off_marked") {
+export async function resetHariMasukByOff(
+  userId,
+  site,
+  resetReason = "off_marked",
+) {
   if (!userId || !site) {
     return { error: "Data user/site tidak lengkap" };
   }
