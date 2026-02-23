@@ -4,6 +4,7 @@ import { sessionManager, setupSessionAutoExtend } from "./utils/sessionManager";
 import { fetchValidationCountForUser } from "./utils/fitToWorkValidationCount";
 import { userNeedsToFillFTWToday } from "./utils/fitToWorkAbsentHelpers";
 import { fetchTasklistTodoCountForUser } from "./utils/tasklistTodoCount";
+import { fetchAllowedMenusForUser } from "./utils/menuAccessHelpers";
 import Login from "./components/Login";
 import MonitoringPage from "./components/MonitoringPage";
 import SiteSelectionPage from "./components/SiteSelectionPage";
@@ -18,6 +19,9 @@ import AdminSettings from "./components/AdminSettings";
 import Profile from "./components/Profile";
 import Home from "./components/Home";
 import FitToWorkValidationNew from "./components/FitToWorkValidationNew";
+import DailyAttendanceList from "./components/DailyAttendance";
+import DailyAttendanceForm from "./components/DailyAttendance/DailyAttendanceForm";
+import DailyAttendanceView from "./components/DailyAttendance/DailyAttendanceView";
 import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
 import PTOForm from "./components/PTOForm";
 import aegisLogo from "./assets/aegis.png";
@@ -121,26 +125,62 @@ function App() {
   const MainApp = () => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+    const [selectedMeetingId, setSelectedMeetingId] = useState(null);
+    const selectedMeetingIdRef = useRef(null);
     const [validationCount, setValidationCount] = useState(0);
     const [ftwNeedsFill, setFtwNeedsFill] = useState(false);
     const [tasklistTodoCount, setTasklistTodoCount] = useState(0);
+    const [allowedMenus, setAllowedMenus] = useState(null);
     const canAccessMonitoring =
       user?.role === "evaluator" || user?.role === "admin";
-    // Hanya jabatan validator yang boleh melihat dan mengakses Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
+
+    const reportPtoJabatan = [
+      "SHERQ Officer",
+      "Field Leading Hand",
+      "Plant Leading Hand",
+      "Technical Service",
+      "Asst. Penanggung Jawab Operasional",
+      "Penanggung Jawab Operasional",
+    ];
+    const validatorJabatan = [
+      "Field Leading Hand",
+      "Plant Leading Hand",
+      "Asst. Penanggung Jawab Operasional",
+      "Penanggung Jawab Operasional",
+      "SHE",
+      "SHERQ Officer",
+    ];
+
     const canAccessFitToWorkValidation = () => {
       if (!user) return false;
+      if (allowedMenus) return allowedMenus.includes("fit-to-work-validation");
       if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
-      const jabatan = (user?.jabatan || "").trim();
-      const validatorJabatan = [
-        "Field Leading Hand",
-        "Plant Leading Hand",
-        "Asst. Penanggung Jawab Operasional",
-        "Penanggung Jawab Operasional",
-        "SHE",
-        "SHERQ Officer",
-      ];
-      return validatorJabatan.includes(jabatan);
+      return validatorJabatan.includes((user?.jabatan || "").trim());
     };
+    const canAccessReport = () => {
+      if (!user) return false;
+      if (allowedMenus) return allowedMenus.includes("daily-attendance");
+      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+      return reportPtoJabatan.includes((user?.jabatan || "").trim());
+    };
+    const canAccessPTO = () => {
+      if (!user) return false;
+      if (allowedMenus) return allowedMenus.includes("pto");
+      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+      return reportPtoJabatan.includes((user?.jabatan || "").trim());
+    };
+
+    useEffect(() => {
+      let cancelled = false;
+      if (!user?.id) {
+        setAllowedMenus(null);
+        return;
+      }
+      fetchAllowedMenusForUser(user).then((menus) => {
+        if (!cancelled) setAllowedMenus(menus);
+      });
+      return () => { cancelled = true; };
+    }, [user?.id, user?.jabatan, user?.site]);
 
     // Tutup panel notifikasi saat pindah menu
     useEffect(() => {
@@ -157,7 +197,9 @@ function App() {
       fetchValidationCountForUser(user).then((count) => {
         if (!cancelled) setValidationCount(count);
       });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }, [user?.id, user?.jabatan, user?.site, activeMenu]);
 
     // Fetch apakah user wajib isi Fit To Work hari ini (untuk badge menu)
@@ -170,7 +212,9 @@ function App() {
       userNeedsToFillFTWToday(user).then((needs) => {
         if (!cancelled) setFtwNeedsFill(!!needs);
       });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }, [user?.id, user?.nrp, user?.site, activeMenu]);
 
     // Fetch jumlah To Do di Tasklist untuk user (untuk badge bottom nav)
@@ -183,13 +227,23 @@ function App() {
       fetchTasklistTodoCountForUser(user).then((count) => {
         if (!cancelled) setTasklistTodoCount(count);
       });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }, [user?.id, user?.site, user?.nama, activeMenu]);
 
     const renderContent = () => {
       switch (activeMenu) {
         case "dashboard":
-          return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
+          return (
+            <Home
+              user={user}
+              onNavigate={handleMenuChange}
+              validationCount={validationCount}
+              ftwNeedsFill={ftwNeedsFill}
+              tasklistTodoCount={tasklistTodoCount}
+            />
+          );
         case "fit-to-work":
           return (
             <FitToWorkForm
@@ -201,12 +255,91 @@ function App() {
           );
         case "fit-to-work-validation":
           if (!canAccessFitToWorkValidation()) {
-            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
           }
           return (
             <FitToWorkValidationNew
               user={user}
               onBack={handleBackToMain}
+              onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
+            />
+          );
+        case "daily-attendance":
+          if (!canAccessReport()) {
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
+          }
+          return (
+            <DailyAttendanceList
+              user={user}
+              tasklistTodoCount={tasklistTodoCount}
+              onNavigate={(menu) => {
+                if (menu.startsWith("daily-attendance-view:")) {
+                  const id = menu.replace("daily-attendance-view:", "");
+                  selectedMeetingIdRef.current = id;
+                  setSelectedMeetingId(id);
+                  handleMenuChange("daily-attendance-view");
+                } else {
+                  handleMenuChange(menu);
+                }
+              }}
+            />
+          );
+        case "daily-attendance-view":
+          if (!canAccessReport()) {
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
+          }
+          return (
+            <DailyAttendanceView
+              meetingId={selectedMeetingId || selectedMeetingIdRef.current}
+              user={user}
+              onBack={() => {
+                selectedMeetingIdRef.current = null;
+                setSelectedMeetingId(null);
+                handleMenuChange("daily-attendance");
+              }}
+            />
+          );
+        case "daily-attendance-new":
+          if (!canAccessReport()) {
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
+          }
+          return (
+            <DailyAttendanceForm
+              user={user}
+              onBack={() => handleMenuChange("daily-attendance")}
               onNavigate={handleMenuChange}
               tasklistTodoCount={tasklistTodoCount}
             />
@@ -239,7 +372,25 @@ function App() {
             />
           );
         case "pto":
-          return <PTOForm user={user} onBack={handleBackToMain} onNavigate={handleMenuChange} tasklistTodoCount={tasklistTodoCount} />;
+          if (!canAccessPTO()) {
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
+          }
+          return (
+            <PTOForm
+              user={user}
+              onBack={handleBackToMain}
+              onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
+            />
+          );
         case "monitoring-fit-to-work":
           return canAccessMonitoring ? (
             <MonitoringPage
@@ -248,7 +399,13 @@ function App() {
               subMenu="Statistik Fit To Work"
             />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
+            <Home
+              user={user}
+              onNavigate={handleMenuChange}
+              validationCount={validationCount}
+              ftwNeedsFill={ftwNeedsFill}
+              tasklistTodoCount={tasklistTodoCount}
+            />
           );
         case "monitoring-take-5":
           return canAccessMonitoring ? (
@@ -258,7 +415,13 @@ function App() {
               subMenu="Take 5"
             />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
+            <Home
+              user={user}
+              onNavigate={handleMenuChange}
+              validationCount={validationCount}
+              ftwNeedsFill={ftwNeedsFill}
+              tasklistTodoCount={tasklistTodoCount}
+            />
           );
         case "monitoring-hazard":
           return canAccessMonitoring ? (
@@ -268,31 +431,63 @@ function App() {
               subMenu="Hazard"
             />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
+            <Home
+              user={user}
+              onNavigate={handleMenuChange}
+              validationCount={validationCount}
+              ftwNeedsFill={ftwNeedsFill}
+              tasklistTodoCount={tasklistTodoCount}
+            />
           );
         case "monitoring-pto":
           return canAccessMonitoring ? (
-            <MonitoringPage
-              user={user}
-              onLogout={handleLogout}
-              subMenu="PTO"
-            />
+            <MonitoringPage user={user} onLogout={handleLogout} subMenu="PTO" />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
+            <Home
+              user={user}
+              onNavigate={handleMenuChange}
+              validationCount={validationCount}
+              ftwNeedsFill={ftwNeedsFill}
+              tasklistTodoCount={tasklistTodoCount}
+            />
           );
         case "campaign":
           if (user?.jabatan !== "Administrator") {
-            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
           }
           return <Campaign user={user} onBack={handleBackToMain} />;
         case "pengaturan":
           if (user?.jabatan !== "Administrator") {
-            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
           }
           return <AdminSettings user={user} onBack={handleBackToMain} />;
         case "user-management":
           if (user?.jabatan !== "Administrator") {
-            return <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />;
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
           }
           return <UserManagement user={user} onBack={handleBackToMain} />;
         case "profile":
@@ -309,7 +504,13 @@ function App() {
           return canAccessMonitoring ? (
             <MonitoringPage user={user} onLogout={handleLogout} />
           ) : (
-            <Home user={user} onNavigate={handleMenuChange} validationCount={validationCount} ftwNeedsFill={ftwNeedsFill} tasklistTodoCount={tasklistTodoCount} />
+            <Home
+              user={user}
+              onNavigate={handleMenuChange}
+              validationCount={validationCount}
+              ftwNeedsFill={ftwNeedsFill}
+              tasklistTodoCount={tasklistTodoCount}
+            />
           );
       }
     };
@@ -439,7 +640,14 @@ function App() {
                   </div>
                 </div>
                 {/* Modern minimal icons */}
-                <div style={{ display: "flex", gap: 8, position: "relative", flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    position: "relative",
+                    flexWrap: "wrap",
+                  }}
+                >
                   <button
                     title="Profile"
                     onClick={() => setActiveMenu("profile")}
@@ -466,7 +674,9 @@ function App() {
                         height: 36,
                         borderRadius: 8,
                         border: "1px solid rgba(255,255,255,0.35)",
-                        background: showNotificationPanel ? "rgba(0,0,0,0.2)" : "transparent",
+                        background: showNotificationPanel
+                          ? "rgba(0,0,0,0.2)"
+                          : "transparent",
                         color: "#ffffff",
                         cursor: "pointer",
                       }}
@@ -537,7 +747,9 @@ function App() {
                     justifyContent: "space-between",
                   }}
                 >
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>Notifikasi</span>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>
+                    Notifikasi
+                  </span>
                   <button
                     type="button"
                     onClick={() => setShowNotificationPanel(false)}
@@ -578,11 +790,16 @@ function App() {
                       }}
                     >
                       <span style={{ fontSize: 18, flexShrink: 0 }}>✅</span>
-                      <div style={{ flex: 1, minWidth: 0, wordWrap: "break-word" }}>
+                      <div
+                        style={{ flex: 1, minWidth: 0, wordWrap: "break-word" }}
+                      >
                         <div style={{ fontWeight: 600 }}>
-                          {validationCount} validasi Fit To Work perlu ditindaklanjuti
+                          {validationCount} validasi Fit To Work perlu
+                          ditindaklanjuti
                         </div>
-                        <div style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>
+                        <div
+                          style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}
+                        >
                           Klik untuk membuka halaman validasi
                         </div>
                       </div>
@@ -612,14 +829,32 @@ function App() {
               >
                 {[
                   { key: "dashboard", label: "Home" },
-                  { key: "fit-to-work", label: "Fit To Work", badge: ftwNeedsFill },
+                  {
+                    key: "fit-to-work",
+                    label: "Fit To Work",
+                    badge: ftwNeedsFill,
+                  },
                   ...(canAccessFitToWorkValidation()
-                    ? [{ key: "fit-to-work-validation", label: "Validasi Fit To Work", badgeCount: validationCount }]
+                    ? [
+                        {
+                          key: "fit-to-work-validation",
+                          label: "Validasi Fit To Work",
+                          badgeCount: validationCount,
+                        },
+                      ]
+                    : []),
+                  ...(canAccessReport()
+                    ? [
+                        {
+                          key: "daily-attendance",
+                          label: "Daily Attendance Record",
+                        },
+                      ]
                     : []),
                   { key: "take-5", label: "Take 5" },
                   { key: "hazard", label: "Hazard Report" },
                   { key: "tasklist", label: "Tasklist" },
-                  { key: "pto", label: "PTO" },
+                  ...(canAccessPTO() ? [{ key: "pto", label: "PTO" }] : []),
                 ].map((item) => (
                   <button
                     key={item.key}
@@ -685,246 +920,249 @@ function App() {
                   </button>
                 ))}
 
-              {/* Menu Monitoring hanya untuk role evaluator dan admin */}
-              {(user?.role === "evaluator" || user?.role === "admin") && (
-                <>
-              <button
-                onClick={() => {
-                  toggleMonitoring();
-                  // Set active menu ke monitoring jika dibuka
-                  if (!isMonitoringOpen) {
-                    setActiveMenu("monitoring");
-                  }
-                }}
-                style={{
-                  textAlign: "left",
-                  width: "100%",
-                  padding: "8px 10px",
-                  background: isMonitoringOpen
-                    ? "rgba(0,0,0,0.15)"
-                    : "transparent",
-                  color: "#ffffff",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontSize: "14px",
-                }}
-              >
-                Monitoring
-              </button>
+                {/* Menu Monitoring hanya untuk role evaluator dan admin */}
+                {(user?.role === "evaluator" || user?.role === "admin") && (
+                  <>
+                    <button
+                      onClick={() => {
+                        toggleMonitoring();
+                        // Set active menu ke monitoring jika dibuka
+                        if (!isMonitoringOpen) {
+                          setActiveMenu("monitoring");
+                        }
+                      }}
+                      style={{
+                        textAlign: "left",
+                        width: "100%",
+                        padding: "8px 10px",
+                        background: isMonitoringOpen
+                          ? "rgba(0,0,0,0.15)"
+                          : "transparent",
+                        color: "#ffffff",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        fontSize: "14px",
+                      }}
+                    >
+                      Monitoring
+                    </button>
 
-              <div
-                key={monitoringAnimationKey}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  marginLeft: 8,
-                  marginRight: 8,
-                  marginTop: 6,
-                  marginBottom: 10,
-                  overflow: "hidden",
-                  opacity: isMonitoringOpen ? 1 : 0,
-                  maxHeight: isMonitoringOpen ? "240px" : "0px",
-                  transition: "all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-                  transform: isMonitoringOpen ? "scaleY(1)" : "scaleY(0)",
-                  transformOrigin: "top",
-                  padding: 8,
-                  background: "rgba(255,255,255,0.06)",
-                  borderRadius: 8,
-                  boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
-                }}
-              >
-                <button
-                  onClick={() => handleMenuChange("monitoring-fit-to-work")}
-                  style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 12px",
-                    background:
-                      activeMenu === "monitoring-fit-to-work"
-                        ? "rgba(0,0,0,0.2)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    opacity: isMonitoringOpen ? 1 : 0,
-                    transform: isMonitoringOpen
-                      ? "translateX(0)"
-                      : "translateX(-30px)",
-                    transition:
-                      "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.8s",
-                    boxShadow:
-                      activeMenu === "monitoring-fit-to-work"
-                        ? "0 2px 8px rgba(0,0,0,0.2)"
-                        : "none",
-                  }}
-                >
-                  Fit To Work Monitoring
-                </button>
-                <button
-                  onClick={() => handleMenuChange("monitoring-take-5")}
-                  style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 12px",
-                    background:
-                      activeMenu === "monitoring-take-5"
-                        ? "rgba(0,0,0,0.2)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    opacity: isMonitoringOpen ? 1 : 0,
-                    transform: isMonitoringOpen
-                      ? "translateX(0)"
-                      : "translateX(-30px)",
-                    transition:
-                      "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.6s",
-                    boxShadow:
-                      activeMenu === "monitoring-take-5"
-                        ? "0 2px 8px rgba(0,0,0,0.2)"
-                        : "none",
-                  }}
-                >
-                  Take 5 Monitoring
-                </button>
-                <button
-                  onClick={() => handleMenuChange("monitoring-hazard")}
-                  style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 12px",
-                    background:
-                      activeMenu === "monitoring-hazard"
-                        ? "rgba(0,0,0,0.2)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    opacity: isMonitoringOpen ? 1 : 0,
-                    transform: isMonitoringOpen
-                      ? "translateX(0)"
-                      : "translateX(-30px)",
-                    transition:
-                      "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 2.4s",
-                    boxShadow:
-                      activeMenu === "monitoring-hazard"
-                        ? "0 2px 8px rgba(0,0,0,0.2)"
-                        : "none",
-                  }}
-                >
-                  Hazard Monitoring
-                </button>
-                <button
-                  onClick={() => handleMenuChange("monitoring-pto")}
-                  style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 12px",
-                    background:
-                      activeMenu === "monitoring-pto"
-                        ? "rgba(0,0,0,0.2)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    opacity: isMonitoringOpen ? 1 : 0,
-                    transform: isMonitoringOpen
-                      ? "translateX(0)"
-                      : "translateX(-30px)",
-                    transition:
-                      "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3.2s",
-                    boxShadow:
-                      activeMenu === "monitoring-pto"
-                        ? "0 2px 8px rgba(0,0,0,0.2)"
-                        : "none",
-                  }}
-                >
-                  PTO Monitoring
-                </button>
-              </div>
-                </>
-              )}
+                    <div
+                      key={monitoringAnimationKey}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        marginLeft: 8,
+                        marginRight: 8,
+                        marginTop: 6,
+                        marginBottom: 10,
+                        overflow: "hidden",
+                        opacity: isMonitoringOpen ? 1 : 0,
+                        maxHeight: isMonitoringOpen ? "240px" : "0px",
+                        transition:
+                          "all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                        transform: isMonitoringOpen ? "scaleY(1)" : "scaleY(0)",
+                        transformOrigin: "top",
+                        padding: 8,
+                        background: "rgba(255,255,255,0.06)",
+                        borderRadius: 8,
+                        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
+                      }}
+                    >
+                      <button
+                        onClick={() =>
+                          handleMenuChange("monitoring-fit-to-work")
+                        }
+                        style={{
+                          textAlign: "left",
+                          width: "100%",
+                          padding: "8px 12px",
+                          background:
+                            activeMenu === "monitoring-fit-to-work"
+                              ? "rgba(0,0,0,0.2)"
+                              : "transparent",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          opacity: isMonitoringOpen ? 1 : 0,
+                          transform: isMonitoringOpen
+                            ? "translateX(0)"
+                            : "translateX(-30px)",
+                          transition:
+                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.8s",
+                          boxShadow:
+                            activeMenu === "monitoring-fit-to-work"
+                              ? "0 2px 8px rgba(0,0,0,0.2)"
+                              : "none",
+                        }}
+                      >
+                        Fit To Work Monitoring
+                      </button>
+                      <button
+                        onClick={() => handleMenuChange("monitoring-take-5")}
+                        style={{
+                          textAlign: "left",
+                          width: "100%",
+                          padding: "8px 12px",
+                          background:
+                            activeMenu === "monitoring-take-5"
+                              ? "rgba(0,0,0,0.2)"
+                              : "transparent",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          opacity: isMonitoringOpen ? 1 : 0,
+                          transform: isMonitoringOpen
+                            ? "translateX(0)"
+                            : "translateX(-30px)",
+                          transition:
+                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.6s",
+                          boxShadow:
+                            activeMenu === "monitoring-take-5"
+                              ? "0 2px 8px rgba(0,0,0,0.2)"
+                              : "none",
+                        }}
+                      >
+                        Take 5 Monitoring
+                      </button>
+                      <button
+                        onClick={() => handleMenuChange("monitoring-hazard")}
+                        style={{
+                          textAlign: "left",
+                          width: "100%",
+                          padding: "8px 12px",
+                          background:
+                            activeMenu === "monitoring-hazard"
+                              ? "rgba(0,0,0,0.2)"
+                              : "transparent",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          opacity: isMonitoringOpen ? 1 : 0,
+                          transform: isMonitoringOpen
+                            ? "translateX(0)"
+                            : "translateX(-30px)",
+                          transition:
+                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 2.4s",
+                          boxShadow:
+                            activeMenu === "monitoring-hazard"
+                              ? "0 2px 8px rgba(0,0,0,0.2)"
+                              : "none",
+                        }}
+                      >
+                        Hazard Monitoring
+                      </button>
+                      <button
+                        onClick={() => handleMenuChange("monitoring-pto")}
+                        style={{
+                          textAlign: "left",
+                          width: "100%",
+                          padding: "8px 12px",
+                          background:
+                            activeMenu === "monitoring-pto"
+                              ? "rgba(0,0,0,0.2)"
+                              : "transparent",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          opacity: isMonitoringOpen ? 1 : 0,
+                          transform: isMonitoringOpen
+                            ? "translateX(0)"
+                            : "translateX(-30px)",
+                          transition:
+                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3.2s",
+                          boxShadow:
+                            activeMenu === "monitoring-pto"
+                              ? "0 2px 8px rgba(0,0,0,0.2)"
+                              : "none",
+                        }}
+                      >
+                        PTO Monitoring
+                      </button>
+                    </div>
+                  </>
+                )}
 
-              {/* Menu Campaign dan Pengaturan hanya untuk Administrator */}
-              {user?.jabatan === "Administrator" && (
-                <>
-                <button
-                  onClick={() => handleMenuChange("campaign")}
-                  style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 10px",
-                    background:
-                      activeMenu === "campaign"
-                        ? "rgba(0,0,0,0.15)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  Campaign
-                </button>
-                <button
-                  onClick={() => handleMenuChange("pengaturan")}
-                  style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 10px",
-                    background:
-                      activeMenu === "pengaturan"
-                        ? "rgba(0,0,0,0.15)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  Pengaturan
-                </button>
-                </>
-              )}
-              {/* Menu Management User hanya untuk Administrator (bukan Admin Site Project) */}
-              {user?.jabatan === "Administrator" && (
-                <button
-                  onClick={() => handleMenuChange("user-management")}
-                  style={{
-                    textAlign: "left",
-                    width: "100%",
-                    padding: "8px 10px",
-                    background:
-                      activeMenu === "user-management"
-                        ? "rgba(0,0,0,0.15)"
-                        : "transparent",
-                    color: "#ffffff",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  Management User
-                </button>
-              )}
-            </nav>
+                {/* Menu Campaign dan Pengaturan hanya untuk Administrator */}
+                {user?.jabatan === "Administrator" && (
+                  <>
+                    <button
+                      onClick={() => handleMenuChange("campaign")}
+                      style={{
+                        textAlign: "left",
+                        width: "100%",
+                        padding: "8px 10px",
+                        background:
+                          activeMenu === "campaign"
+                            ? "rgba(0,0,0,0.15)"
+                            : "transparent",
+                        color: "#ffffff",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        fontSize: "14px",
+                      }}
+                    >
+                      Campaign
+                    </button>
+                    <button
+                      onClick={() => handleMenuChange("pengaturan")}
+                      style={{
+                        textAlign: "left",
+                        width: "100%",
+                        padding: "8px 10px",
+                        background:
+                          activeMenu === "pengaturan"
+                            ? "rgba(0,0,0,0.15)"
+                            : "transparent",
+                        color: "#ffffff",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        fontSize: "14px",
+                      }}
+                    >
+                      Pengaturan
+                    </button>
+                  </>
+                )}
+                {/* Menu Management User hanya untuk Administrator (bukan Admin Site Project) */}
+                {user?.jabatan === "Administrator" && (
+                  <button
+                    onClick={() => handleMenuChange("user-management")}
+                    style={{
+                      textAlign: "left",
+                      width: "100%",
+                      padding: "8px 10px",
+                      background:
+                        activeMenu === "user-management"
+                          ? "rgba(0,0,0,0.15)"
+                          : "transparent",
+                      color: "#ffffff",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Management User
+                  </button>
+                )}
+              </nav>
             )}
             {/* Removed bottom logout button */}
           </aside>

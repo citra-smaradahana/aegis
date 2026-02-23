@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import MobileBottomNavigation from "./MobileBottomNavigation";
+import { fetchAllowedMenusForUser } from "../utils/menuAccessHelpers";
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
 function parseTextWithLinks(text) {
@@ -30,8 +31,8 @@ function getPreviewText(text, maxLength = 90) {
   return `${cleanText.slice(0, maxLength).trimEnd()}...`;
 }
 
-// Hanya jabatan validator yang boleh melihat menu Validasi Fit To Work (bukan Quality Control, Operator MMU, Crew, Blaster).
-function canAccessFitToWorkValidation(user) {
+// Fallback: jabatan validator (jika tidak ada config di DB)
+function canAccessFitToWorkValidationFallback(user) {
   if (!user) return false;
   if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
   const jabatan = (user?.jabatan || "").trim();
@@ -44,6 +45,27 @@ function canAccessFitToWorkValidation(user) {
     "SHERQ Officer",
   ];
   return validatorJabatan.includes(jabatan);
+}
+
+const REPORT_PTO_JABATAN = [
+  "SHERQ Officer",
+  "Field Leading Hand",
+  "Plant Leading Hand",
+  "Technical Service",
+  "Asst. Penanggung Jawab Operasional",
+  "Penanggung Jawab Operasional",
+];
+
+function canAccessReportFallback(user) {
+  if (!user) return false;
+  if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+  return REPORT_PTO_JABATAN.includes((user?.jabatan || "").trim());
+}
+
+function canAccessPTOFallback(user) {
+  if (!user) return false;
+  if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+  return REPORT_PTO_JABATAN.includes((user?.jabatan || "").trim());
 }
 
 function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = false, tasklistTodoCount = 0 }) {
@@ -152,6 +174,20 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
     };
   }, [campaigns.length, campaignPaused]);
 
+  const [allowedMenus, setAllowedMenus] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setAllowedMenus(null);
+      return;
+    }
+    fetchAllowedMenusForUser(user).then((menus) => {
+      if (!cancelled) setAllowedMenus(menus);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id, user?.jabatan, user?.site]);
+
   useEffect(() => {
     return () => {
       if (resumeCampaignTimerRef.current) {
@@ -159,49 +195,52 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
       }
     };
   }, []);
+
   const allMenuItems = [
-    {
-      key: "fit-to-work",
-      label: "Fit To Work",
-      icon: "👷",
-      color: "#3b82f6",
-      description: "Formulir kelayakan kerja",
-    },
-    {
-      key: "fit-to-work-validation",
-      label: "Validasi Fit To Work",
-      icon: "✅",
-      color: "#10b981",
-      description: "Validasi kelayakan kerja",
-    },
-    {
-      key: "take-5",
-      label: "Take 5",
-      icon: "⏰",
-      color: "#f59e0b",
-      description: "Pemeriksaan 5 menit",
-    },
-    {
-      key: "hazard",
-      label: "Hazard Report",
-      icon: "⚠️",
-      color: "#ef4444",
-      description: "Laporan bahaya",
-    },
-    {
-      key: "pto",
-      label: "PTO",
-      icon: "📋",
-      color: "#8b5cf6",
-      description: "Planned Task Observation",
-    },
+    { key: "fit-to-work", label: "FTW", icon: "👷", color: "#3b82f6", placeholder: false },
+    { key: "fit-to-work-validation", label: "Validasi", icon: "✅", color: "#10b981", placeholder: false },
+    { key: "daily-attendance", label: "Laporan", icon: "📄", color: "#0ea5e9", placeholder: false },
+    { key: "take-5", label: "Take 5", icon: "⏰", color: "#f59e0b", placeholder: false },
+    { key: "hazard", label: "Hazard", icon: "⚠️", color: "#ef4444", placeholder: false },
+    { key: "pto", label: "PTO", icon: "📋", color: "#8b5cf6", placeholder: false },
+    { key: "slot-7", label: "Segera", icon: "➕", color: "#9ca3af", placeholder: true },
+    { key: "slot-8", label: "Segera", icon: "➕", color: "#9ca3af", placeholder: true },
   ];
 
-  const menuItems = allMenuItems.filter(
-    (item) =>
-      item.key !== "fit-to-work-validation" ||
-      canAccessFitToWorkValidation(user)
-  );
+  const hasReportAccess = allowedMenus
+    ? allowedMenus.includes("daily-attendance")
+    : canAccessReportFallback(user);
+  const hasPTOAccess = allowedMenus ? allowedMenus.includes("pto") : canAccessPTOFallback(user);
+  const hasValidasiAccess = allowedMenus
+    ? allowedMenus.includes("fit-to-work-validation")
+    : canAccessFitToWorkValidationFallback(user);
+  const isRegularUser = !hasReportAccess && !hasPTOAccess && !hasValidasiAccess;
+
+  const menuItemsRaw = (allowedMenus
+    ? allMenuItems.filter((item) => !item.placeholder && allowedMenus.includes(item.key))
+    : allMenuItems.filter((item) => {
+        if (isRegularUser) return ["fit-to-work", "take-5", "hazard"].includes(item.key);
+        if (item.key === "daily-attendance" && !hasReportAccess) return false;
+        if (item.key === "pto" && !hasPTOAccess) return false;
+        return true;
+      })
+  ).map((item) => {
+    if (item.key === "fit-to-work-validation" && !hasValidasiAccess) {
+      return { ...item, placeholder: true, label: "Segera" };
+    }
+    return item;
+  });
+
+  const menuItems =
+    allowedMenus
+      ? menuItemsRaw
+      : isRegularUser
+        ? menuItemsRaw
+        : hasReportAccess
+          ? menuItemsRaw
+          : menuItemsRaw.slice(0, 6);
+
+  const useListLayout = menuItems.length <= 5;
 
   return (
     <>
@@ -378,9 +417,10 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
         <div
           className="mobile-home-menu-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            gap: 10,
+            display: useListLayout ? "flex" : "grid",
+            flexDirection: useListLayout ? "column" : undefined,
+            gridTemplateColumns: useListLayout ? undefined : menuItems.length > 5 ? "repeat(4, 1fr)" : "repeat(3, 1fr)",
+            gap: useListLayout ? 8 : 10,
             flexShrink: 0,
             paddingRight: 8,
             boxSizing: "border-box",
@@ -389,105 +429,95 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
           {menuItems.map((item) => (
             <button
               key={item.key}
-              onClick={() => onNavigate(item.key)}
+              onClick={() => !item.placeholder && onNavigate(item.key)}
+              disabled={item.placeholder}
               className="mobile-home-menu-item"
               style={{
-                background: "white",
+                background: item.placeholder ? "#f1f5f9" : "white",
                 border: "none",
-                borderRadius: 16,
-                padding: "14px 16px",
-                cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                borderRadius: 12,
+                padding: useListLayout ? "12px 16px" : "10px 8px",
+                cursor: item.placeholder ? "default" : "pointer",
+                boxShadow: item.placeholder ? "none" : "0 4px 12px rgba(0,0,0,0.1)",
                 transition: "all 0.2s ease",
-                textAlign: "left",
+                textAlign: useListLayout ? "left" : "center",
                 display: "flex",
+                flexDirection: useListLayout ? "row" : "column",
                 alignItems: "center",
-                gap: 12,
-                minHeight: 64,
+                gap: useListLayout ? 14 : 6,
+                minHeight: useListLayout ? 56 : 72,
+                opacity: item.placeholder ? 0.7 : 1,
+                position: "relative",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.15)";
+                if (!item.placeholder) {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.15)";
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+                e.currentTarget.style.boxShadow = item.placeholder ? "none" : "0 4px 12px rgba(0,0,0,0.1)";
               }}
             >
               <div
                 className="mobile-home-menu-icon"
                 style={{
-                  width: 40,
-                  height: 40,
+                  width: useListLayout ? 40 : 36,
+                  height: useListLayout ? 40 : 36,
                   borderRadius: "10px",
                   background: `${item.color}20`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 20,
+                  fontSize: useListLayout ? 20 : 18,
                   flexShrink: 0,
                 }}
               >
                 {item.icon}
               </div>
-              <div className="mobile-home-menu-text" style={{ flex: 1, minWidth: 0 }}>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: "#1f2937",
-                    marginBottom: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  {item.label}
-                  {item.key === "fit-to-work" && ftwNeedsFill && (
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        background: "#ef4444",
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                  {item.key === "fit-to-work-validation" && validationCount > 0 && (
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        background: "#ef4444",
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 13,
-                    color: "#6b7280",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {item.description}
-                </p>
-              </div>
-              <div
+              <span
                 style={{
-                  color: item.color,
-                  fontSize: 20,
-                  opacity: 0.7,
-                  flexShrink: 0,
+                  fontSize: useListLayout ? 15 : 11,
+                  fontWeight: 600,
+                  color: item.placeholder ? "#94a3b8" : "#1f2937",
+                  lineHeight: 1.2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  flex: useListLayout ? 1 : undefined,
                 }}
               >
-                →
-              </div>
+                {item.label}
+              </span>
+              {item.key === "fit-to-work" && ftwNeedsFill && !item.placeholder && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    background: "#ef4444",
+                  }}
+                />
+              )}
+              {item.key === "fit-to-work-validation" && validationCount > 0 && !item.placeholder && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    background: "#ef4444",
+                  }}
+                />
+              )}
             </button>
           ))}
         </div>

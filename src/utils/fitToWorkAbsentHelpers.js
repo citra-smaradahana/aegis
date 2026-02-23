@@ -214,19 +214,72 @@ export async function fetchUsersAttendanceForValidator(
   const { data: usersData, error: usersError } = await usersQuery;
   if (usersError || !usersData || usersData.length === 0) return [];
 
-  const derivedSummary = await buildAttendanceSummaryForUsers(
-    usersData,
-    getTodayWITA(),
+  // --- MODIFIKASI UNTUK 48 JAM TIDUR ---
+  // Ambil data FTW hari ini untuk data tidur malam ini (24h)
+  const today = getTodayWITA();
+  const { data: ftwToday } = await supabase
+    .from("fit_to_work")
+    .select("nrp, total_jam_tidur, tidak_mengkonsumsi_obat, tidak_ada_masalah_pribadi, siap_bekerja")
+    .eq("site", userSite)
+    .eq("tanggal", today);
+
+  const ftwTodayMap = new Map(
+    (ftwToday || []).map((r) => [
+      r.nrp,
+      {
+        total_jam_tidur: r.total_jam_tidur,
+        tidak_mengkonsumsi_obat: r.tidak_mengkonsumsi_obat,
+        tidak_ada_masalah_pribadi: r.tidak_ada_masalah_pribadi,
+        siap_bekerja: r.siap_bekerja,
+      },
+    ]),
   );
+
+  // Hitung tanggal kemarin
+  const todayDate = new Date(today);
+  const yesterdayDate = new Date(todayDate);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toISOString().split("T")[0];
+
+  // Ambil data FTW kemarin untuk data tidur kemarin (48h part)
+  const { data: ftwYesterday } = await supabase
+    .from("fit_to_work")
+    .select("nrp, total_jam_tidur")
+    .eq("site", userSite)
+    .eq("tanggal", yesterday);
+
+  const ftwYesterdayMap = new Map(
+    (ftwYesterday || []).map((r) => [r.nrp, r.total_jam_tidur]),
+  );
+  // --------------------------------------
+
+  const derivedSummary = await buildAttendanceSummaryForUsers(usersData, today);
   const summaryMap = new Map((derivedSummary || []).map((s) => [s.user_id, s]));
 
   return usersData
     .map((u) => {
       const summary = summaryMap.get(u.id);
+      const ftwRow = ftwTodayMap.get(u.nrp);
+
+      // Ambil data tidur dan FTW
+      const sleepToday = ftwRow
+        ? parseFloat(ftwRow.total_jam_tidur) || 0
+        : 0;
+      const sleepYesterday = ftwYesterdayMap.get(u.nrp)
+        ? parseFloat(ftwYesterdayMap.get(u.nrp))
+        : 0;
+      const sleep48h = sleepToday + sleepYesterday;
+
       return {
         ...u,
         hari_masuk: summary?.current_hari_masuk || 0,
         attendance_last_ftw_date: summary?.last_ftw_date || null,
+        sleep_today: sleepToday,
+        sleep_yesterday: sleepYesterday,
+        sleep_48h: sleep48h,
+        tidak_mengkonsumsi_obat: ftwRow?.tidak_mengkonsumsi_obat ?? true,
+        tidak_ada_masalah_pribadi: ftwRow?.tidak_ada_masalah_pribadi ?? true,
+        siap_bekerja: ftwRow?.siap_bekerja ?? true,
       };
     })
     .sort((a, b) => {

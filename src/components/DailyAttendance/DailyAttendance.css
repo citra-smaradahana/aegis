@@ -1,0 +1,61 @@
+/* Shared styles untuk Daily Attendance Record - Form & Print sinkron */
+
+/* Info Pertemuan - konsisten antara form dan PDF */
+.daily-attendance-info-pertemuan .info-field {
+  margin-bottom: 0;
+}
+
+.daily-attendance-info-pertemuan .info-field-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.daily-attendance-info-pertemuan .info-field-value {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  background: #fff;
+}
+
+.daily-attendance-info-pertemuan .info-field-value.readonly {
+  background: #f9fafb;
+  color: #374151;
+  cursor: not-allowed;
+}
+
+/* Section card - konsisten */
+.daily-attendance-section {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.daily-attendance-section-header {
+  background: #f9fafb;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Mobile: ukuran lebih kecil */
+.daily-attendance-form-mobile input,
+.daily-attendance-form-mobile select,
+.daily-attendance-form-mobile textarea {
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+}
+
+.daily-attendance-form-mobile label {
+  font-size: 12px !important;
+  margin-bottom: 4px !important;
+}
+
+.daily-attendance-form-mobile .bg-gray-50.p-4 {
+  padding: 12px !important;
+}
