@@ -197,14 +197,14 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
   }, []);
 
   const allMenuItems = [
-    { key: "fit-to-work", label: "FTW", icon: "👷", color: "#3b82f6", placeholder: false },
-    { key: "fit-to-work-validation", label: "Validasi", icon: "✅", color: "#10b981", placeholder: false },
-    { key: "daily-attendance", label: "Laporan", icon: "📄", color: "#0ea5e9", placeholder: false },
-    { key: "take-5", label: "Take 5", icon: "⏰", color: "#f59e0b", placeholder: false },
-    { key: "hazard", label: "Hazard", icon: "⚠️", color: "#ef4444", placeholder: false },
-    { key: "pto", label: "PTO", icon: "📋", color: "#8b5cf6", placeholder: false },
-    { key: "slot-7", label: "Segera", icon: "➕", color: "#9ca3af", placeholder: true },
-    { key: "slot-8", label: "Segera", icon: "➕", color: "#9ca3af", placeholder: true },
+    { key: "fit-to-work", label: "FTW", fullLabel: "Fit To Work", icon: "👷", color: "#3b82f6", placeholder: false },
+    { key: "fit-to-work-validation", label: "Validasi", fullLabel: "Validasi Fit To Work", icon: "✅", color: "#10b981", placeholder: false },
+    { key: "daily-attendance", label: "Laporan", fullLabel: "Laporan Kehadiran", icon: "📄", color: "#0ea5e9", placeholder: false },
+    { key: "take-5", label: "Take 5", fullLabel: "Take 5", icon: "⏰", color: "#f59e0b", placeholder: false },
+    { key: "hazard", label: "Hazard", fullLabel: "Hazard", icon: "⚠️", color: "#ef4444", placeholder: false },
+    { key: "pto", label: "PTO", fullLabel: "Laporan PTO", icon: "📋", color: "#8b5cf6", placeholder: false },
+    { key: "slot-7", label: "Segera", fullLabel: "Segera", icon: "➕", color: "#9ca3af", placeholder: true },
+    { key: "slot-8", label: "Segera", fullLabel: "Segera", icon: "➕", color: "#9ca3af", placeholder: true },
   ];
 
   const hasReportAccess = allowedMenus
@@ -490,7 +490,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
                   flex: useListLayout ? 1 : undefined,
                 }}
               >
-                {item.label}
+                {useListLayout && item.fullLabel && !item.placeholder ? item.fullLabel : item.label}
               </span>
               {item.key === "fit-to-work" && ftwNeedsFill && !item.placeholder && (
                 <span
