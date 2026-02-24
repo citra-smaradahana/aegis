@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../supabaseClient";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import LocationDetailSelector from "../LocationDetailSelector";
@@ -83,6 +83,8 @@ function PTOFormDesktop({ user, onBack }) {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const fotoCameraRef = useRef();
+  const fotoGalleryRef = useRef();
 
   useEffect(() => {
     fetchSites();
@@ -1111,21 +1113,56 @@ function PTOFormDesktop({ user, onBack }) {
           </label>
 
           {!formData.fotoTemuan && !showCropper && (
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                borderRadius: "8px",
-                border: "1px solid #334155",
-                backgroundColor: "#0b1220",
-                color: "#e5e7eb",
-                fontSize: "14px",
-              }}
-            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => fotoCameraRef.current?.click()}
+                style={{
+                  flex: 1,
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #334155",
+                  backgroundColor: "#0b1220",
+                  color: "#e5e7eb",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                }}
+              >
+                📷 Kamera
+              </button>
+              <button
+                type="button"
+                onClick={() => fotoGalleryRef.current?.click()}
+                style={{
+                  flex: 1,
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #334155",
+                  backgroundColor: "#0b1220",
+                  color: "#e5e7eb",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                }}
+              >
+                🖼️ Galeri
+              </button>
+            </div>
           )}
+          <input
+            ref={fotoCameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+          <input
+            ref={fotoGalleryRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
 
           {showCropper && (
             <div

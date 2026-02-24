@@ -8,7 +8,17 @@ import { downloadPdfFromElement } from "../../utils/downloadPdfFromElement";
 import DailyAttendancePrint from "./DailyAttendancePrint";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+import SelectModalWithSearch from "../SelectModalWithSearch";
 import "./DailyAttendance.css";
+
+const MEETING_TYPE_OPTIONS = [
+  { value: "P5M", label: "P5M (Pagi)" },
+  { value: "Safety Talk", label: "Safety Talk" },
+  { value: "Briefing", label: "Briefing Umum" },
+  { value: "Rapat", label: "Rapat / Meeting" },
+  { value: "Sosialisasi", label: "Sosialisasi" },
+  { value: "Lain-lain", label: "Lain-lain" },
+];
 
 /**
  * Form Input Laporan Harian (Daily Attendance Record)
@@ -72,6 +82,12 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
 
   // Daftar PJO / Asst PJO untuk dropdown Approval
   const [approverList, setApproverList] = useState([]);
+
+  // Modal search (mobile) - Jenis Pertemuan & Approval
+  const [showMeetingTypeModal, setShowMeetingTypeModal] = useState(false);
+  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [meetingTypeSearchQuery, setMeetingTypeSearchQuery] = useState("");
+  const [approverSearchQuery, setApproverSearchQuery] = useState("");
 
   // Style Constants - Inline styles (Tailwind tidak aktif di project)
   const btnPrimary = {
@@ -621,19 +637,40 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                   <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Jenis Pertemuan
                   </label>
-                  <select
-                    name="meetingType"
-                    value={formData.meetingType}
-                    onChange={handleHeaderChange}
-                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
-                  >
-                    <option value="P5M">P5M (Pagi)</option>
-                    <option value="Safety Talk">Safety Talk</option>
-                    <option value="Briefing">Briefing Umum</option>
-                    <option value="Rapat">Rapat / Meeting</option>
-                    <option value="Sosialisasi">Sosialisasi</option>
-                    <option value="Lain-lain">Lain-lain</option>
-                  </select>
+                  {isMobile ? (
+                    <div
+                      onClick={() => setShowMeetingTypeModal(true)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 8,
+                        border: "1px solid #d1d5db",
+                        background: "#fff",
+                        fontSize: 14,
+                        color: "#1f2937",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>
+                        {MEETING_TYPE_OPTIONS.find((o) => o.value === formData.meetingType)?.label || formData.meetingType}
+                      </span>
+                      <span style={{ color: "#9ca3af", fontSize: 12 }}>▼</span>
+                    </div>
+                  ) : (
+                    <select
+                      name="meetingType"
+                      value={formData.meetingType}
+                      onChange={handleHeaderChange}
+                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
+                    >
+                      {MEETING_TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">
@@ -698,27 +735,51 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                   <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Approval (Mengetahui)
                   </label>
-                  <select
-                    name="approver_id"
-                    value={formData.approver_id || ""}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      const sel = approverList.find((a) => a.id === id);
-                      setFormData((prev) => ({
-                        ...prev,
-                        approver_id: id,
-                        approver_name: sel ? sel.nama : "",
-                      }));
-                    }}
-                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
-                  >
-                    <option value="">-- Pilih PJO / Asst PJO --</option>
-                    {approverList.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.nama} ({a.jabatan})
-                      </option>
-                    ))}
-                  </select>
+                  {isMobile ? (
+                    <div
+                      onClick={() => setShowApproverModal(true)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: 8,
+                        border: "1px solid #d1d5db",
+                        background: "#fff",
+                        fontSize: 14,
+                        color: formData.approver_name ? "#1f2937" : "#6b7280",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>
+                        {formData.approver_name || "-- Pilih PJO / Asst PJO --"}
+                      </span>
+                      <span style={{ color: "#9ca3af", fontSize: 12 }}>▼</span>
+                    </div>
+                  ) : (
+                    <select
+                      name="approver_id"
+                      value={formData.approver_id || ""}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        const sel = approverList.find((a) => a.id === id);
+                        setFormData((prev) => ({
+                          ...prev,
+                          approver_id: id,
+                          approver_name: sel ? sel.nama : "",
+                        }));
+                      }}
+                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
+                    >
+                      <option value="">-- Pilih PJO / Asst PJO --</option>
+                      {approverList.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nama} ({a.jabatan})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <p className="mt-1 text-xs text-gray-500">
                     {approverList.length === 0
                       ? "Tidak ada PJO/Asst PJO untuk site ini. Tambah user dengan jabatan tersebut di User Management."
@@ -1258,6 +1319,170 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               <button onClick={handlePrint} style={btnPrimary}>
                 Cetak Sekarang
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Jenis Pertemuan (mobile) - dropdown dengan search */}
+      {isMobile && (
+        <SelectModalWithSearch
+          title="Pilih Jenis Pertemuan"
+          options={MEETING_TYPE_OPTIONS.map((o) => o.label)}
+          searchQuery={meetingTypeSearchQuery}
+          onSearchChange={setMeetingTypeSearchQuery}
+          show={showMeetingTypeModal}
+          onClose={() => {
+            setShowMeetingTypeModal(false);
+            setMeetingTypeSearchQuery("");
+          }}
+          onSelect={(label) => {
+            const opt = MEETING_TYPE_OPTIONS.find((o) => o.label === label);
+            if (opt) {
+              setFormData((prev) => ({ ...prev, meetingType: opt.value }));
+            }
+            setShowMeetingTypeModal(false);
+            setMeetingTypeSearchQuery("");
+          }}
+          placeholder="Ketik untuk mencari..."
+        />
+      )}
+
+      {/* Modal Approval (mobile) - dropdown dengan search */}
+      {isMobile && showApproverModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 70,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 1100,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+          onClick={() => {
+            setShowApproverModal(false);
+            setApproverSearchQuery("");
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              maxHeight: "70vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+                Pilih PJO / Asst PJO
+              </div>
+              <input
+                type="text"
+                value={approverSearchQuery}
+                onChange={(e) => setApproverSearchQuery(e.target.value)}
+                placeholder="Ketik untuk mencari..."
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                  color: "#111827",
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+              <div
+                onClick={() => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    approver_id: "",
+                    approver_name: "",
+                  }));
+                  setShowApproverModal(false);
+                  setApproverSearchQuery("");
+                }}
+                style={{
+                  padding: "14px 16px",
+                  fontSize: 16,
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  borderBottom: "1px solid #f3f4f6",
+                }}
+              >
+                -- Kosongkan (Tidak pilih) --
+              </div>
+              {approverList
+                .filter(
+                  (a) =>
+                    (a.nama || "")
+                      .toLowerCase()
+                      .includes((approverSearchQuery || "").toLowerCase()) ||
+                    (a.jabatan || "")
+                      .toLowerCase()
+                      .includes((approverSearchQuery || "").toLowerCase())
+                )
+                .sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"))
+                .map((a) => (
+                  <div
+                    key={a.id}
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        approver_id: a.id,
+                        approver_name: a.nama || "",
+                      }));
+                      setShowApproverModal(false);
+                      setApproverSearchQuery("");
+                    }}
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: 16,
+                      color: "#1f2937",
+                      cursor: "pointer",
+                      borderBottom: "1px solid #f3f4f6",
+                    }}
+                  >
+                    {a.nama} ({a.jabatan})
+                  </div>
+                ))}
+              {approverList.length === 0 ? (
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontSize: 14,
+                  }}
+                >
+                  Tidak ada PJO/Asst PJO untuk site ini
+                </div>
+              ) : approverList.filter(
+                  (a) =>
+                    (a.nama || "").toLowerCase().includes((approverSearchQuery || "").toLowerCase()) ||
+                    (a.jabatan || "").toLowerCase().includes((approverSearchQuery || "").toLowerCase())
+                ).length === 0 ? (
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontSize: 14,
+                  }}
+                >
+                  Tidak ada yang sesuai
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

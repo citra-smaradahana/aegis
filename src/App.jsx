@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { supabase } from "./supabaseClient";
 import { sessionManager, setupSessionAutoExtend } from "./utils/sessionManager";
 import { fetchValidationCountForUser } from "./utils/fitToWorkValidationCount";
@@ -40,6 +42,10 @@ function App() {
   const [monitoringAnimationKey, setMonitoringAnimationKey] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const sessionAutoExtendSetup = useRef(false);
+  const backHandlerRef = useRef(null);
+  const setBackHandler = useCallback((fn) => {
+    backHandlerRef.current = fn;
+  }, []);
 
   // Handle online/offline status
   useEffect(() => {
@@ -64,6 +70,27 @@ function App() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Hardware back button (Android) - berperilaku seperti tombol back di dalam app
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+    const listener = CapacitorApp.addListener("backButton", () => {
+      if (currentPage === "site-selection") {
+        setCurrentPage("login");
+        return;
+      }
+      if (currentPage === "login") {
+        CapacitorApp.exitApp();
+        return;
+      }
+      if (currentPage === "main-app") {
+        const handler = backHandlerRef.current;
+        if (handler) handler();
+        else handleBackToMain();
+      }
+    });
+    return () => listener.remove();
+  }, [currentPage]);
 
   // Restore session on load (tetap login di web/PWA)
   useEffect(() => {
@@ -130,7 +157,7 @@ function App() {
   };
 
   // Main App Component with Navigation
-  const MainApp = () => {
+  const MainApp = ({ setBackHandler }) => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showNotificationPanel, setShowNotificationPanel] = useState(false);
     const [selectedMeetingId, setSelectedMeetingId] = useState(null);
@@ -246,6 +273,25 @@ function App() {
         registerPushNotifications(user.id);
       }
     }, [user?.id]);
+
+    // Daftar handler tombol back hardware (Android)
+    useEffect(() => {
+      if (!setBackHandler) return;
+      setBackHandler(() => {
+        if (activeMenu === "daily-attendance-view") {
+          selectedMeetingIdRef.current = null;
+          setSelectedMeetingId(null);
+          handleMenuChange("daily-attendance");
+        } else if (activeMenu === "daily-attendance-new") {
+          handleMenuChange("daily-attendance");
+        } else if (activeMenu === "dashboard") {
+          CapacitorApp.exitApp();
+        } else {
+          handleBackToMain();
+        }
+      });
+      return () => setBackHandler(null);
+    }, [activeMenu, setBackHandler]);
 
     const renderContent = () => {
       switch (activeMenu) {
@@ -1300,7 +1346,7 @@ function App() {
         />
       )}
 
-      {currentPage === "main-app" && <MainApp />}
+      {currentPage === "main-app" && <MainApp setBackHandler={setBackHandler} />}
     </div>
   );
 }

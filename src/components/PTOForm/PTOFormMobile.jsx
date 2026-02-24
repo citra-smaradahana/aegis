@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
@@ -183,6 +183,8 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [alasanSearchQuery, setAlasanSearchQuery] = useState("");
   const [prosedurSearchQuery, setProsedurSearchQuery] = useState("");
   const [showCustomDetailInput, setShowCustomDetailInput] = useState(false);
+  const fotoCameraRef = useRef();
+  const fotoGalleryRef = useRef();
 
   useEffect(() => {
     setShowCustomDetailInput(false);
@@ -768,7 +770,48 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
             <div style={fieldMargin}>
               <label style={labelStyle}>Foto Temuan (Opsional)</label>
               {!formData.fotoTemuan ? (
-                <input type="file" accept="image/*" onChange={handleFileChange} style={inputStyle} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => fotoCameraRef.current?.click()}
+                    style={{
+                      flex: 1,
+                      padding: "12px",
+                      background: "#f3f4f6",
+                      border: "2px dashed #d1d5db",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      color: "#6b7280",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>📷</span> Kamera
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fotoGalleryRef.current?.click()}
+                    style={{
+                      flex: 1,
+                      padding: "12px",
+                      background: "#f3f4f6",
+                      border: "2px dashed #d1d5db",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      color: "#6b7280",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>🖼️</span> Galeri
+                  </button>
+                </div>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <img
@@ -785,6 +828,21 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                   </button>
                 </div>
               )}
+              <input
+                ref={fotoCameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
+              <input
+                ref={fotoGalleryRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
             </div>
           </div>
         )}

@@ -552,7 +552,7 @@ function TasklistFormRejectAtDoneMobile({
                 src={evidencePreview}
                 alt="Evidence Preview"
                 onClick={() =>
-                  document.getElementById('evidence-input').click()
+                  document.getElementById('evidence-gallery-input').click()
                 }
                 style={{
                   maxWidth: '100%',
@@ -574,43 +574,62 @@ function TasklistFormRejectAtDoneMobile({
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => document.getElementById('evidence-input').click()}
-              style={{
-                width: '100%',
-                background: '#f3f4f6',
-                border: '2px dashed #d1d5db',
-                borderRadius: '8px',
-                padding: '20px',
-                fontSize: 16,
-                color: '#6b7280',
-                cursor: readOnly ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
-              disabled={readOnly}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => document.getElementById('evidence-camera-input').click()}
+                style={{
+                  flex: 1,
+                  background: '#f3f4f6',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  fontSize: 14,
+                  color: '#6b7280',
+                  cursor: readOnly ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+                disabled={readOnly}
               >
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-              Klik untuk mengambil foto
-            </button>
+                <span>📷</span> Kamera
+              </button>
+              <button
+                type="button"
+                onClick={() => document.getElementById('evidence-gallery-input').click()}
+                style={{
+                  flex: 1,
+                  background: '#f3f4f6',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  fontSize: 14,
+                  color: '#6b7280',
+                  cursor: readOnly ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+                disabled={readOnly}
+              >
+                <span>🖼️</span> Galeri
+              </button>
+            </div>
           )}
           <input
-            id="evidence-input"
+            id="evidence-camera-input"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleEvidence}
+            style={{ display: 'none' }}
+            disabled={readOnly}
+          />
+          <input
+            id="evidence-gallery-input"
             type="file"
             accept="image/*"
             onChange={handleEvidence}

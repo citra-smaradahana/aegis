@@ -47,7 +47,8 @@ function HazardFormDesktop({ user }) {
   });
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
-  const fileInputRef = useRef();
+  const cameraInputRef = useRef();
+  const galleryInputRef = useRef();
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
@@ -275,13 +276,9 @@ function HazardFormDesktop({ user }) {
     }
   };
 
-  const handleClickCamera = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleClickPreview = () => {
-    fileInputRef.current?.click();
-  };
+  const handleClickCamera = () => cameraInputRef.current?.click();
+  const handleClickGallery = () => galleryInputRef.current?.click();
+  const handleClickPreview = () => galleryInputRef.current?.click();
 
   const handleNext = () => setPage((p) => p + 1);
   const handleBack = () => setPage((p) => p - 1);
@@ -307,9 +304,8 @@ function HazardFormDesktop({ user }) {
   const handleCropCancel = () => {
     setShowCrop(false);
     setRawImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
   async function uploadEvidence() {
@@ -1337,7 +1333,15 @@ function HazardFormDesktop({ user }) {
                     Foto Evidence
                   </label>
                   <input
-                    ref={fileInputRef}
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleEvidence}
+                    style={{ display: "none" }}
+                  />
+                  <input
+                    ref={galleryInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleEvidence}
@@ -1384,22 +1388,40 @@ function HazardFormDesktop({ user }) {
                       />
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleClickCamera}
-                      style={{
-                        width: "100%",
-                        background: "#0b1220",
-                        border: "2px dashed #334155",
-                        borderRadius: 8,
-                        padding: "16px",
-                        fontSize: 15,
-                        color: "#9ca3af",
-                        cursor: "pointer",
-                      }}
-                    >
-                      📷 Ambil foto atau pilih dari galeri
-                    </button>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={handleClickCamera}
+                        style={{
+                          flex: 1,
+                          background: "#0b1220",
+                          border: "2px dashed #334155",
+                          borderRadius: 8,
+                          padding: "16px",
+                          fontSize: 15,
+                          color: "#9ca3af",
+                          cursor: "pointer",
+                        }}
+                      >
+                        📷 Kamera
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClickGallery}
+                        style={{
+                          flex: 1,
+                          background: "#0b1220",
+                          border: "2px dashed #334155",
+                          borderRadius: 8,
+                          padding: "16px",
+                          fontSize: 15,
+                          color: "#9ca3af",
+                          cursor: "pointer",
+                        }}
+                      >
+                        🖼️ Galeri
+                      </button>
+                    </div>
                   )}
                 </div>
 

@@ -25,7 +25,8 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [showImagePopup, setShowImagePopup] = useState(false);
-  const fileInputRef = React.useRef();
+  const cameraInputRef = React.useRef();
+  const galleryInputRef = React.useRef();
 
   // Prefill form jika ada data hazard
   useEffect(() => {
@@ -723,25 +724,54 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                         onClick={() => setShowImagePopup(true)}
                       />
                     </div>
-                  ) : (
-                    <div
+                  ) : null}
+                  <div style={{ display: "flex", gap: 8, marginTop: evidencePreview ? 8 : 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
                       style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "#1f2937",
                         border: "2px dashed #374151",
                         borderRadius: 8,
-                        padding: 24,
-                        textAlign: "center",
+                        color: "#9ca3af",
                         cursor: readOnly ? "default" : "pointer",
-                        background: readOnly ? "#1f2937" : "#1f2937",
-                        color: readOnly ? "#9ca3af" : "#9ca3af",
+                        fontSize: 14,
                       }}
-                      onClick={() => !readOnly && fileInputRef.current?.click()}
+                      disabled={readOnly}
                     >
-                      <div style={{ fontSize: 24, marginBottom: 8 }}>📷</div>
-                      <div>Klik untuk upload foto revisi</div>
-                    </div>
-                  )}
+                      📷 Kamera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "#1f2937",
+                        border: "2px dashed #374151",
+                        borderRadius: 8,
+                        color: "#9ca3af",
+                        cursor: readOnly ? "default" : "pointer",
+                        fontSize: 14,
+                      }}
+                      disabled={readOnly}
+                    >
+                      🖼️ Galeri
+                    </button>
+                  </div>
                   <input
-                    ref={fileInputRef}
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleEvidence}
+                    style={{ display: "none" }}
+                    disabled={readOnly}
+                  />
+                  <input
+                    ref={galleryInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleEvidence}
@@ -855,25 +885,54 @@ function TasklistFormProgress({ hazard, onClose, onSuccess, readOnly }) {
                         onClick={() => setShowImagePopup(true)}
                       />
                     </div>
-                  ) : (
-                    <div
+                  ) : null}
+                  <div style={{ display: "flex", gap: 8, marginTop: evidencePreview || hazard.evidence_perbaikan ? 8 : 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
                       style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "#1f2937",
                         border: "2px dashed #374151",
                         borderRadius: 8,
-                        padding: 24,
-                        textAlign: "center",
+                        color: "#9ca3af",
                         cursor: readOnly ? "default" : "pointer",
-                        background: readOnly ? "#1f2937" : "#1f2937",
-                        color: readOnly ? "#9ca3af" : "#9ca3af",
+                        fontSize: 14,
                       }}
-                      onClick={() => !readOnly && fileInputRef.current?.click()}
+                      disabled={readOnly}
                     >
-                      <div style={{ fontSize: 24, marginBottom: 8 }}>📷</div>
-                      <div>Klik untuk upload foto</div>
-                    </div>
-                  )}
+                      📷 Kamera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "#1f2937",
+                        border: "2px dashed #374151",
+                        borderRadius: 8,
+                        color: "#9ca3af",
+                        cursor: readOnly ? "default" : "pointer",
+                        fontSize: 14,
+                      }}
+                      disabled={readOnly}
+                    >
+                      🖼️ Galeri
+                    </button>
+                  </div>
                   <input
-                    ref={fileInputRef}
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleEvidence}
+                    style={{ display: "none" }}
+                    disabled={readOnly}
+                  />
+                  <input
+                    ref={galleryInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleEvidence}

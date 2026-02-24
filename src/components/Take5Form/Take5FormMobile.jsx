@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
@@ -46,6 +46,8 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
+  const buktiCameraRef = useRef();
+  const buktiGalleryRef = useRef();
 
   // Daftar field yang belum terisi (untuk notifikasi)
   const getValidationErrors = () => {
@@ -907,26 +909,8 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
                     ? "Bukti Kondisi (Foto)"
                     : "Bukti Perbaikan (Foto)"}
                 </label>
-                <p
-                  style={{
-                    fontSize: 11,
-                    color: "#6b7280",
-                    margin: "0 0 6px 0",
-                  }}
-                >
-                  Ambil foto terlebih dahulu dengan kamera ponsel, lalu pilih dari galeri.
-                </p>
                 {buktiPreview ? (
-                  <div
-                    style={{
-                      position: "relative",
-                      marginTop: 0,
-                      width: "100%",
-                      minWidth: 0,
-                      boxSizing: "border-box",
-                      overflow: "hidden",
-                    }}
-                  >
+                  <div style={{ marginBottom: 8 }}>
                     <img
                       src={buktiPreview}
                       alt="Preview"
@@ -940,102 +924,108 @@ const Take5FormMobile = ({ user, onRedirectHazard, onBack, onNavigate, tasklistT
                         boxSizing: "border-box",
                       }}
                     />
-                    <div
-                      style={{
-                        position: "relative",
-                        width: "100%",
-                        minWidth: 0,
-                        marginTop: 8,
-                        boxSizing: "border-box",
-                      }}
-                    >
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/gif"
-                        onChange={handleBuktiChange}
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => buktiCameraRef.current?.click()}
                         style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          opacity: 0,
-                          cursor: "pointer",
-                          zIndex: 2,
-                        }}
-                      />
-                      <div
-                        style={{
-                          ...inputStyle,
-                          width: "100%",
+                          flex: 1,
                           padding: "10px 12px",
                           background: "#f3f4f6",
-                          textAlign: "center",
+                          border: "2px dashed #d1d5db",
+                          borderRadius: 8,
+                          fontSize: 13,
+                          color: "#6b7280",
                           cursor: "pointer",
-                          boxSizing: "border-box",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
                         }}
                       >
-                        Ganti foto dari galeri
-                      </div>
+                        <span>📷</span> Kamera
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => buktiGalleryRef.current?.click()}
+                        style={{
+                          flex: 1,
+                          padding: "10px 12px",
+                          background: "#f3f4f6",
+                          border: "2px dashed #d1d5db",
+                          borderRadius: 8,
+                          fontSize: 13,
+                          color: "#6b7280",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>🖼️</span> Galeri
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  <div
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      minWidth: 0,
-                      marginTop: 0,
-                      boxSizing: "border-box",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/gif"
-                      onChange={handleBuktiChange}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => buktiCameraRef.current?.click()}
                       style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        opacity: 0,
-                        cursor: "pointer",
-                        zIndex: 2,
-                      }}
-                    />
-                    <div
-                      style={{
-                        ...inputStyle,
-                        width: "100%",
+                        flex: 1,
                         padding: "12px",
                         background: "#f3f4f6",
-                        textAlign: "center",
+                        border: "2px dashed #d1d5db",
+                        borderRadius: 8,
+                        fontSize: 13,
+                        color: "#6b7280",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: 8,
-                        boxSizing: "border-box",
+                        gap: 6,
                       }}
                     >
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <path d="M21 15l-5-5L5 21" />
-                      </svg>
-                      Pilih foto dari galeri
-                    </div>
+                      <span>📷</span> Kamera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => buktiGalleryRef.current?.click()}
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "#f3f4f6",
+                        border: "2px dashed #d1d5db",
+                        borderRadius: 8,
+                        fontSize: 13,
+                        color: "#6b7280",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span>🖼️</span> Galeri
+                    </button>
                   </div>
                 )}
+                <input
+                  ref={buktiCameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleBuktiChange}
+                  style={{ display: "none" }}
+                />
+                <input
+                  ref={buktiGalleryRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBuktiChange}
+                  style={{ display: "none" }}
+                />
               </div>
 
               <div style={fieldMargin}>

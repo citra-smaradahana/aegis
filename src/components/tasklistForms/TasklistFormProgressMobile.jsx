@@ -17,7 +17,8 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [showImagePopup, setShowImagePopup] = useState(false);
-  const fileInputRef = React.useRef();
+  const cameraInputRef = React.useRef();
+  const galleryInputRef = React.useRef();
 
   // Prefill form jika ada data hazard
   useEffect(() => {
@@ -489,7 +490,16 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
           </label>
 
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleEvidence}
+            style={{ display: 'none' }}
+            disabled={readOnly}
+          />
+          <input
+            ref={galleryInputRef}
             type="file"
             accept="image/*"
             onChange={handleEvidence}
@@ -502,7 +512,7 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
               <img
                 src={evidencePreview}
                 alt="Evidence Preview"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => galleryInputRef.current?.click()}
                 style={{
                   maxWidth: '100%',
                   maxHeight: '200px',
@@ -523,40 +533,50 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                width: '100%',
-                background: '#f3f4f6',
-                border: '2px dashed #d1d5db',
-                borderRadius: '8px',
-                padding: '20px',
-                fontSize: 16,
-                color: '#6b7280',
-                cursor: readOnly ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
-              disabled={readOnly}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                style={{
+                  flex: 1,
+                  background: '#f3f4f6',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  fontSize: 14,
+                  color: '#6b7280',
+                  cursor: readOnly ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+                disabled={readOnly}
               >
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-              Klik untuk mengambil foto
-            </button>
+                <span>📷</span> Kamera
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                style={{
+                  flex: 1,
+                  background: '#f3f4f6',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  fontSize: 14,
+                  color: '#6b7280',
+                  cursor: readOnly ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+                disabled={readOnly}
+              >
+                <span>🖼️</span> Galeri
+              </button>
+            </div>
           )}
         </div>
 

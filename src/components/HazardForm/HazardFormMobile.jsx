@@ -47,7 +47,8 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   });
   const [evidence, setEvidence] = useState(null);
   const [evidencePreview, setEvidencePreview] = useState(null);
-  const fileInputRef = useRef();
+  const cameraInputRef = useRef();
+  const galleryInputRef = useRef();
   const [, setTake5Pending] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportId, setSelectedReportId] = useState(null);
@@ -273,13 +274,9 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
     }
   };
 
-  const handleClickCamera = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleClickPreview = () => {
-    fileInputRef.current?.click();
-  };
+  const handleClickCamera = () => cameraInputRef.current?.click();
+  const handleClickGallery = () => galleryInputRef.current?.click();
+  const handleClickPreview = () => galleryInputRef.current?.click();
 
   const handleNext = () => setPage((p) => p + 1);
   const handleBack = () => setPage((p) => p - 1);
@@ -331,9 +328,8 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const handleCropCancel = () => {
     setShowCrop(false);
     setRawImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
   async function uploadEvidence() {
@@ -1588,11 +1584,18 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                   Foto Evidence
                 </label>
                 <input
-                  ref={fileInputRef}
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleEvidence}
+                  style={{ display: "none" }}
+                />
+                <input
+                  ref={galleryInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handleEvidence}
-                  name="evidence"
                   style={{ display: "none" }}
                 />
                 {evidencePreview ? (
@@ -1627,39 +1630,50 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     />
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleClickCamera}
-                    style={{
-                      width: "100%",
-                      background: "#f3f4f6",
-                      border: "2px dashed #d1d5db",
-                      borderRadius: 8,
-                      padding: "12px",
-                      fontSize: 13,
-                      color: "#6b7280",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={handleClickCamera}
+                      style={{
+                        flex: 1,
+                        background: "#f3f4f6",
+                        border: "2px dashed #d1d5db",
+                        borderRadius: 8,
+                        padding: "12px",
+                        fontSize: 13,
+                        color: "#6b7280",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
                     >
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
-                    Ambil foto atau pilih dari galeri
-                  </button>
+                      <span style={{ fontSize: 18 }}>📷</span>
+                      Kamera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClickGallery}
+                      style={{
+                        flex: 1,
+                        background: "#f3f4f6",
+                        border: "2px dashed #d1d5db",
+                        borderRadius: 8,
+                        padding: "12px",
+                        fontSize: 13,
+                        color: "#6b7280",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>🖼️</span>
+                      Galeri
+                    </button>
+                  </div>
                 )}
               </div>
 

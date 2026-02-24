@@ -136,14 +136,9 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     }
   };
 
-  const handleBuktiClick = () => {
-    // Trigger file input click
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "image/*";
-    fileInput.onchange = handleBuktiChange;
-    fileInput.click();
-  };
+  const buktiCameraRef = React.useRef();
+  const buktiGalleryRef = React.useRef();
+  const handleBuktiClick = () => buktiGalleryRef.current?.click();
 
   const handleCropConfirm = async () => {
     try {
@@ -814,16 +809,56 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                       {/* Hint removed as requested */}
                     </div>
                   ) : (
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleBuktiChange}
-                      required={
-                        kondisiKerja === "perbaikan" || kondisiKerja === "stop"
-                      }
-                      style={inputStyle}
-                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => buktiCameraRef.current?.click()}
+                        style={{
+                          flex: 1,
+                          padding: "12px",
+                          background: "#f3f4f6",
+                          border: "2px dashed #d1d5db",
+                          borderRadius: 8,
+                          color: "#6b7280",
+                          cursor: "pointer",
+                          fontSize: 14,
+                        }}
+                      >
+                        📷 Kamera
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => buktiGalleryRef.current?.click()}
+                        style={{
+                          flex: 1,
+                          padding: "12px",
+                          background: "#f3f4f6",
+                          border: "2px dashed #d1d5db",
+                          borderRadius: 8,
+                          color: "#6b7280",
+                          cursor: "pointer",
+                          fontSize: 14,
+                        }}
+                      >
+                        🖼️ Galeri
+                      </button>
+                    </div>
                   )}
+                  <input
+                    ref={buktiCameraRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleBuktiChange}
+                    style={{ display: "none" }}
+                  />
+                  <input
+                    ref={buktiGalleryRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBuktiChange}
+                    style={{ display: "none" }}
+                  />
                 </div>
 
                 <div style={fieldMargin}>
