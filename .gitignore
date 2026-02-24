@@ -92,3 +92,7 @@ temp/
 sw.js.map
 workbox-*.js
 workbox-*.js.map
+
+# Android signing keys (JANGAN commit ke repository)
+*.jks
+*.keystore

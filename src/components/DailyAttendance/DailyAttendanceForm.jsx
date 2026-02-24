@@ -80,6 +80,10 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
   // State Data Absensi (Halaman 2)
   const [attendanceList, setAttendanceList] = useState([]);
 
+  // State Gambar Lampiran (untuk print)
+  const [images, setImages] = useState([]); // Array of { file?, previewUrl, url? }
+  const imageInputRef = useRef(null);
+
   // Daftar PJO / Asst PJO untuk dropdown Approval
   const [approverList, setApproverList] = useState([]);
 
@@ -88,6 +92,10 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
   const [showApproverModal, setShowApproverModal] = useState(false);
   const [meetingTypeSearchQuery, setMeetingTypeSearchQuery] = useState("");
   const [approverSearchQuery, setApproverSearchQuery] = useState("");
+
+  // Konfirmasi simpan & toast sukses
+  const [showConfirmSave, setShowConfirmSave] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   // Style Constants - Inline styles (Tailwind tidak aktif di project)
   const btnPrimary = {
@@ -367,12 +375,61 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
     setActions(newActions);
   };
 
-  // Save Function
-  const handleSave = async () => {
+  // --- Handlers untuk Gambar ---
+  const handleImageSelect = (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const newImages = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith("image/")) continue;
+      const previewUrl = URL.createObjectURL(file);
+      newImages.push({ file, previewUrl });
+    }
+    setImages((prev) => [...prev, ...newImages]);
+    e.target.value = "";
+  };
+
+  const removeImage = (index) => {
+    setImages((prev) => {
+      const next = [...prev];
+      if (next[index]?.previewUrl) URL.revokeObjectURL(next[index].previewUrl);
+      next.splice(index, 1);
+      return next;
+    });
+  };
+
+  const uploadImages = async () => {
+    const urls = [];
+    for (const img of images) {
+      if (img.url) {
+        urls.push(img.url);
+        continue;
+      }
+      if (!img.file) continue;
+      const fileExt = img.file.name.split(".").pop() || "jpg";
+      const fileName = `safety-meeting/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+      const { error } = await supabase.storage.from("safety_meeting_bucket").upload(fileName, img.file);
+      if (error) throw new Error("Gagal upload gambar");
+      const { data } = supabase.storage.from("safety_meeting_bucket").getPublicUrl(fileName);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  };
+
+  // Save Function - dipanggil setelah user konfirmasi
+  const doSave = async () => {
     try {
       if (!user) {
         alert("Sesi habis, silakan login ulang.");
         return;
+      }
+
+      setShowConfirmSave(false);
+
+      let imageUrls = [];
+      if (images.length > 0) {
+        imageUrls = await uploadImages();
       }
 
       const payload = {
@@ -390,14 +447,14 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
         issues: issues,
         actions: actions,
         attendance_list: attendanceList,
+        images: imageUrls,
         creator_id: user.id,
         approver_id: formData.approver_id || null,
         approver_name: formData.approver_name || null,
         status: "Pending", // Default status menunggu approval
       };
 
-      // Simpan ke database
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("safety_meetings")
         .insert(payload)
         .select()
@@ -405,12 +462,19 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
 
       if (error) throw error;
 
-      alert("Laporan berhasil disimpan! Menunggu approval PJO/Asst PJO.");
-      if (onBack) onBack(); // Kembali ke menu utama
+      setShowSuccessToast(true);
+      setTimeout(() => {
+        setShowSuccessToast(false);
+        if (onBack) onBack();
+      }, 500);
     } catch (err) {
       console.error("Gagal menyimpan laporan:", err);
       alert(`Gagal menyimpan: ${err.message}`);
     }
+  };
+
+  const handleSave = () => {
+    setShowConfirmSave(true);
   };
 
   if (loading)
@@ -880,6 +944,25 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                         </div>
                         <div>
                           <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">
+                            Lampiran
+                          </label>
+                          <select
+                            value={topic.attachment ? "Ada" : "Tidak Ada"}
+                            onChange={(e) =>
+                              handleTopicChange(
+                                idx,
+                                "attachment",
+                                e.target.value === "Ada",
+                              )
+                            }
+                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2.5 border"
+                          >
+                            <option value="Tidak Ada">Tidak Ada</option>
+                            <option value="Ada">Ada</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">
                             Catatan Tambahan
                           </label>
                           <input
@@ -1209,6 +1292,105 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               </div>
             </div>
 
+            {/* Section 6: Tambah Gambar (Lampiran) - Opsional */}
+            <div
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+              style={isMobile ? { borderRadius: 12 } : {}}
+            >
+              <div
+                className="bg-gray-50 border-b border-gray-200"
+                style={{ padding: isMobile ? "10px 14px" : "16px 24px" }}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm"
+                    style={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32, fontSize: isMobile ? 11 : 14 }}
+                  >
+                    6
+                  </span>
+                  <h2 className="font-bold text-gray-800" style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}>
+                    Lampiran (Opsional)
+                  </h2>
+                </div>
+                <p className="text-sm text-gray-500 mt-1" style={{ marginTop: 4, marginBottom: 0 }}>
+                  Tambah gambar untuk dicetak di bagian bawah PDF
+                </p>
+              </div>
+              <div style={{ padding: isMobile ? "12px 14px" : "24px" }}>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  style={{ display: "none" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  style={{
+                    ...btnOutline,
+                    marginBottom: images.length ? 16 : 0,
+                  }}
+                >
+                  📷 Tambah Gambar
+                </button>
+                {images.length > 0 && (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    {images.map((img, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          position: "relative",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          border: "1px solid #e5e7eb",
+                        }}
+                      >
+                        <img
+                          src={img.previewUrl || img.url}
+                          alt={`Lampiran ${idx + 1}`}
+                          style={{
+                            width: "100%",
+                            height: 80,
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          style={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            background: "rgba(239,68,68,0.9)",
+                            color: "#fff",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: 14,
+                            lineHeight: 1,
+                            padding: 0,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Save Button */}
             <div className="flex justify-end pt-4 pb-8">
               <button
@@ -1241,6 +1423,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               topics,
               issues,
               actions,
+              images: images.map((img) => img.previewUrl || img.url).filter(Boolean),
               creatorName: user?.nama,
               creatorJabatan: user?.jabatan || "",
               approverName: formData.approver_name || "(Menunggu Ttd)",
@@ -1297,6 +1480,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     topics,
                     issues,
                     actions,
+                    images: images.map((img) => img.previewUrl || img.url).filter(Boolean),
                     creatorName: user?.nama,
                     creatorJabatan: user?.jabatan || "",
                     approverName: formData.approver_name || "(Menunggu Ttd)",
@@ -1485,6 +1669,94 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               ) : null}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Simpan */}
+      {showConfirmSave && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            padding: 16,
+          }}
+          onClick={() => setShowConfirmSave(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 360,
+              width: "100%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p
+              style={{
+                margin: "0 0 24px 0",
+                fontSize: 16,
+                color: "#1f2937",
+                textAlign: "center",
+              }}
+            >
+              Apakah anda yakin menyimpan laporan ini?
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "center",
+              }}
+            >
+              <button
+                onClick={() => setShowConfirmSave(false)}
+                style={{
+                  ...btnOutline,
+                  padding: "10px 24px",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={doSave}
+                style={{
+                  ...btnPrimary,
+                  padding: "10px 24px",
+                }}
+              >
+                Ya, Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Sukses - hilang dalam 0.5 detik */}
+      {showSuccessToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: isMobile ? 80 : 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 2100,
+            background: "#10b981",
+            color: "#fff",
+            padding: "14px 24px",
+            borderRadius: 12,
+            fontSize: 15,
+            fontWeight: 600,
+            boxShadow: "0 8px 24px rgba(16, 185, 129, 0.4)",
+          }}
+        >
+          Laporan berhasil disimpan! Menunggu approval PJO/Asst PJO.
         </div>
       )}
 

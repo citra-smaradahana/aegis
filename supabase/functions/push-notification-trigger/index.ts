@@ -77,15 +77,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- HAZARD REPORT: Tasklist baru (PIC & Evaluator) ---
+    // --- HAZARD REPORT: Tasklist - notifikasi saat hazard dibuat ATAU status berubah sesuai workflow ---
+    // Workflow: Open→Pelapor, Submit/Progress/Reject at Open/Reject at Done→PIC, Done→Evaluator
     if (table === "hazard_report") {
       const status = (record.status || "").trim();
-      const lokasi = (record.lokasi || "").trim();
+      const oldStatus = (old_record?.status || "").trim();
+      const lokasi = (record.lokasi || record.site || "").trim();
       const picNama = (record.pic || "").trim();
       const evaluatorNama = (record.evaluator_nama || "").trim();
+      const pelaporNama = (record.pelapor_nama || "").trim();
 
-      if (lokasi && (picNama || evaluatorNama)) {
-        const namesToFind = [picNama, evaluatorNama].filter(Boolean);
+      // Hanya proses jika status bukan Closed, dan (INSERT atau status berubah)
+      const isInsert = !old_record;
+      const statusChanged = oldStatus !== status;
+      if (status === "Closed" || (!isInsert && !statusChanged)) {
+        // Skip: sudah closed atau update tanpa perubahan status
+      } else if (lokasi) {
+        const namesToFind: string[] = [];
+        if (status === "Open" && pelaporNama) namesToFind.push(pelaporNama);
+        if (["Submit", "Progress", "Reject at Open", "Reject at Done"].includes(status) && picNama) namesToFind.push(picNama);
+        if (status === "Done" && evaluatorNama) namesToFind.push(evaluatorNama);
+
         const foundIds = new Set<string>();
         for (const name of namesToFind) {
           const { data: users } = await supabase
@@ -98,9 +110,11 @@ Deno.serve(async (req) => {
           }
         }
         foundIds.forEach((id) => userIdsToNotify.push(id));
-        title = "Tasklist";
-        body = "Ada task baru yang perlu ditindaklanjuti";
-        data = { type: "tasklist", action: "tasklist" };
+        if (foundIds.size > 0) {
+          title = "Tasklist";
+          body = "Ada task baru yang perlu ditindaklanjuti";
+          data = { type: "tasklist", action: "tasklist" };
+        }
       }
     }
 
