@@ -28,7 +28,7 @@ function FitToWorkValidationListNew({
   const [activeTab, setActiveTab] = useState("action");
   const MOBILE_HEADER_HEIGHT = 60;
   const MOBILE_TAB_TOP = MOBILE_HEADER_HEIGHT + 8;
-  const MOBILE_TAB_RESERVED_HEIGHT = 98;
+  const MOBILE_TAB_RESERVED_HEIGHT = 155; // Ruang minimal untuk tab bar agar judul section tidak overlap
 
   const getStatusColor = (status) => {
     switch (status) {

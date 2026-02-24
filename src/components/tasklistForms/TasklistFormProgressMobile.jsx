@@ -492,7 +492,6 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleEvidence}
             style={{ display: 'none' }}
             disabled={readOnly}

@@ -613,7 +613,6 @@ function TasklistFormRejectAtDoneMobile({
             id="evidence-input"
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleEvidence}
             style={{ display: 'none' }}
             disabled={readOnly}

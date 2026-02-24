@@ -5,6 +5,10 @@ import { fetchValidationCountForUser } from "./utils/fitToWorkValidationCount";
 import { userNeedsToFillFTWToday } from "./utils/fitToWorkAbsentHelpers";
 import { fetchTasklistTodoCountForUser } from "./utils/tasklistTodoCount";
 import { fetchAllowedMenusForUser } from "./utils/menuAccessHelpers";
+import {
+  registerPushNotifications,
+  unregisterPushNotifications,
+} from "./utils/pushNotificationHelpers";
 import Login from "./components/Login";
 import MonitoringPage from "./components/MonitoringPage";
 import SiteSelectionPage from "./components/SiteSelectionPage";
@@ -85,6 +89,10 @@ function App() {
   };
 
   const handleLogout = () => {
+    const userId = user?.id;
+    if (userId) {
+      unregisterPushNotifications(userId);
+    }
     sessionManager.clearSession();
     setUser(null);
     setCurrentPage("login");
@@ -231,6 +239,13 @@ function App() {
         cancelled = true;
       };
     }, [user?.id, user?.site, user?.nama, activeMenu]);
+
+    // Daftar push notification (hanya di native Android/iOS)
+    useEffect(() => {
+      if (user?.id) {
+        registerPushNotifications(user.id);
+      }
+    }, [user?.id]);
 
     const renderContent = () => {
       switch (activeMenu) {

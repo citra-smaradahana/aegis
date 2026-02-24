@@ -1398,7 +1398,7 @@ function HazardFormDesktop({ user }) {
                         cursor: "pointer",
                       }}
                     >
-                      📷 Klik untuk mengambil foto
+                      📷 Ambil foto atau pilih dari galeri
                     </button>
                   )}
                 </div>
