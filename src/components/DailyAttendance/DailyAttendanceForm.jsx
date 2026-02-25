@@ -6,6 +6,7 @@ import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import { fetchUsersAttendanceForValidator } from "../../utils/fitToWorkAbsentHelpers";
 import { downloadPdfFromElement } from "../../utils/downloadPdfFromElement";
 import DailyAttendancePrint from "./DailyAttendancePrint";
+import SearchablePersonField from "./SearchablePersonField";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import SelectModalWithSearch from "../SelectModalWithSearch";
@@ -49,18 +50,11 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
   // State Form Header
   const [formData, setFormData] = useState({
     date: getTodayWITA(),
-    // Format waktu HTML input type="time" harus HH:mm (24 jam)
-    timeStart: new Date()
-      .toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false, // Pastikan 24 jam
-      })
-      .replace(/\./g, ":"), // Ganti titik dengan titik dua jika locale ID pakai titik
+    timeStart: "", // Kosong, diisi manual
     timeEnd: "",
-    duration: "15", // default 15 menit
-    place: "",
-    meetingType: "Briefing", // Default
+    duration: "15",
+    place: "", // Kosong, diisi manual
+    meetingType: "", // Kosong, harus dipilih
     topic: "",
     agenda: "", // Jika beda dengan topic
     site: "",
@@ -83,9 +77,12 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
   // State Gambar Lampiran (untuk print)
   const [images, setImages] = useState([]); // Array of { file?, previewUrl, url? }
   const imageInputRef = useRef(null);
+  const [lampiranDiHalamanBerikutnya, setLampiranDiHalamanBerikutnya] = useState(false);
 
   // Daftar PJO / Asst PJO untuk dropdown Approval
   const [approverList, setApproverList] = useState([]);
+  // Daftar user site untuk Dibawakan Oleh, Disampaikan Oleh, PIC (bisa pilih atau ketik manual)
+  const [siteUserList, setSiteUserList] = useState([]);
 
   // Modal search (mobile) - Jenis Pertemuan & Approval
   const [showMeetingTypeModal, setShowMeetingTypeModal] = useState(false);
@@ -93,9 +90,15 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
   const [meetingTypeSearchQuery, setMeetingTypeSearchQuery] = useState("");
   const [approverSearchQuery, setApproverSearchQuery] = useState("");
 
+  // Modal search person (Dibawakan Oleh, Disampaikan Oleh, PIC) - bisa pilih dari list atau ketik manual
+  const [showPersonSelectModal, setShowPersonSelectModal] = useState(false);
+  const [personSelectContext, setPersonSelectContext] = useState(null); // { type: 'presenter'|'submittedBy'|'pic', index }
+  const [personSelectSearchQuery, setPersonSelectSearchQuery] = useState("");
+
   // Konfirmasi simpan & toast sukses
   const [showConfirmSave, setShowConfirmSave] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   // Style Constants - Inline styles (Tailwind tidak aktif di project)
   const btnPrimary = {
@@ -148,10 +151,13 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
     fetchInitialData();
   }, []);
 
-  // Refetch approver saat site/area tersedia (fallback jika initial load site kosong)
+  // Refetch approver & site users saat site/area tersedia (fallback jika initial load site kosong)
   useEffect(() => {
     const site = (formData.site || formData.area || "").trim();
-    if (site) fetchApproverList(site);
+    if (site) {
+      fetchApproverList(site);
+      fetchSiteUserList(site);
+    }
   }, [formData.site, formData.area]);
 
   // Refetch daftar hadir untuk tanggal tertentu
@@ -177,7 +183,15 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
           tidak_mengkonsumsi_obat: row.tidak_mengkonsumsi_obat ?? true,
           tidak_ada_masalah_pribadi: row.tidak_ada_masalah_pribadi ?? true,
           siap_bekerja: row.siap_bekerja ?? true,
+          ftw_created_at: row.created_at || row.ftw_created_at || null,
         }));
+        // Urutan berdasarkan jam pengisian FTW: yang pertama mengisi di atas
+        mapped.sort((a, b) => {
+          const timeA = a.ftw_created_at ? new Date(a.ftw_created_at).getTime() : Infinity;
+          const timeB = b.ftw_created_at ? new Date(b.ftw_created_at).getTime() : Infinity;
+          if (timeA !== timeB) return timeA - timeB;
+          return (a.nama || "").localeCompare(b.nama || "", "id");
+        });
         setAttendanceList(mapped);
       } else {
         const attendanceData = await fetchUsersAttendanceForValidator(
@@ -227,6 +241,27 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
     }
   };
 
+  const fetchSiteUserList = async (siteForFetch) => {
+    const site = (siteForFetch || "").trim();
+    if (!site) return;
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, nama, jabatan")
+        .eq("site", site)
+        .order("nama");
+      if (error) {
+        console.warn("Gagal fetch site user list:", error);
+        setSiteUserList([]);
+        return;
+      }
+      setSiteUserList(data || []);
+    } catch (e) {
+      console.warn("Gagal fetch site user list:", e);
+      setSiteUserList([]);
+    }
+  };
+
   const fetchInitialData = async () => {
     try {
       setLoading(true);
@@ -251,21 +286,20 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
 
       setUser(userData || sessionUser);
 
-      // Pre-fill form - gunakan userData dari DB, fallback ke session (site user)
+      // Pre-fill form - site/area untuk internal (approver, attendance), place/topic kosong agar diisi manual
       const siteValue = userData?.site || sessionUser?.site || "";
       setFormData((prev) => ({
         ...prev,
-        place: siteValue,
         site: siteValue,
         department: userData?.departemen || sessionUser?.departemen || "",
         area: siteValue,
-        topic: "Safety Briefing Harian (P5M)", // Default topic
       }));
 
       const tanggal = formData.date || getTodayWITA();
       await Promise.all([
         fetchAttendanceForDate(tanggal, userData || sessionUser),
         fetchApproverList(siteValue),
+        fetchSiteUserList(siteValue),
       ]);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -275,10 +309,19 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
     }
   };
 
+  // Format tanggal untuk nama file: YYYYMMDD (contoh: 20260225)
+  const dateForFilename = formData.date ? formData.date.replace(/-/g, "") : "";
+
   // Handle Print (desktop - buka dialog print)
   const handlePrint = useReactToPrint({
     contentRef: printComponentRef,
-    documentTitle: `Daily_Attendance_${formData.date}_${formData.site}`,
+    documentTitle: dateForFilename ? `Daily Meeting - ${dateForFilename}` : "Daily Meeting",
+    pageStyle: `
+      @page { margin: 10mm; size: A4 portrait; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    `,
   });
 
   // Handle Download PDF (mobile - auto download)
@@ -286,7 +329,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
     if (!printComponentRef?.current) return;
     try {
       setIsDownloadingPdf(true);
-      const filename = `Daily_Attendance_${formData.date}_${formData.site || "report"}`;
+      const filename = dateForFilename ? `Daily Meeting - ${dateForFilename}` : "Daily Meeting";
       await downloadPdfFromElement(printComponentRef, filename);
     } catch (err) {
       console.error("Gagal download PDF:", err);
@@ -473,7 +516,24 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
     }
   };
 
+  const getValidationErrors = () => {
+    const errors = [];
+    if (!formData.meetingType?.trim()) errors.push("Jenis Pertemuan");
+    if (!formData.place?.trim()) errors.push("Tempat / Lokasi");
+    if (!formData.timeStart?.trim()) errors.push("Jam Mulai");
+    topics.forEach((t, idx) => {
+      if (!t.content?.trim()) errors.push(`Topik ${idx + 1}: Isi Topik wajib diisi`);
+    });
+    if (topics.length === 0) errors.push("Minimal satu topik harus ditambahkan dan diisi");
+    return errors;
+  };
+
   const handleSave = () => {
+    const errs = getValidationErrors();
+    if (errs.length > 0) {
+      setShowValidationModal(true);
+      return;
+    }
     setShowConfirmSave(true);
   };
 
@@ -718,8 +778,10 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                         justifyContent: "space-between",
                       }}
                     >
-                      <span>
-                        {MEETING_TYPE_OPTIONS.find((o) => o.value === formData.meetingType)?.label || formData.meetingType}
+                      <span style={{ color: formData.meetingType ? "#1f2937" : "#6b7280" }}>
+                        {formData.meetingType
+                          ? MEETING_TYPE_OPTIONS.find((o) => o.value === formData.meetingType)?.label || formData.meetingType
+                          : "-- Pilih Jenis Pertemuan --"}
                       </span>
                       <span style={{ color: "#9ca3af", fontSize: 12 }}>▼</span>
                     </div>
@@ -730,6 +792,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                       onChange={handleHeaderChange}
                       className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
                     >
+                      <option value="">-- Pilih Jenis Pertemuan --</option>
                       {MEETING_TYPE_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
@@ -745,6 +808,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     name="place"
                     value={formData.place}
                     onChange={handleHeaderChange}
+                    placeholder="Contoh: BSIB, Ruang Rapat"
                     className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
                   />
                 </div>
@@ -859,7 +923,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               style={isMobile ? { borderRadius: 12 } : {}}
             >
               <div
-                className="bg-gray-50 border-b border-gray-200 flex items-center justify-between"
+                className="bg-gray-50 border-b border-gray-200"
                 style={{ padding: isMobile ? "10px 14px" : "16px 24px" }}
               >
                 <div className="flex items-center gap-3">
@@ -876,16 +940,6 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     Notulen (Isi Rapat)
                   </h2>
                 </div>
-                <button
-                  onClick={addTopic}
-                  style={{
-                    ...btnPrimary,
-                    padding: isMobile ? "6px 12px" : "8px 16px",
-                    fontSize: isMobile ? 12 : 14,
-                  }}
-                >
-                  <span className="leading-none">+</span> Tambah Topik
-                </button>
               </div>
               <div
                 className="space-y-4"
@@ -925,21 +979,18 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">
-                            Dibawakan Oleh
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Nama Pembicara"
+                          <SearchablePersonField
+                            label="Dibawakan Oleh"
                             value={topic.presenter}
-                            onChange={(e) =>
-                              handleTopicChange(
-                                idx,
-                                "presenter",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2.5 border"
+                            onChange={(v) => handleTopicChange(idx, "presenter", v)}
+                            userList={siteUserList}
+                            placeholder="Nama Pembicara"
+                            isMobile={isMobile}
+                            onOpenModal={() => {
+                              setPersonSelectContext({ type: "presenter", index: idx });
+                              setPersonSelectSearchQuery(topic.presenter || "");
+                              setShowPersonSelectModal(true);
+                            }}
                           />
                         </div>
                         <div>
@@ -979,6 +1030,17 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     </div>
                   </div>
                 ))}
+                <button
+                  onClick={addTopic}
+                  style={{
+                    ...btnPrimary,
+                    padding: isMobile ? "10px 16px" : "12px 20px",
+                    fontSize: isMobile ? 14 : 15,
+                    width: "100%",
+                  }}
+                >
+                  <span className="leading-none">+</span> Tambah Topik
+                </button>
               </div>
             </div>
 
@@ -1044,21 +1106,18 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">
-                            Disampaikan Oleh
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Nama Penyampai"
+                          <SearchablePersonField
+                            label="Disampaikan Oleh"
                             value={issue.submittedBy}
-                            onChange={(e) =>
-                              handleIssueChange(
-                                idx,
-                                "submittedBy",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2.5 border"
+                            onChange={(v) => handleIssueChange(idx, "submittedBy", v)}
+                            userList={siteUserList}
+                            placeholder="Nama Penyampai"
+                            isMobile={isMobile}
+                            onOpenModal={() => {
+                              setPersonSelectContext({ type: "submittedBy", index: idx });
+                              setPersonSelectSearchQuery(issue.submittedBy || "");
+                              setShowPersonSelectModal(true);
+                            }}
                           />
                         </div>
                       </div>
@@ -1135,17 +1194,18 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">
-                            PIC
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Nama PIC"
+                          <SearchablePersonField
+                            label="PIC"
                             value={action.pic}
-                            onChange={(e) =>
-                              handleActionChange(idx, "pic", e.target.value)
-                            }
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2.5 border"
+                            onChange={(v) => handleActionChange(idx, "pic", v)}
+                            userList={siteUserList}
+                            placeholder="Nama PIC"
+                            isMobile={isMobile}
+                            onOpenModal={() => {
+                              setPersonSelectContext({ type: "pic", index: idx });
+                              setPersonSelectSearchQuery(action.pic || "");
+                              setShowPersonSelectModal(true);
+                            }}
                           />
                         </div>
                         <div>
@@ -1315,6 +1375,22 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 <p className="text-sm text-gray-500 mt-1" style={{ marginTop: 4, marginBottom: 0 }}>
                   Tambah gambar untuk dicetak di bagian bawah PDF
                 </p>
+                {images.length > 0 && (
+                  <label
+                    className="flex items-center gap-2 mt-3 cursor-pointer"
+                    style={{ marginTop: 12 }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={lampiranDiHalamanBerikutnya}
+                      onChange={(e) => setLampiranDiHalamanBerikutnya(e.target.checked)}
+                      style={{ width: 18, height: 18, cursor: "pointer" }}
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Cetak lampiran di halaman berikutnya
+                    </span>
+                  </label>
+                )}
               </div>
               <div style={{ padding: isMobile ? "12px 14px" : "24px" }}>
                 <input
@@ -1424,6 +1500,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               issues,
               actions,
               images: images.map((img) => img.previewUrl || img.url).filter(Boolean),
+              lampiranDiHalamanBerikutnya,
               creatorName: user?.nama,
               creatorJabatan: user?.jabatan || "",
               approverName: formData.approver_name || "(Menunggu Ttd)",
@@ -1481,6 +1558,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     issues,
                     actions,
                     images: images.map((img) => img.previewUrl || img.url).filter(Boolean),
+                    lampiranDiHalamanBerikutnya,
                     creatorName: user?.nama,
                     creatorJabatan: user?.jabatan || "",
                     approverName: formData.approver_name || "(Menunggu Ttd)",
@@ -1668,6 +1746,239 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 </div>
               ) : null}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Pilih Orang (Dibawakan Oleh, Disampaikan Oleh, PIC) - bisa pilih dari list atau gunakan nama yang diketik */}
+      {isMobile && showPersonSelectModal && personSelectContext && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 70,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 1100,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+          onClick={() => {
+            setShowPersonSelectModal(false);
+            setPersonSelectContext(null);
+            setPersonSelectSearchQuery("");
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              maxHeight: "70vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+                {personSelectContext.type === "presenter" && "Dibawakan Oleh"}
+                {personSelectContext.type === "submittedBy" && "Disampaikan Oleh"}
+                {personSelectContext.type === "pic" && "PIC"}
+              </div>
+              <input
+                type="text"
+                value={personSelectSearchQuery}
+                onChange={(e) => setPersonSelectSearchQuery(e.target.value)}
+                placeholder="Ketik untuk mencari atau gunakan nama..."
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                  color: "#111827",
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+              {/* Opsi: Gunakan nama yang diketik (untuk orang di luar sistem) */}
+              {personSelectSearchQuery.trim() && (
+                <div
+                  onClick={() => {
+                    const { type, index } = personSelectContext;
+                    if (type === "presenter") handleTopicChange(index, "presenter", personSelectSearchQuery.trim());
+                    if (type === "submittedBy") handleIssueChange(index, "submittedBy", personSelectSearchQuery.trim());
+                    if (type === "pic") handleActionChange(index, "pic", personSelectSearchQuery.trim());
+                    setShowPersonSelectModal(false);
+                    setPersonSelectContext(null);
+                    setPersonSelectSearchQuery("");
+                  }}
+                  style={{
+                    padding: "14px 16px",
+                    fontSize: 16,
+                    color: "#2563eb",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    borderBottom: "1px solid #f3f4f6",
+                    backgroundColor: "#eff6ff",
+                  }}
+                >
+                  ✓ Gunakan: &quot;{personSelectSearchQuery.trim()}&quot;
+                </div>
+              )}
+              {/* Kosongkan */}
+              <div
+                onClick={() => {
+                  const { type, index } = personSelectContext;
+                  if (type === "presenter") handleTopicChange(index, "presenter", "");
+                  if (type === "submittedBy") handleIssueChange(index, "submittedBy", "");
+                  if (type === "pic") handleActionChange(index, "pic", "");
+                  setShowPersonSelectModal(false);
+                  setPersonSelectContext(null);
+                  setPersonSelectSearchQuery("");
+                }}
+                style={{
+                  padding: "14px 16px",
+                  fontSize: 16,
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  borderBottom: "1px solid #f3f4f6",
+                }}
+              >
+                -- Kosongkan --
+              </div>
+              {/* Daftar user dari site */}
+              {siteUserList
+                .filter(
+                  (u) =>
+                    (u.nama || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase()) ||
+                    (u.jabatan || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase())
+                )
+                .sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"))
+                .map((u) => (
+                  <div
+                    key={u.id}
+                    onClick={() => {
+                      const { type, index } = personSelectContext;
+                      const nama = u.nama || "";
+                      if (type === "presenter") handleTopicChange(index, "presenter", nama);
+                      if (type === "submittedBy") handleIssueChange(index, "submittedBy", nama);
+                      if (type === "pic") handleActionChange(index, "pic", nama);
+                      setShowPersonSelectModal(false);
+                      setPersonSelectContext(null);
+                      setPersonSelectSearchQuery("");
+                    }}
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: 16,
+                      color: "#1f2937",
+                      cursor: "pointer",
+                      borderBottom: "1px solid #f3f4f6",
+                    }}
+                  >
+                    {u.nama}
+                    {u.jabatan ? ` (${u.jabatan})` : ""}
+                  </div>
+                ))}
+              {siteUserList.filter(
+                (u) =>
+                  (u.nama || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase()) ||
+                  (u.jabatan || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase())
+              ).length === 0 &&
+                !personSelectSearchQuery.trim() && (
+                  <div
+                    style={{
+                      padding: 24,
+                      textAlign: "center",
+                      color: "#6b7280",
+                      fontSize: 14,
+                    }}
+                  >
+                    Tidak ada user di site ini. Ketik nama di atas untuk orang di luar sistem.
+                  </div>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal notifikasi validasi - field wajib belum diisi */}
+      {showValidationModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setShowValidationModal(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 20,
+              maxWidth: 340,
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 16,
+                color: "#1f2937",
+                marginBottom: 12,
+              }}
+            >
+              Lengkapi data berikut
+            </div>
+            <ul
+              style={{
+                margin: "0 0 16px 0",
+                paddingLeft: 20,
+                color: "#4b5563",
+                fontSize: 14,
+                lineHeight: 1.8,
+              }}
+            >
+              {getValidationErrors().map((err) => (
+                <li key={err}>{err}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setShowValidationModal(false)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Baik
+            </button>
           </div>
         </div>
       )}

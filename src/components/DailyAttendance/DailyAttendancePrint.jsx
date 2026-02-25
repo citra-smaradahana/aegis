@@ -33,6 +33,7 @@ const DailyAttendancePrint = React.forwardRef(
       issues = [], // Array of { content, submittedBy }
       actions = [], // Array of { content, pic, due, status }
       images = [], // Array of image URLs untuk lampiran
+      lampiranDiHalamanBerikutnya = false,
       creatorName = "",
       creatorJabatan = "",
       approverName = "",
@@ -585,60 +586,7 @@ const DailyAttendancePrint = React.forwardRef(
             </tbody>
           </table>
 
-          {/* LAMPIRAN - Gambar di bagian bawah */}
-          {images && images.length > 0 && (
-            <div style={{ marginTop: 24, pageBreakInside: "avoid" }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#1f2937",
-                  marginBottom: 12,
-                  borderBottom: "1px solid #d1d5db",
-                  paddingBottom: 4,
-                }}
-              >
-                Lampiran
-                <span className="th-blue" style={{ fontWeight: 400, color: "#6b7280", marginLeft: 4 }}>
-                  (Attachment)
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 12,
-                }}
-              >
-                {images.map((url, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      flex: "1 1 120px",
-                      minWidth: 100,
-                      maxWidth: 180,
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 4,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={url}
-                      alt={`Lampiran ${idx + 1}`}
-                      style={{
-                        width: "100%",
-                        height: 120,
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* FOOTER TANDA TANGAN */}
+          {/* FOOTER TANDA TANGAN - di atas Lampiran */}
           <div className="footer-signature">
             <div className="sig-box">
               <span className="sig-label">
@@ -675,6 +623,67 @@ const DailyAttendancePrint = React.forwardRef(
               )}
             </div>
           </div>
+
+          {/* LAMPIRAN - Di bawah tanda tangan atau di halaman berikutnya */}
+          {images && images.length > 0 && (
+            <div
+              className="lampiran-section"
+              style={{
+                marginTop: 24,
+                width: "100%",
+                pageBreakInside: "auto",
+                ...(lampiranDiHalamanBerikutnya ? { pageBreakBefore: "always" } : {}),
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#1f2937",
+                  marginBottom: 12,
+                  borderBottom: "1px solid #d1d5db",
+                  paddingBottom: 4,
+                }}
+              >
+                Lampiran
+                <span className="th-blue" style={{ fontWeight: 400, color: "#6b7280", marginLeft: 4 }}>
+                  (Attachment)
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: lampiranDiHalamanBerikutnya ? "1fr" : "repeat(2, 1fr)",
+                  gap: 12,
+                  width: "100%",
+                }}
+              >
+                {images.map((url, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 4,
+                      overflow: "hidden",
+                      pageBreakInside: "avoid",
+                    }}
+                  >
+                    <img
+                      src={url}
+                      alt={`Lampiran ${idx + 1}`}
+                      style={{
+                        width: "100%",
+                        height: lampiranDiHalamanBerikutnya ? 250 : 140,
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

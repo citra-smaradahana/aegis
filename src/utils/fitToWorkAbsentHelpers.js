@@ -227,7 +227,7 @@ export async function fetchUsersAttendanceForValidator(
   const today = getTodayWITA();
   const { data: ftwToday } = await supabase
     .from("fit_to_work")
-    .select("nrp, total_jam_tidur, tidak_mengkonsumsi_obat, tidak_ada_masalah_pribadi, siap_bekerja")
+    .select("nrp, total_jam_tidur, tidak_mengkonsumsi_obat, tidak_ada_masalah_pribadi, siap_bekerja, created_at")
     .eq("site", userSite)
     .eq("tanggal", today);
 
@@ -239,6 +239,7 @@ export async function fetchUsersAttendanceForValidator(
         tidak_mengkonsumsi_obat: r.tidak_mengkonsumsi_obat,
         tidak_ada_masalah_pribadi: r.tidak_ada_masalah_pribadi,
         siap_bekerja: r.siap_bekerja,
+        created_at: r.created_at,
       },
     ]),
   );
@@ -288,12 +289,14 @@ export async function fetchUsersAttendanceForValidator(
         tidak_mengkonsumsi_obat: ftwRow?.tidak_mengkonsumsi_obat ?? true,
         tidak_ada_masalah_pribadi: ftwRow?.tidak_ada_masalah_pribadi ?? true,
         siap_bekerja: ftwRow?.siap_bekerja ?? true,
+        ftw_created_at: ftwRow?.created_at || null,
       };
     })
     .sort((a, b) => {
-      if ((b.hari_masuk || 0) !== (a.hari_masuk || 0)) {
-        return (b.hari_masuk || 0) - (a.hari_masuk || 0);
-      }
+      // Urutan berdasarkan jam pengisian FTW: yang pertama mengisi di atas
+      const timeA = a.ftw_created_at ? new Date(a.ftw_created_at).getTime() : Infinity;
+      const timeB = b.ftw_created_at ? new Date(b.ftw_created_at).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
       return (a.nama || "").localeCompare(b.nama || "", "id");
     });
 }

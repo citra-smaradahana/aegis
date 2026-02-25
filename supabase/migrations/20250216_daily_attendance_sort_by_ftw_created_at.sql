@@ -1,6 +1,8 @@
--- View + Fungsi Daftar Hadir dari Fit To Work (ringkas)
--- Jalankan di Supabase SQL Editor
+-- Migration: Urutan daftar hadir berdasarkan jam pengisian Fit To Work
+-- Yang pertama mengisi FTW tampil di atas
+-- Jalankan di Supabase SQL Editor jika belum pakai migrations
 
+-- 1. Update view v_daily_attendance_ftw - tambah ftw_created_at
 CREATE OR REPLACE VIEW v_daily_attendance_ftw AS
 WITH ftw_today AS (
   SELECT f.nrp, f.site, f.tanggal, f.total_jam_tidur AS sleep_today,
@@ -31,6 +33,7 @@ SELECT user_id, nama, jabatan, nrp, site, tanggal, hari_masuk, sleep_today, slee
   tidak_mengkonsumsi_obat, tidak_ada_masalah_pribadi, siap_bekerja, ftw_created_at
 FROM combined;
 
+-- 2. Update function get_daily_attendance_ftw - return created_at, order by ftw_created_at ASC
 DROP FUNCTION IF EXISTS get_daily_attendance_ftw(DATE, TEXT);
 
 CREATE OR REPLACE FUNCTION get_daily_attendance_ftw(p_tanggal DATE, p_site TEXT)

@@ -2,6 +2,7 @@
   @page {
     size: A4 portrait;
     margin: 10mm;
+    /* Kurangi ruang header/footer browser - user bisa uncheck "Headers and footers" di dialog print */
   }
 
   body {

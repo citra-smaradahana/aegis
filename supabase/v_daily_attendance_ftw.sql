@@ -18,7 +18,8 @@ WITH ftw_today AS (
     f.total_jam_tidur AS sleep_today,
     COALESCE(f.tidak_mengkonsumsi_obat, true) AS tidak_mengkonsumsi_obat,
     COALESCE(f.tidak_ada_masalah_pribadi, true) AS tidak_ada_masalah_pribadi,
-    COALESCE(f.siap_bekerja, true) AS siap_bekerja
+    COALESCE(f.siap_bekerja, true) AS siap_bekerja,
+    f.created_at AS ftw_created_at
   FROM fit_to_work f
   WHERE f.tanggal IS NOT NULL
 ),
@@ -45,7 +46,8 @@ combined AS (
     COALESCE(t.sleep_today::numeric, 0) + COALESCE(y.sleep_yesterday::numeric, 0) AS sleep_48h,
     t.tidak_mengkonsumsi_obat,
     t.tidak_ada_masalah_pribadi,
-    t.siap_bekerja
+    t.siap_bekerja,
+    t.ftw_created_at
   FROM users u
   INNER JOIN ftw_today t ON u.nrp = t.nrp AND u.site = t.site
   LEFT JOIN fit_to_work_attendance_summary a ON u.id = a.user_id
@@ -65,7 +67,8 @@ SELECT
   sleep_48h,
   tidak_mengkonsumsi_obat,
   tidak_ada_masalah_pribadi,
-  siap_bekerja
+  siap_bekerja,
+  ftw_created_at
 FROM combined;
 
 COMMENT ON VIEW v_daily_attendance_ftw IS 'Daftar hadir: user yang sudah isi Fit To Work. Filter: tanggal, site.';
@@ -90,7 +93,8 @@ RETURNS TABLE (
   sleep_48h NUMERIC,
   tidak_mengkonsumsi_obat BOOLEAN,
   tidak_ada_masalah_pribadi BOOLEAN,
-  siap_bekerja BOOLEAN
+  siap_bekerja BOOLEAN,
+  created_at TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -104,11 +108,12 @@ BEGIN
     v.sleep_48h,
     v.tidak_mengkonsumsi_obat,
     v.tidak_ada_masalah_pribadi,
-    v.siap_bekerja
+    v.siap_bekerja,
+    v.ftw_created_at
   FROM v_daily_attendance_ftw v
   WHERE v.tanggal = p_tanggal
     AND v.site = p_site
-  ORDER BY v.hari_masuk DESC, v.nama;
+  ORDER BY v.ftw_created_at ASC NULLS LAST, v.nama;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
