@@ -228,6 +228,8 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
     topics: meeting.agenda_items || [],
     issues: meeting.issues || [],
     actions: meeting.actions || [],
+    images: Array.isArray(meeting.images) ? meeting.images : (meeting.images ? [meeting.images] : []),
+    lampiranDiHalamanBerikutnya: meeting.lampiran_di_halaman_berikutnya === true || meeting.lampiran_di_halaman_berikutnya === "true",
     creatorName: meeting.creator_name || "",
     creatorJabatan: meeting.creator_jabatan || "",
     approverName: approverDisplay,

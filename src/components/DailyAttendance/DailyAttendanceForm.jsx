@@ -491,6 +491,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
         actions: actions,
         attendance_list: attendanceList,
         images: imageUrls,
+        lampiran_di_halaman_berikutnya: lampiranDiHalamanBerikutnya,
         creator_id: user.id,
         approver_id: formData.approver_id || null,
         approver_name: formData.approver_name || null,
