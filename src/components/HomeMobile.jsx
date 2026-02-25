@@ -200,6 +200,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
     { key: "fit-to-work", label: "FTW", fullLabel: "Fit To Work", icon: "👷", color: "#3b82f6", placeholder: false },
     { key: "fit-to-work-validation", label: "Validasi", fullLabel: "Validasi Fit To Work", icon: "✅", color: "#10b981", placeholder: false },
     { key: "daily-attendance", label: "Laporan", fullLabel: "Laporan Kehadiran", icon: "📄", color: "#0ea5e9", placeholder: false },
+    { key: "fatigue-check", label: "Fatigue", fullLabel: "Fatigue Check Report", icon: "😴", color: "#8b5cf6", placeholder: false },
     { key: "take-5", label: "Take 5", fullLabel: "Take 5", icon: "⏰", color: "#f59e0b", placeholder: false },
     { key: "hazard", label: "Hazard", fullLabel: "Hazard", icon: "⚠️", color: "#ef4444", placeholder: false },
     { key: "pto", label: "PTO", fullLabel: "Laporan PTO", icon: "📋", color: "#8b5cf6", placeholder: false },
@@ -209,6 +210,9 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
 
   const hasReportAccess = allowedMenus
     ? allowedMenus.includes("daily-attendance")
+    : canAccessReportFallback(user);
+  const hasFatigueCheckAccess = allowedMenus
+    ? allowedMenus.includes("fatigue-check")
     : canAccessReportFallback(user);
   const hasPTOAccess = allowedMenus ? allowedMenus.includes("pto") : canAccessPTOFallback(user);
   const hasValidasiAccess = allowedMenus
@@ -221,6 +225,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
     : allMenuItems.filter((item) => {
         if (isRegularUser) return ["fit-to-work", "take-5", "hazard"].includes(item.key);
         if (item.key === "daily-attendance" && !hasReportAccess) return false;
+        if (item.key === "fatigue-check" && !hasFatigueCheckAccess) return false;
         if (item.key === "pto" && !hasPTOAccess) return false;
         return true;
       })

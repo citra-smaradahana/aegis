@@ -1,0 +1,575 @@
+/* Fatigue Check Report - Form & Print */
+
+/* Container for screen view & print - padding ringkas agar 5 user + tanda tangan muat 1 halaman */
+.fatigue-check-print-container {
+  min-width: 297mm;
+  width: 297mm;
+  margin: 0 auto;
+  background: #fff;
+  padding: 12px 20px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Satu halaman = satu form lengkap. Max 5 user per halaman. */
+.fc-print-page {
+  font-family: Arial, Helvetica, sans-serif;
+  width: 100%;
+  color: #000;
+  box-sizing: border-box;
+  background: #fff;
+  page-break-inside: avoid;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Blue Italic Text for English Translations */
+.fc-italic-blue {
+  color: #0066cc;
+  font-style: italic;
+  font-weight: normal;
+}
+
+.fc-title-sub-blue {
+  color: #0066cc;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 14px;
+}
+
+.fc-th-sub {
+  color: #0066cc;
+  font-style: italic;
+  font-weight: normal;
+  font-size: 9px;
+  display: block;
+  margin-top: 1px;
+}
+
+.fc-footer-sub {
+  color: #0066cc;
+  font-style: italic;
+  font-weight: normal;
+}
+
+.fc-footer-sub-blue {
+  color: #0066cc;
+  font-style: italic;
+  font-weight: bold;
+}
+
+/* Header Table */
+.fc-header-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #000;
+  margin-bottom: 0; /* Attached to info section if needed, or small gap */
+}
+
+.fc-header-table td {
+  border: 1px solid #000;
+  padding: 2px 10px 4px 10px;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+.fc-header-logo-cell {
+  width: 150px;
+  text-align: center;
+  padding: 6px 12px 8px 12px !important;
+}
+
+.fc-logo {
+  max-width: 120px;
+  height: auto;
+}
+
+.fc-header-title-cell {
+  text-align: center;
+}
+
+.fc-title-main {
+  font-weight: bold;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.fc-header-info-cell {
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* Info Section */
+.fc-info-section {
+  border-left: 1px solid #000;
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
+  padding: 2px 10px 4px 10px;
+  font-size: 11px;
+}
+
+.fc-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1px;
+}
+
+.fc-info-item {
+  font-weight: bold;
+  width: 48%;
+}
+
+/* Main Table - padding cukup agar teks tidak tertimpa garis saat PDF */
+.fc-main-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #000;
+  font-size: 9px;
+  border-spacing: 0;
+}
+
+.fc-th {
+  border: 1px solid #000;
+  padding: 2px 8px 4px 8px;
+  text-align: center;
+  font-weight: bold;
+  vertical-align: middle;
+  background-color: transparent;
+  box-sizing: border-box;
+}
+
+.fc-th-small {
+  font-size: 9px;
+  font-weight: normal;
+}
+
+.fc-th-num {
+  border: 1px solid #000;
+  text-align: center;
+  font-weight: bold;
+  padding: 2px 6px 3px 6px;
+}
+
+.fc-th-sub-col {
+  border: 1px solid #000;
+  text-align: center;
+  font-weight: bold;
+  padding: 2px 6px 4px 6px;
+  vertical-align: top;
+}
+
+.fc-td {
+  border: 1px solid #000;
+  padding: 2px 10px 4px 10px;
+  vertical-align: top;
+  min-height: 16px;
+  font-size: 9px;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  box-sizing: border-box;
+}
+
+/* Kolom Nama Pekerja & Jabatan - pastikan teks panjang tidak terpotong, wrap ke baris baru */
+.fc-td-nama {
+  min-width: 70px;
+}
+
+.fc-td-center {
+  border: 1px solid #000;
+  padding: 2px 10px 4px 10px;
+  text-align: center;
+  vertical-align: top;
+  font-size: 9px;
+  line-height: 1.3;
+  box-sizing: border-box;
+}
+
+/* Footer - jangan terpotong saat print */
+.fc-footer {
+  display: flex;
+  border-left: 1px solid #000;
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
+  background: #fff;
+  page-break-inside: avoid;
+}
+
+.fc-footer-left {
+  flex: 1;
+  border-right: 1px solid #000;
+  padding: 4px 10px 6px 10px;
+  background: #fff;
+}
+
+.fc-footer-right {
+  flex: 1.5;
+  padding: 4px 10px 6px 10px;
+  background: #fff;
+}
+
+.fc-footer-title {
+  font-weight: bold;
+  font-size: 10px;
+  margin-bottom: 1px;
+}
+
+.fc-footer-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 9px;
+}
+
+.fc-footer-list li {
+  margin-bottom: 0;
+  line-height: 1.25;
+}
+
+.fc-footer-cols {
+  display: flex;
+  gap: 8px;
+}
+
+/* Signatures - jangan terpotong saat print */
+.fc-signature-table {
+  display: flex;
+  margin-top: 6px;
+  border: 1px solid #000;
+  background: #fff;
+  page-break-inside: avoid;
+}
+
+.fc-sig-col {
+  flex: 1;
+  border-right: 1px solid #000;
+  background: #fff;
+}
+
+.fc-sig-col:last-child {
+  border-right: none;
+}
+
+.fc-sig-header {
+  border-bottom: 1px solid #000;
+  padding: 2px 8px 4px 8px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: bold;
+  background: #fff;
+}
+
+.fc-sig-value {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  background: #fff;
+  padding: 2px 8px 4px 8px;
+}
+
+.fc-sig-value-esign {
+  padding: 2px 8px 4px 8px;
+}
+
+.fc-esign-img {
+  max-height: 28px;
+  max-width: 120px;
+  object-fit: contain;
+}
+
+/* Print Media Query */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
+
+  .fc-print-page {
+    page-break-after: always;
+  }
+
+  .fc-print-page:last-child {
+    page-break-after: auto;
+  }
+
+  /* Pastikan footer & tanda tangan tidak terpotong - pindah ke halaman berikut jika perlu */
+  .fc-footer,
+  .fc-signature-table {
+    page-break-inside: avoid !important;
+  }
+
+  body {
+    background: none;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .fatigue-check-print-container {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+    background: #fff !important;
+  }
+
+  /* Force white background on print - area hitam jadi putih saat cetak */
+  .fatigue-check-print-container,
+  .fc-print-page,
+  .fc-info-section,
+  .fc-footer,
+  .fc-footer-left,
+  .fc-footer-right,
+  .fc-signature-table,
+  .fc-sig-col,
+  .fc-sig-header,
+  .fc-sig-value,
+  .fc-header-table,
+  .fc-header-table td,
+  .fc-main-table,
+  .fc-main-table th,
+  .fc-main-table td {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Keep existing styles for Form View (non-print) to prevent breaking the UI */
+.fatigue-check-section {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.fatigue-check-section-header {
+  background: #f3f4f6;
+  padding: 16px 24px;
+  border-bottom: 1px solid #d1d5db;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.fatigue-check-card {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.fatigue-check-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.fatigue-check-card-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.fatigue-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.fatigue-check-field {
+  margin-bottom: 0;
+}
+
+.fatigue-check-field-label {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.fatigue-check-field-value {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #9ca3af;
+  font-size: 14px;
+  background: #fff;
+  color: #0f172a;
+}
+
+.fatigue-check-field-value::placeholder,
+.fatigue-check-field input::placeholder {
+  color: #475569;
+}
+
+.fatigue-check-field-value.readonly {
+  background: #f3f4f6;
+  color: #1f2937;
+  cursor: not-allowed;
+}
+
+.fatigue-check-sobriety-list {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.fatigue-check-sobriety-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.fatigue-check-sobriety-hint {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.fatigue-check-sobriety-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 16px;
+}
+
+.fatigue-check-sobriety-row:last-child {
+  border-bottom: none;
+}
+
+.fatigue-check-sobriety-label {
+  font-weight: 500;
+  color: #0f172a;
+  font-size: 13px;
+  flex: 1;
+}
+
+.fatigue-check-sobriety-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.fatigue-check-sobriety-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.fatigue-check-checkbox-label {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.fatigue-check-dropdown-trigger {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 2px solid #374151;
+  background: #fff;
+  cursor: pointer;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.fatigue-check-add-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Compact view - riwayat laporan & print: sesuaikan jumlah user saja */
+.fatigue-check-view-card {
+  padding: 16px 20px 20px !important;
+  margin-bottom: 16px;
+  min-height: 0;
+  overflow: visible;
+}
+
+.fatigue-check-view-card:last-child {
+  margin-bottom: 0;
+}
+
+.fatigue-check-view-card .fatigue-check-card-header {
+  margin-bottom: 12px !important;
+  padding-bottom: 10px !important;
+}
+
+/* View card - grid layout rapi label | value */
+.fc-view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px 24px;
+  margin-bottom: 12px;
+}
+
+.fc-view-grid-compact {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.fc-view-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fc-view-row-nama {
+  grid-column: 1 / -1;
+}
+
+.fc-view-row-kriteria {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fc-view-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.fc-view-value {
+  font-size: 14px;
+  color: #0f172a;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.fc-view-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 12px 0;
+}
+
+.fatigue-check-view-grid {
+  gap: 8px !important;
+}
+
+.fatigue-check-view-grid div {
+  color: #0f172a;
+  font-size: 13px;
+}

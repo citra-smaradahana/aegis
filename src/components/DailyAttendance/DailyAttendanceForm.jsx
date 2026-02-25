@@ -484,6 +484,7 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
         duration: parseInt(formData.duration || "0"),
         location: formData.place,
         topic: formData.topic,
+        agenda: formData.agenda,
         department: formData.department,
         area: formData.area || formData.site || "",
         agenda_items: topics,
@@ -810,6 +811,19 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     value={formData.place}
                     onChange={handleHeaderChange}
                     placeholder="Contoh: BSIB, Ruang Rapat"
+                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Agenda / Tema
+                  </label>
+                  <input
+                    type="text"
+                    name="agenda"
+                    value={formData.agenda}
+                    onChange={handleHeaderChange}
+                    placeholder="Contoh: Safety Briefing Shift Pagi, Pembahasan K3"
                     className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
                   />
                 </div>

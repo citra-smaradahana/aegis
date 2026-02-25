@@ -34,6 +34,7 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
     return [
       "Mekanik",
       "Operator Plant",
+      "Operator WOPP",
       "Field Leading Hand",
       "Plant Leading Hand",
     ];
@@ -51,12 +52,12 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
       "Field Leading Hand",
       "Plant Leading Hand",
     ];
-    // Mandat PLH->FLH: tambah Mekanik/Operator Plant
+    // Mandat PLH->FLH: tambah bawahan PLH (Mekanik, Operator Plant, Operator WOPP)
     const plhMandate = (mandates || []).find(
       (m) => m.mandate_type === "PLH_TO_FLH",
     );
     if (plhMandate) {
-      return [...base, "Mekanik", "Operator Plant"];
+      return [...base, "Mekanik", "Operator Plant", "Operator WOPP"];
     }
     return base;
   }

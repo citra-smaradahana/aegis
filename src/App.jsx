@@ -28,6 +28,8 @@ import FitToWorkValidationNew from "./components/FitToWorkValidationNew";
 import DailyAttendanceList from "./components/DailyAttendance";
 import DailyAttendanceForm from "./components/DailyAttendance/DailyAttendanceForm";
 import DailyAttendanceView from "./components/DailyAttendance/DailyAttendanceView";
+import FatigueCheckList from "./components/FatigueCheck";
+import FatigueCheckForm from "./components/FatigueCheck/FatigueCheckForm";
 import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
 import PTOForm from "./components/PTOForm";
 import aegisLogo from "./assets/aegis.png";
@@ -204,6 +206,12 @@ function App() {
       if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
       return reportPtoJabatan.includes((user?.jabatan || "").trim());
     };
+    const canAccessFatigueCheck = () => {
+      if (!user) return false;
+      if (allowedMenus) return allowedMenus.includes("fatigue-check");
+      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+      return reportPtoJabatan.includes((user?.jabatan || "").trim());
+    };
 
     useEffect(() => {
       let cancelled = false;
@@ -284,6 +292,8 @@ function App() {
           handleMenuChange("daily-attendance");
         } else if (activeMenu === "daily-attendance-new") {
           handleMenuChange("daily-attendance");
+        } else if (activeMenu === "fatigue-check-new") {
+          handleMenuChange("fatigue-check");
         } else if (activeMenu === "dashboard") {
           CapacitorApp.exitApp();
         } else {
@@ -401,6 +411,45 @@ function App() {
             <DailyAttendanceForm
               user={user}
               onBack={() => handleMenuChange("daily-attendance")}
+              onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
+            />
+          );
+        case "fatigue-check":
+          if (!canAccessFatigueCheck()) {
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
+          }
+          return (
+            <FatigueCheckList
+              user={user}
+              onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
+            />
+          );
+        case "fatigue-check-new":
+          if (!canAccessFatigueCheck()) {
+            return (
+              <Home
+                user={user}
+                onNavigate={handleMenuChange}
+                validationCount={validationCount}
+                ftwNeedsFill={ftwNeedsFill}
+                tasklistTodoCount={tasklistTodoCount}
+              />
+            );
+          }
+          return (
+            <FatigueCheckForm
+              user={user}
+              onBack={() => handleMenuChange("fatigue-check")}
               onNavigate={handleMenuChange}
               tasklistTodoCount={tasklistTodoCount}
             />
@@ -909,6 +958,14 @@ function App() {
                         {
                           key: "daily-attendance",
                           label: "Daily Attendance Record",
+                        },
+                      ]
+                    : []),
+                  ...(canAccessFatigueCheck()
+                    ? [
+                        {
+                          key: "fatigue-check",
+                          label: "Fatigue Check Report",
                         },
                       ]
                     : []),

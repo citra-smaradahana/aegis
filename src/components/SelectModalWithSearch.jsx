@@ -1,106 +1,96 @@
 import React from "react";
 
 /**
- * Modal bottom-sheet dengan pencarian - popup dari bawah, navbar tetap terlihat (bottom: 70)
- * Digunakan untuk Hazard Report & Take 5 mobile - Lokasi, Detail Lokasi, dll.
+ * Modal dengan search untuk memilih satu opsi dari daftar.
+ * @param {string} title - Judul modal
+ * @param {string[]} options - Daftar opsi (string)
+ * @param {string} searchQuery - Nilai search
+ * @param {Function} onSearchChange - Callback saat search berubah
+ * @param {boolean} show - Tampilkan modal
+ * @param {Function} onClose - Callback saat tutup
+ * @param {Function} onSelect - Callback saat opsi dipilih (value string)
+ * @param {string} placeholder - Placeholder input search
  */
 const SelectModalWithSearch = ({
-  title,
-  options,
-  onSelect,
-  searchQuery,
+  title = "Pilih",
+  options = [],
+  searchQuery = "",
   onSearchChange,
-  show,
+  show = false,
   onClose,
+  onSelect,
   placeholder = "Ketik untuk mencari...",
 }) => {
   if (!show) return null;
+
   const filtered = options.filter((opt) =>
-    String(opt).toLowerCase().includes((searchQuery || "").toLowerCase())
+    (opt || "").toLowerCase().includes((searchQuery || "").toLowerCase())
   );
+
   return (
     <div
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 70,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        zIndex: 1100,
+        inset: 0,
+        zIndex: 2000,
         display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-end",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.5)",
       }}
       onClick={onClose}
     >
       <div
         style={{
-          backgroundColor: "#fff",
+          width: "100%",
+          maxHeight: "70vh",
+          background: "#fff",
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
-          maxHeight: "70vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
+          padding: 16,
+          boxShadow: "0 -4px 20px rgba(0,0,0,0.2)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12, color: "#111827" }}>{title}</div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+          placeholder={placeholder}
           style={{
-            padding: "16px",
-            borderBottom: "1px solid #e5e7eb",
-            flexShrink: 0,
+            width: "100%",
+            padding: "12px 14px",
+            borderRadius: 8,
+            border: "2px solid #374151",
+            fontSize: 14,
+            marginBottom: 12,
+            color: "#111827",
+            backgroundColor: "#fff",
           }}
-        >
-          <div className="mobile-popup-title" style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
-            {title}
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={placeholder}
-            autoComplete="off"
-            className="mobile-popup-search-input"
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: "1px solid #d1d5db",
-              fontSize: 16,
-              boxSizing: "border-box",
-              color: "#111827",
-            }}
-          />
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-          {filtered.map((opt) => (
-            <div
-              key={opt}
-              onClick={() => onSelect(opt)}
-              style={{
-                padding: "14px 16px",
-                fontSize: 16,
-                color: "#1f2937",
-                cursor: "pointer",
-                borderBottom: "1px solid #f3f4f6",
-              }}
-            >
-              {opt}
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <div
-              style={{
-                padding: 24,
-                textAlign: "center",
-                color: "#6b7280",
-                fontSize: 14,
-              }}
-            >
-              Tidak ada yang sesuai
-            </div>
+        />
+        <div style={{ maxHeight: 280, overflowY: "auto" }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: 16, color: "#374151", fontSize: 14, fontWeight: 500 }}>Tidak ada hasil</div>
+          ) : (
+            filtered.map((opt) => (
+              <div
+                key={opt}
+                onClick={() => {
+                  onSelect && onSelect(opt);
+                }}
+                style={{
+                  padding: "12px 14px",
+                  borderBottom: "1px solid #e5e7eb",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  color: "#111827",
+                  fontWeight: 500,
+                }}
+              >
+                {opt}
+              </div>
+            ))
           )}
         </div>
       </div>

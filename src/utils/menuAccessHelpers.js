@@ -9,6 +9,7 @@ export const MENU_KEYS = [
   { key: "fit-to-work", label: "Fit To Work", icon: "👷" },
   { key: "fit-to-work-validation", label: "Validasi Fit To Work", icon: "✅" },
   { key: "daily-attendance", label: "Laporan (Daily Attendance)", icon: "📄" },
+  { key: "fatigue-check", label: "Fatigue Check Report", icon: "😴" },
   { key: "take-5", label: "Take 5", icon: "⏰" },
   { key: "hazard", label: "Hazard", icon: "⚠️" },
   { key: "pto", label: "PTO", icon: "📋" },
@@ -22,6 +23,7 @@ const DEFAULT_SUPERVISOR_MENUS = [
   "fit-to-work",
   "fit-to-work-validation",
   "daily-attendance",
+  "fatigue-check",
   "take-5",
   "hazard",
   "pto",
@@ -70,6 +72,13 @@ export async function fetchAllowedMenusForUser(user) {
 
   const jabatanName = (user.jabatan || "").trim();
   const siteName = (user.site || "").trim();
+
+  // Administrator & Admin Site Project selalu melihat semua menu (termasuk fatigue-check)
+  if (jabatanName === "Administrator" || jabatanName === "Admin Site Project") {
+    const allKeys = MENU_KEYS.map((m) => m.key);
+    setCached(cacheKey, allKeys);
+    return allKeys;
+  }
 
   try {
     let jabatanMenus = [];
