@@ -105,7 +105,10 @@ const FatigueCheckListDesktop = ({ user: userProp, onNavigate }) => {
     );
   };
 
-  const canCreate = ["Field Leading Hand", "Plant Leading Hand"].includes(sessionUser?.jabatan || "");
+  const canCreate =
+    ["Field Leading Hand", "Plant Leading Hand", "Penanggung Jawab Operasional", "Asst. Penanggung Jawab Operasional", "SHERQ Officer"].includes(
+      (sessionUser?.jabatan || "").trim()
+    );
 
   return (
     <div
@@ -295,7 +298,10 @@ const FatigueCheckListMobile = ({ user: userProp, onNavigate, tasklistTodoCount 
     }
   };
 
-  const canCreate = ["Field Leading Hand", "Plant Leading Hand"].includes(sessionUser?.jabatan || "");
+  const canCreate =
+    ["Field Leading Hand", "Plant Leading Hand", "Penanggung Jawab Operasional", "Asst. Penanggung Jawab Operasional", "SHERQ Officer"].includes(
+      (sessionUser?.jabatan || "").trim()
+    );
 
   const handleBack = () => {
     if (viewReportId) {
@@ -446,6 +452,7 @@ const FatigueCheckListMobile = ({ user: userProp, onNavigate, tasklistTodoCount 
         onNavigate={(tab) => {
           if (tab === "home") onNavigate("dashboard");
           else if (tab === "tasklist") onNavigate("tasklist");
+          else if (tab === "profile") onNavigate("profile");
         }}
       />
     </div>
