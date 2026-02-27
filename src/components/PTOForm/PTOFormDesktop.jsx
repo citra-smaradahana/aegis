@@ -3,7 +3,12 @@ import { supabase } from "../../supabaseClient";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import LocationDetailSelector from "../LocationDetailSelector";
 import Cropper from "react-easy-crop";
-import { fetchProsedur, fetchAlasanObservasi } from "../../utils/masterDataHelpers";
+import {
+  fetchProsedur,
+  fetchAlasanObservasi,
+  fetchSites,
+  fetchProsedurDepartemen,
+} from "../../utils/masterDataHelpers";
 
 // Inject CSS for PTO navigation buttons with higher specificity
 if (typeof document !== "undefined") {
@@ -31,14 +36,23 @@ if (typeof document !== "undefined") {
 }
 
 const alasanObservasiFallback = [
-  "Pekerja Baru", "Kinerja Pekerja Kurang Baik", "Tes Praktek", "Kinerja Pekerja Baik",
-  "Observasi Rutin", "Baru Terjadi Insiden", "Pekerja Dengan Pengetahuan Terbatas",
+  "Pekerja Baru",
+  "Kinerja Pekerja Kurang Baik",
+  "Tes Praktek",
+  "Kinerja Pekerja Baik",
+  "Observasi Rutin",
+  "Baru Terjadi Insiden",
+  "Pekerja Dengan Pengetahuan Terbatas",
 ];
 
 const prosedurFallback = [
-  "Prosedur Kerja Aman", "Prosedur Penggunaan APD", "Prosedur Operasi Mesin",
-  "Prosedur Pekerjaan di Ketinggian", "Prosedur Pekerjaan Panas",
-  "Prosedur Pengangkatan Manual", "Prosedur Pekerjaan di Ruang Terbatas",
+  "Prosedur Kerja Aman",
+  "Prosedur Penggunaan APD",
+  "Prosedur Operasi Mesin",
+  "Prosedur Pekerjaan di Ketinggian",
+  "Prosedur Pekerjaan Panas",
+  "Prosedur Pengangkatan Manual",
+  "Prosedur Pekerjaan di Ruang Terbatas",
 ];
 
 function PTOFormDesktop({ user, onBack }) {
@@ -74,8 +88,12 @@ function PTOFormDesktop({ user, onBack }) {
   const [observers, setObservers] = useState([]);
   const [observees, setObservees] = useState([]);
   const [pics, setPICs] = useState([]);
-  const [alasanObservasiOptions, setAlasanObservasiOptions] = useState(alasanObservasiFallback);
+  const [alasanObservasiOptions, setAlasanObservasiOptions] = useState(
+    alasanObservasiFallback,
+  );
   const [prosedurOptions, setProsedurOptions] = useState(prosedurFallback);
+  const [prosedurDepartemens, setProsedurDepartemens] = useState([]);
+  const [prosedurDepartemenId, setProsedurDepartemenId] = useState(null);
 
   // Photo crop states
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -87,7 +105,15 @@ function PTOFormDesktop({ user, onBack }) {
   const fotoGalleryRef = useRef();
 
   useEffect(() => {
-    fetchSites();
+    const initSites = async () => {
+      try {
+        const arr = await fetchSites();
+        setSites(Array.isArray(arr) ? arr : []);
+      } catch (e) {
+        setSites([]);
+      }
+    };
+    initSites();
     if (formData.site) {
       fetchObservers();
       fetchObservees();
@@ -97,29 +123,31 @@ function PTOFormDesktop({ user, onBack }) {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchAlasanObservasi(), fetchProsedur()]).then(([alasan, prosedur]) => {
+    const run = async () => {
+      const [alasan, deptList] = await Promise.all([
+        fetchAlasanObservasi(),
+        fetchProsedurDepartemen(),
+      ]);
       if (cancelled) return;
       if (alasan?.length > 0) setAlasanObservasiOptions(alasan);
-      if (prosedur?.length > 0) setProsedurOptions(prosedur);
-    });
-    return () => { cancelled = true; };
-  }, []);
+      setProsedurDepartemens(deptList || []);
+      // Jika sudah ada departemen terpilih, muat prosedurnya, jika belum kosongkan
+      if (prosedurDepartemenId) {
+        const prosedur = await fetchProsedur(prosedurDepartemenId);
+        setProsedurOptions(prosedur || []);
+      } else {
+        // fallback: muat semua prosedur lama
+        const prosedur = await fetchProsedur();
+        setProsedurOptions(prosedur || []);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [prosedurDepartemenId]);
 
-  const fetchSites = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("site")
-        .not("site", "is", null);
-
-      if (error) throw error;
-
-      const uniqueSites = [...new Set(data.map((user) => user.site))];
-      setSites(uniqueSites);
-    } catch (error) {
-      console.error("Error fetching sites:", error);
-    }
-  };
+  // Removed legacy fetchSites() using users table. Sites now loaded from master data.
 
   const fetchObservers = async () => {
     try {
@@ -128,16 +156,19 @@ function PTOFormDesktop({ user, onBack }) {
         .select("id, nama, jabatan")
         .eq("site", formData.site)
         .in("jabatan", [
-          "Pengawas",
-          "Technical Service",
-          "SHERQ Officer",
-          "Assisten Penanggung Jawab Operasional",
           "Penanggung Jawab Operasional",
+          "Asst. Penanggung Jawab Operasional",
+          "SHERQ Officer",
+          "Technical Service",
+          "Field Leading Hand",
+          "Plant Leading Hand",
         ])
         .neq("id", user.id);
 
       if (error) throw error;
-      const sorted = (data || []).sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"));
+      const sorted = (data || []).sort((a, b) =>
+        (a.nama || "").localeCompare(b.nama || "", "id"),
+      );
       setObservers(sorted);
     } catch (error) {
       console.error("Error fetching observers:", error);
@@ -160,7 +191,9 @@ function PTOFormDesktop({ user, onBack }) {
       const { data, error } = await query;
 
       if (error) throw error;
-      const sorted = (data || []).sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"));
+      const sorted = (data || []).sort((a, b) =>
+        (a.nama || "").localeCompare(b.nama || "", "id"),
+      );
       setObservees(sorted);
     } catch (error) {
       console.error("Error fetching observees:", error);
@@ -183,7 +216,9 @@ function PTOFormDesktop({ user, onBack }) {
       const { data, error } = await query;
 
       if (error) throw error;
-      const sorted = (data || []).sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"));
+      const sorted = (data || []).sort((a, b) =>
+        (a.nama || "").localeCompare(b.nama || "", "id"),
+      );
       setPICs(sorted);
     } catch (error) {
       console.error("Error fetching PICs:", error);
@@ -240,7 +275,7 @@ function PTOFormDesktop({ user, onBack }) {
     ctx.drawImage(
       image,
       safeArea / 2 - image.width * 0.5,
-      safeArea / 2 - image.height * 0.5
+      safeArea / 2 - image.height * 0.5,
     );
 
     const data = ctx.getImageData(0, 0, safeArea, safeArea);
@@ -251,7 +286,7 @@ function PTOFormDesktop({ user, onBack }) {
     ctx.putImageData(
       data,
       0 - safeArea / 2 + image.width * 0.5 - pixelCrop.x,
-      0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y
+      0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y,
     );
 
     return new Promise((resolve) => {
@@ -481,7 +516,7 @@ function PTOFormDesktop({ user, onBack }) {
         console.error("Supabase insert error:", error);
         if (error.message.includes("row-level security")) {
           throw new Error(
-            "Akses ditolak oleh kebijakan keamanan. Silakan hubungi administrator."
+            "Akses ditolak oleh kebijakan keamanan. Silakan hubungi administrator.",
           );
         }
         throw error;
@@ -499,7 +534,7 @@ function PTOFormDesktop({ user, onBack }) {
             "create_hazard_report_from_pto",
             {
               pto_id: data[0].id,
-            }
+            },
           );
 
           if (hazardError) {
@@ -532,6 +567,7 @@ function PTOFormDesktop({ user, onBack }) {
         maxWidth: "800px",
         margin: "0 auto",
         width: "100%",
+        paddingBottom: "40px",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -656,6 +692,52 @@ function PTOFormDesktop({ user, onBack }) {
           </select>
         </div>
 
+        {/* Pilih Prosedur Departemen */}
+        <div>
+          <label
+            style={{
+              display: "block",
+              marginBottom: 8,
+              color: "#e5e7eb",
+              fontSize: "14px",
+            }}
+          >
+            Pilih Prosedur Departemen
+          </label>
+          <select
+            value={prosedurDepartemenId || ""}
+            onChange={async (e) => {
+              const val = e.target.value || null;
+              setProsedurDepartemenId(val);
+              // reset pilihan prosedur saat departemen berubah
+              setFormData((prev) => ({ ...prev, prosedur: "" }));
+              if (val) {
+                const list = await fetchProsedur(val);
+                setProsedurOptions(list || []);
+              } else {
+                const list = await fetchProsedur();
+                setProsedurOptions(list || []);
+              }
+            }}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              border: "1px solid #334155",
+              backgroundColor: "#0b1220",
+              color: "#e5e7eb",
+              fontSize: "14px",
+            }}
+          >
+            <option value="">Pilih Prosedur Departemen</option>
+            {(prosedurDepartemens || []).map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Pilih Prosedur */}
         <div>
           <label
@@ -684,13 +766,13 @@ function PTOFormDesktop({ user, onBack }) {
           >
             <option value="">Pilih Prosedur</option>
             {prosedurOptions.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p} value={p}>
+                {p}
+              </option>
             ))}
           </select>
         </div>
       </div>
-    </div>
-  );
 
   const renderPage2 = () => (
     <div
@@ -1507,7 +1589,7 @@ function PTOFormDesktop({ user, onBack }) {
           <div
             style={{
               flex: 1,
-              overflowY: "hidden",
+              overflowY: "visible",
               paddingRight: 8,
               marginBottom: 20,
             }}

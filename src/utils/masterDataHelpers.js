@@ -81,7 +81,10 @@ export async function insertSite(name) {
 }
 
 export async function updateSite(id, name) {
-  await supabase.from("master_sites").update({ name: name.trim() }).eq("id", id);
+  await supabase
+    .from("master_sites")
+    .update({ name: name.trim() })
+    .eq("id", id);
   invalidateMasterDataCache();
 }
 
@@ -193,19 +196,19 @@ export async function deleteSubKetidaksesuaian(id) {
   invalidateMasterDataCache();
 }
 
-/** Prosedur */
-export async function fetchProsedurForAdmin() {
+/** Prosedur Departemen */
+export async function fetchProsedurDepartemenForAdmin() {
   const { data } = await supabase
-    .from("master_prosedur")
+    .from("master_prosedur_departemen")
     .select("id, name, sort_order")
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
   return data || [];
 }
 
-export async function insertProsedur(name) {
+export async function insertProsedurDepartemen(name) {
   const { data } = await supabase
-    .from("master_prosedur")
+    .from("master_prosedur_departemen")
     .insert({ name: name.trim() })
     .select("id")
     .single();
@@ -213,10 +216,43 @@ export async function insertProsedur(name) {
   return data;
 }
 
-export async function updateProsedur(id, name) {
+export async function updateProsedurDepartemen(id, name) {
+  await supabase
+    .from("master_prosedur_departemen")
+    .update({ name: name.trim() })
+    .eq("id", id);
+  invalidateMasterDataCache();
+}
+
+export async function deleteProsedurDepartemen(id) {
+  await supabase.from("master_prosedur_departemen").delete().eq("id", id);
+  invalidateMasterDataCache();
+}
+
+/** Prosedur */
+export async function fetchProsedurForAdmin() {
+  const { data } = await supabase
+    .from("master_prosedur")
+    .select("id, name, sort_order, departemen_id")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  return data || [];
+}
+
+export async function insertProsedur(name, departemenId = null) {
+  const { data } = await supabase
+    .from("master_prosedur")
+    .insert({ name: name.trim(), departemen_id: departemenId })
+    .select("id")
+    .single();
+  invalidateMasterDataCache();
+  return data;
+}
+
+export async function updateProsedur(id, name, departemenId = null) {
   await supabase
     .from("master_prosedur")
-    .update({ name: name.trim() })
+    .update({ name: name.trim(), departemen_id: departemenId })
     .eq("id", id);
   invalidateMasterDataCache();
 }
@@ -294,24 +330,60 @@ export async function deleteAlasanObservasi(id) {
 
 /** Import data awal dari config (untuk tabel kosong) */
 const SITES_DEFAULT = [
-  "Head Office", "Balikpapan", "ADRO", "AMMP", "BSIB", "GAMR", "HRSB", "HRSE",
-  "PABB", "PBRB", "PKJA", "PPAB", "PSMM", "REBH", "RMTU", "PMTU",
+  "Head Office",
+  "Balikpapan",
+  "ADRO",
+  "AMMP",
+  "BSIB",
+  "GAMR",
+  "HRSB",
+  "HRSE",
+  "PABB",
+  "PBRB",
+  "PKJA",
+  "PPAB",
+  "PSMM",
+  "REBH",
+  "RMTU",
+  "PMTU",
 ];
 const PROSEDUR_DEFAULT = [
-  "Prosedur Kerja Aman", "Prosedur Penggunaan APD", "Prosedur Operasi Mesin",
-  "Prosedur Pekerjaan di Ketinggian", "Prosedur Pekerjaan Panas",
-  "Prosedur Pengangkatan Manual", "Prosedur Pekerjaan di Ruang Terbatas",
+  "Prosedur Kerja Aman",
+  "Prosedur Penggunaan APD",
+  "Prosedur Operasi Mesin",
+  "Prosedur Pekerjaan di Ketinggian",
+  "Prosedur Pekerjaan Panas",
+  "Prosedur Pengangkatan Manual",
+  "Prosedur Pekerjaan di Ruang Terbatas",
 ];
 const JABATAN_DEFAULT = [
-  "Penanggung Jawab Operasional", "Asst. Penanggung Jawab Operasional", "SHERQ Officer",
-  "SHERQ Supervisor", "SHERQ System & Compliance Officer", "Technical Service",
-  "Field Leading Hand", "Plant Leading Hand", "Operator MMU", "Operator Plant",
-  "Operator WOPP", "Mekanik", "Crew", "Administrator", "Admin Site Project",
-  "Blaster", "Quality Controller", "Training & Development Specialist",
+  "Penanggung Jawab Operasional",
+  "Asst. Penanggung Jawab Operasional",
+  "SHERQ Officer",
+  "SHERQ Supervisor",
+  "SHERQ System & Compliance Officer",
+  "Technical Service",
+  "Field Leading Hand",
+  "Plant Leading Hand",
+  "Operator MMU",
+  "Operator Plant",
+  "Operator WOPP",
+  "Mekanik",
+  "Crew",
+  "Administrator",
+  "Admin Site Project",
+  "Blaster",
+  "Quality Controller",
+  "Training & Development Specialist",
 ];
 const ALASAN_OBSERVASI_DEFAULT = [
-  "Pekerja Baru", "Kinerja Pekerja Kurang Baik", "Tes Praktek", "Kinerja Pekerja Baik",
-  "Observasi Rutin", "Baru Terjadi Insiden", "Pekerja Dengan Pengetahuan Terbatas",
+  "Pekerja Baru",
+  "Kinerja Pekerja Kurang Baik",
+  "Tes Praktek",
+  "Kinerja Pekerja Baik",
+  "Observasi Rutin",
+  "Baru Terjadi Insiden",
+  "Pekerja Dengan Pengetahuan Terbatas",
 ];
 
 async function upsertIgnore(table, row, conflictCols) {
@@ -327,45 +399,92 @@ export async function importSeedData() {
 
   // Sites
   for (let i = 0; i < SITES_DEFAULT.length; i++) {
-    await upsertIgnore("master_sites", { name: SITES_DEFAULT[i], sort_order: i + 1 }, "name");
+    await upsertIgnore(
+      "master_sites",
+      { name: SITES_DEFAULT[i], sort_order: i + 1 },
+      "name",
+    );
   }
 
   // Site locations untuk BSIB
-  const { data: bsibSite } = await supabase.from("master_sites").select("id").eq("name", "BSIB").single();
+  const { data: bsibSite } = await supabase
+    .from("master_sites")
+    .select("id")
+    .eq("name", "BSIB")
+    .single();
   if (bsibSite) {
-    const bsibLocs = ["Office", "Workshop", "OSP", "PIT A", "PIT C", "PIT E", "Candrian", "HLO"];
+    const bsibLocs = [
+      "Office",
+      "Workshop",
+      "OSP",
+      "PIT A",
+      "PIT C",
+      "PIT E",
+      "Candrian",
+      "HLO",
+    ];
     for (let i = 0; i < bsibLocs.length; i++) {
-      await upsertIgnore("master_site_locations", { site_id: bsibSite.id, name: bsibLocs[i], sort_order: i + 1 }, "site_id,name");
+      await upsertIgnore(
+        "master_site_locations",
+        { site_id: bsibSite.id, name: bsibLocs[i], sort_order: i + 1 },
+        "site_id,name",
+      );
     }
   }
 
   // Ketidaksesuaian + Sub
-  const { SUB_OPTIONS } = await import("../config/hazardKetidaksesuaianOptions");
+  const { SUB_OPTIONS } = await import(
+    "../config/hazardKetidaksesuaianOptions"
+  );
   const ketKeys = Object.keys(SUB_OPTIONS || {});
   for (let i = 0; i < ketKeys.length; i++) {
-    await upsertIgnore("master_ketidaksesuaian", { name: ketKeys[i], sort_order: i + 1 }, "name");
-    const { data: kRow } = await supabase.from("master_ketidaksesuaian").select("id").eq("name", ketKeys[i]).single();
+    await upsertIgnore(
+      "master_ketidaksesuaian",
+      { name: ketKeys[i], sort_order: i + 1 },
+      "name",
+    );
+    const { data: kRow } = await supabase
+      .from("master_ketidaksesuaian")
+      .select("id")
+      .eq("name", ketKeys[i])
+      .single();
     if (kRow?.id) {
       const subs = SUB_OPTIONS[ketKeys[i]] || [];
       for (let j = 0; j < subs.length; j++) {
-        await upsertIgnore("master_sub_ketidaksesuaian", { ketidaksesuaian_id: kRow.id, name: subs[j], sort_order: j + 1 }, "ketidaksesuaian_id,name");
+        await upsertIgnore(
+          "master_sub_ketidaksesuaian",
+          { ketidaksesuaian_id: kRow.id, name: subs[j], sort_order: j + 1 },
+          "ketidaksesuaian_id,name",
+        );
       }
     }
   }
 
   // Prosedur
   for (let i = 0; i < PROSEDUR_DEFAULT.length; i++) {
-    await upsertIgnore("master_prosedur", { name: PROSEDUR_DEFAULT[i], sort_order: i + 1 }, "name");
+    await upsertIgnore(
+      "master_prosedur",
+      { name: PROSEDUR_DEFAULT[i], sort_order: i + 1 },
+      "name",
+    );
   }
 
   // Jabatan
   for (let i = 0; i < JABATAN_DEFAULT.length; i++) {
-    await upsertIgnore("master_jabatan", { name: JABATAN_DEFAULT[i], sort_order: i + 1 }, "name");
+    await upsertIgnore(
+      "master_jabatan",
+      { name: JABATAN_DEFAULT[i], sort_order: i + 1 },
+      "name",
+    );
   }
 
   // Alasan Observasi
   for (let i = 0; i < ALASAN_OBSERVASI_DEFAULT.length; i++) {
-    await upsertIgnore("master_alasan_observasi", { name: ALASAN_OBSERVASI_DEFAULT[i], sort_order: i + 1 }, "name");
+    await upsertIgnore(
+      "master_alasan_observasi",
+      { name: ALASAN_OBSERVASI_DEFAULT[i], sort_order: i + 1 },
+      "name",
+    );
   }
 }
 
@@ -441,18 +560,46 @@ export async function fetchSubKetidaksesuaian(ketidaksesuaianId) {
   return result;
 }
 
-/** Fetch prosedur */
-export async function fetchProsedur() {
-  const c = getCached("prosedur");
+/** Fetch prosedur departemen */
+export async function fetchProsedurDepartemen() {
+  const c = getCached("prosedur_departemen");
   if (c) return c;
   const { data, error } = await supabase
-    .from("master_prosedur")
+    .from("master_prosedur_departemen")
     .select("id, name, sort_order")
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
   if (error) return [];
+  const result = (data || []).map((r) => ({ id: r.id, name: r.name }));
+  setCached("prosedur_departemen", result);
+  return result;
+}
+
+/** Fetch prosedur (optionally by departemenId) */
+export async function fetchProsedur(departemenId = null) {
+  const cacheKey = departemenId ? `prosedur_${departemenId}` : "prosedur";
+  const c = getCached(cacheKey);
+  if (c) return c;
+
+  let query = supabase
+    .from("master_prosedur")
+    .select("id, name, sort_order, departemen_id")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (departemenId) {
+    query = query.eq("departemen_id", departemenId);
+  }
+
+  const { data, error } = await query;
+  if (error) return [];
+
+  // Return array of strings for backward compatibility if no dept selected,
+  // or logic needs to handle objects.
+  // Existing code expects array of strings.
+  // But if we filter by department, we likely want just names.
   const result = (data || []).map((r) => r.name);
-  setCached("prosedur", result);
+  setCached(cacheKey, result);
   return result;
 }
 

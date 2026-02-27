@@ -20,9 +20,15 @@ import {
   updateSubKetidaksesuaian,
   deleteSubKetidaksesuaian,
   fetchProsedurForAdmin,
+  fetchProsedurDepartemenForAdmin,
+  fetchProsedurForAdminByDepartemenId,
   insertProsedur,
+  insertProsedurWithDepartemen,
   updateProsedur,
   deleteProsedur,
+  insertProsedurDepartemen,
+  updateProsedurDepartemen,
+  deleteProsedurDepartemen,
   fetchJabatanForAdmin,
   insertJabatan,
   updateJabatan,
@@ -49,6 +55,7 @@ const TYPES = [
   { key: "ftw_settings", label: "Pengaturan Fit To Work" },
   { key: "ketidaksesuaian", label: "Ketidaksesuaian" },
   { key: "sub_ketidaksesuaian", label: "Sub Ketidaksesuaian" },
+  { key: "prosedur_departemen", label: "Prosedur Departemen" },
   { key: "prosedur", label: "Prosedur" },
   { key: "jabatan", label: "Jabatan" },
   { key: "alasan_observasi", label: "Alasan Observasi" },
@@ -71,7 +78,9 @@ function AdminSettings({ user, onBack }) {
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
 
   const needsParent =
-    activeType === "site_location" || activeType === "sub_ketidaksesuaian";
+    activeType === "site_location" ||
+    activeType === "sub_ketidaksesuaian" ||
+    activeType === "prosedur";
   const isFTWSettings = activeType === "ftw_settings";
   const isMenuAccess = activeType === "menu_access";
 
@@ -95,6 +104,10 @@ function AdminSettings({ user, onBack }) {
       setSelectedParentId((prev) => (data.length ? data[0]?.id || prev : null));
     } else if (activeType === "sub_ketidaksesuaian") {
       const data = await fetchKetidaksesuaianForAdmin();
+      setParentItems(data);
+      setSelectedParentId((prev) => (data.length ? data[0]?.id || prev : null));
+    } else if (activeType === "prosedur") {
+      const data = await fetchProsedurDepartemenForAdmin();
       setParentItems(data);
       setSelectedParentId((prev) => (data.length ? data[0]?.id || prev : null));
     } else if (activeType === "menu_access") {
@@ -135,9 +148,16 @@ function AdminSettings({ user, onBack }) {
           const data = await fetchSubKetidaksesuaianForAdmin(selectedParentId);
           setItems(data);
         } else setItems([]);
-      } else if (activeType === "prosedur") {
-        const data = await fetchProsedurForAdmin();
+      } else if (activeType === "prosedur_departemen") {
+        const data = await fetchProsedurDepartemenForAdmin();
         setItems(data);
+      } else if (activeType === "prosedur") {
+        if (selectedParentId) {
+          const data = await fetchProsedurForAdminByDepartemenId(selectedParentId);
+          setItems(data);
+        } else {
+          setItems([]);
+        }
       } else if (activeType === "jabatan") {
         const data = await fetchJabatanForAdmin();
         setItems(data);
@@ -266,9 +286,20 @@ function AdminSettings({ user, onBack }) {
         if (editingItem)
           await updateSubKetidaksesuaian(editingItem.id, formName);
         else await insertSubKetidaksesuaian(selectedParentId, formName);
+      } else if (activeType === "prosedur_departemen") {
+        if (editingItem) await updateProsedurDepartemen(editingItem.id, formName);
+        else await insertProsedurDepartemen(formName);
       } else if (activeType === "prosedur") {
-        if (editingItem) await updateProsedur(editingItem.id, formName);
-        else await insertProsedur(formName);
+        if (!selectedParentId) {
+          setError("Pilih Prosedur Departemen terlebih dahulu");
+          setSaving(false);
+          return;
+        }
+        if (editingItem) {
+          await updateProsedur(editingItem.id, formName);
+        } else {
+          await insertProsedurWithDepartemen(selectedParentId, formName);
+        }
       } else if (activeType === "jabatan") {
         if (editingItem) await updateJabatan(editingItem.id, formName);
         else await insertJabatan(formName);
@@ -302,6 +333,8 @@ function AdminSettings({ user, onBack }) {
         await deleteKetidaksesuaian(item.id);
       else if (activeType === "sub_ketidaksesuaian")
         await deleteSubKetidaksesuaian(item.id);
+      else if (activeType === "prosedur_departemen")
+        await deleteProsedurDepartemen(item.id);
       else if (activeType === "prosedur") await deleteProsedur(item.id);
       else if (activeType === "jabatan") await deleteJabatan(item.id);
       else if (activeType === "alasan_observasi")
@@ -314,7 +347,13 @@ function AdminSettings({ user, onBack }) {
   };
 
   const parentLabel =
-    activeType === "site_location" ? "Site" : "Ketidaksesuaian";
+    activeType === "site_location"
+      ? "Site"
+      : activeType === "sub_ketidaksesuaian"
+      ? "Ketidaksesuaian"
+      : activeType === "prosedur"
+      ? "Prosedur Departemen"
+      : "";
 
   const canImport =
     ["site", "ketidaksesuaian", "prosedur", "jabatan", "alasan_observasi"].includes(activeType) &&
@@ -383,7 +422,7 @@ function AdminSettings({ user, onBack }) {
     >
       <div
         style={{
-          maxWidth: 1000,
+          maxWidth: 1200,
           margin: "0 auto",
           width: "100%",
           padding: isMobile ? "40px 20px" : "24px 20px",
