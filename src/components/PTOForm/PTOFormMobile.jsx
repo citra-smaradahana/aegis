@@ -13,7 +13,7 @@ import {
   CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
-import { fetchProsedur, fetchAlasanObservasi } from "../../utils/masterDataHelpers";
+import { fetchProsedur, fetchAlasanObservasi, fetchProsedurDepartemen } from "../../utils/masterDataHelpers";
 
 const alasanObservasiFallback = [
   "Pekerja Baru", "Kinerja Pekerja Kurang Baik", "Tes Praktek", "Kinerja Pekerja Baik",
@@ -162,11 +162,19 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [alasanObservasiOptions, setAlasanObservasiOptions] = useState(alasanObservasiFallback);
   const [prosedurOptions, setProsedurOptions] = useState(prosedurFallback);
   const [detailLokasiOptions, setDetailLokasiOptions] = useState([]);
+  const [prosedurDepartemenList, setProsedurDepartemenList] = useState([]);
+  const [prosedurDepartemenOptions, setProsedurDepartemenOptions] = useState([]);
+  const [selectedProsedurDepartemenName, setSelectedProsedurDepartemenName] = useState("");
+  const [selectedProsedurDepartemenId, setSelectedProsedurDepartemenId] = useState(null);
 
   const [showObserverModal, setShowObserverModal] = useState(false);
   const [showObserveeModal, setShowObserveeModal] = useState(false);
   const [showPICModal, setShowPICModal] = useState(false);
+  const [showProsedurDepartemenModal, setShowProsedurDepartemenModal] = useState(false);
   const [personSearch, setPersonSearch] = useState("");
+  const [prosedurDepartemenSearchQuery, setProsedurDepartemenSearchQuery] = useState("");
+  const [toastMsg, setToastMsg] = useState("");
+  const [showToast, setShowToast] = useState(false);
 
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
@@ -205,13 +213,23 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchAlasanObservasi(), fetchProsedur()]).then(([alasan, prosedur]) => {
+    const run = async () => {
+      const [alasan, dept] = await Promise.all([fetchAlasanObservasi(), fetchProsedurDepartemen()]);
       if (cancelled) return;
       if (alasan?.length > 0) setAlasanObservasiOptions(alasan);
-      if (prosedur?.length > 0) setProsedurOptions(prosedur);
-    });
+      setProsedurDepartemenList(dept || []);
+      setProsedurDepartemenOptions((dept || []).map((d) => d.name));
+      if (selectedProsedurDepartemenId) {
+        const prosedur = await fetchProsedur(selectedProsedurDepartemenId);
+        setProsedurOptions(prosedur || []);
+      } else {
+        const prosedur = await fetchProsedur();
+        setProsedurOptions(prosedur || []);
+      }
+    };
+    run();
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedProsedurDepartemenId]);
 
   useEffect(() => {
     const f = async () => {
@@ -282,7 +300,14 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
 
   const validatePage = () => {
     if (page === 1)
-      return formData.tanggal && formData.site && formData.detailLokasi && formData.alasanObservasi;
+      return (
+        formData.tanggal &&
+        formData.site &&
+        formData.detailLokasi &&
+        formData.alasanObservasi &&
+        selectedProsedurDepartemenId &&
+        formData.prosedur
+      );
     if (page === 2) return formData.observee && formData.pekerjaanYangDilakukan;
     if (page === 3)
       return [
@@ -676,8 +701,37 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
               </div>
             </div>
             <div style={fieldMargin}>
+              <label style={labelStyle}>Prosedur Departemen</label>
+              <div
+                onClick={() => { setProsedurDepartemenSearchQuery(""); setShowProsedurDepartemenModal(true); }}
+                style={tapFieldStyle}
+              >
+                <span style={{ color: selectedProsedurDepartemenName ? "#222" : "#6b7280" }}>
+                  {selectedProsedurDepartemenName || "Pilih Prosedur Departemen"}
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
+              </div>
+            </div>
+            <div style={fieldMargin}>
               <label style={labelStyle}>Prosedur (Opsional)</label>
-              <div onClick={() => { setProsedurSearchQuery(""); setShowProsedurModal(true); }} style={tapFieldStyle}>
+              <div
+                onClick={() => {
+                  if (!selectedProsedurDepartemenId) {
+                    setToastMsg("Pilih Prosedur Departemen terlebih dahulu");
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 500);
+                    return;
+                  }
+                  setProsedurSearchQuery("");
+                  setShowProsedurModal(true);
+                }}
+                style={{
+                  ...tapFieldStyle,
+                  background: !selectedProsedurDepartemenId ? "#f3f4f6" : undefined,
+                  color: !selectedProsedurDepartemenId ? "#9ca3af" : undefined,
+                  cursor: !selectedProsedurDepartemenId ? "not-allowed" : "pointer",
+                }}
+              >
                 <span style={{ color: formData.prosedur ? "#222" : "#6b7280" }}>
                   {formData.prosedur || "Pilih Prosedur"}
                 </span>
@@ -945,6 +999,44 @@ function PTOFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
       </div>
 
       {/* Popup dari bawah (sama Hazard Report) - navbar tetap terlihat */}
+      <SelectModalWithSearch
+        title="Pilih Prosedur Departemen"
+        options={prosedurDepartemenOptions}
+        onSelect={async (val) => {
+          setSelectedProsedurDepartemenName(val || "");
+          const found = (prosedurDepartemenList || []).find((d) => d.name === val);
+          const id = found?.id || null;
+          setSelectedProsedurDepartemenId(id);
+          setFormData((p) => ({ ...p, prosedur: "" }));
+          setShowProsedurDepartemenModal(false);
+          setProsedurDepartemenSearchQuery("");
+          const list = await fetchProsedur(id);
+          setProsedurOptions(list || []);
+        }}
+        searchQuery={prosedurDepartemenSearchQuery}
+        onSearchChange={setProsedurDepartemenSearchQuery}
+        show={showProsedurDepartemenModal}
+        onClose={() => setShowProsedurDepartemenModal(false)}
+      />
+      {showToast && (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: "80px",
+            transform: "translateX(-50%)",
+            background: "rgba(17,24,39,0.95)",
+            color: "#fff",
+            padding: "10px 14px",
+            borderRadius: 8,
+            fontSize: 12,
+            zIndex: 3000,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          }}
+        >
+          {toastMsg}
+        </div>
+      )}
       <SelectModalWithSearch
         title="Pilih Lokasi"
         options={CUSTOM_INPUT_SITES}

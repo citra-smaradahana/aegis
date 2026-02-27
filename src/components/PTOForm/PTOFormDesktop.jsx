@@ -357,7 +357,9 @@ function PTOFormDesktop({ user, onBack }) {
         formData.tanggal &&
         formData.site &&
         formData.detailLokasi &&
-        formData.alasanObservasi
+        formData.alasanObservasi &&
+        prosedurDepartemenId &&
+        formData.prosedur
       );
     }
     if (page === 2) {
@@ -567,8 +569,7 @@ function PTOFormDesktop({ user, onBack }) {
         maxWidth: "800px",
         margin: "0 auto",
         width: "100%",
-        paddingBottom: "40px",
-        minHeight: "calc(100vh - 240px)",
+        paddingBottom: "24px",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -755,13 +756,14 @@ function PTOFormDesktop({ user, onBack }) {
             name="prosedur"
             value={formData.prosedur}
             onChange={handleInputChange}
+            disabled={!prosedurDepartemenId}
             style={{
               width: "100%",
               padding: "12px 16px",
               borderRadius: "8px",
               border: "1px solid #334155",
-              backgroundColor: "#0b1220",
-              color: "#e5e7eb",
+              backgroundColor: !prosedurDepartemenId ? "#1f2937" : "#0b1220",
+              color: !prosedurDepartemenId ? "#6b7280" : "#e5e7eb",
               fontSize: "14px",
             }}
           >
@@ -774,6 +776,8 @@ function PTOFormDesktop({ user, onBack }) {
           </select>
         </div>
       </div>
+    </div>
+  );
 
   const renderPage2 = () => (
     <div
@@ -784,7 +788,7 @@ function PTOFormDesktop({ user, onBack }) {
         maxWidth: "800px",
         margin: "0 auto",
         width: "100%",
-        minHeight: "calc(100vh - 240px)",
+        paddingBottom: "24px",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1609,26 +1613,29 @@ function PTOFormDesktop({ user, onBack }) {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              marginTop: "auto",
               gap: 16,
-              padding: "12px 0",
+              padding: 0,
               maxWidth: "800px",
               margin: "0 auto",
               width: "100%",
+              position: "static",
+              background: "transparent",
             }}
           >
             <button
               type="button"
               onClick={prevPage}
               disabled={page === 1}
-              className="pto-nav-button"
               style={{
-                background: page === 1 ? "#374151" : "#6b7280",
-                color: "#ffffff",
+                background: page === 1 ? "#f3f4f6" : "#6b7280",
+                color: page === 1 ? "#9ca3af" : "#fff",
                 border: "none",
-                borderRadius: 6,
-                padding: "8px 16px",
-                fontSize: 14,
-                fontWeight: 500,
+                borderRadius: 8,
+                padding: "12px 24px",
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: page === 1 ? "not-allowed" : "pointer",
                 opacity: page === 1 ? 0.5 : 1,
               }}
             >
@@ -1652,15 +1659,15 @@ function PTOFormDesktop({ user, onBack }) {
                 type="button"
                 onClick={nextPage}
                 disabled={!validatePage()}
-                className="pto-nav-button"
                 style={{
-                  background: validatePage() ? "#3b82f6" : "#374151",
-                  color: "#ffffff",
+                  background: "#2563eb",
+                  color: "#fff",
                   border: "none",
-                  borderRadius: 6,
-                  padding: "8px 16px",
-                  fontSize: 14,
-                  fontWeight: 500,
+                  borderRadius: 8,
+                  padding: "12px 24px",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: validatePage() ? "pointer" : "not-allowed",
                 }}
               >
                 {page === 3 && !hasNegativeAnswers()
@@ -1672,16 +1679,17 @@ function PTOFormDesktop({ user, onBack }) {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting || !validatePage()}
-                className="pto-nav-button"
                 style={{
                   background:
-                    submitting || !validatePage() ? "#374151" : "#3b82f6",
-                  color: "#ffffff",
+                    submitting || !validatePage() ? "#6b7280" : "#2563eb",
+                  color: "#fff",
                   border: "none",
-                  borderRadius: 6,
-                  padding: "8px 16px",
-                  fontSize: 14,
-                  fontWeight: 500,
+                  borderRadius: 8,
+                  padding: "12px 24px",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor:
+                    submitting || !validatePage() ? "not-allowed" : "pointer",
                 }}
               >
                 {submitting ? "Menyimpan..." : "Simpan PTO"}

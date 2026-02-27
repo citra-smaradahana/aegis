@@ -101,15 +101,24 @@ function AdminSettings({ user, onBack }) {
     if (activeType === "site_location") {
       const data = await fetchSitesForAdmin();
       setParentItems(data);
-      setSelectedParentId((prev) => (data.length ? data[0]?.id || prev : null));
+      setSelectedParentId((prev) => {
+        if (!data.length) return null;
+        return (prev && data.some((d) => d.id === prev)) ? prev : (data[0]?.id || null);
+      });
     } else if (activeType === "sub_ketidaksesuaian") {
       const data = await fetchKetidaksesuaianForAdmin();
       setParentItems(data);
-      setSelectedParentId((prev) => (data.length ? data[0]?.id || prev : null));
+      setSelectedParentId((prev) => {
+        if (!data.length) return null;
+        return (prev && data.some((d) => d.id === prev)) ? prev : (data[0]?.id || null);
+      });
     } else if (activeType === "prosedur") {
       const data = await fetchProsedurDepartemenForAdmin();
       setParentItems(data);
-      setSelectedParentId((prev) => (data.length ? data[0]?.id || prev : null));
+      setSelectedParentId((prev) => {
+        if (!data.length) return null;
+        return (prev && data.some((d) => d.id === prev)) ? prev : (data[0]?.id || null);
+      });
     } else if (activeType === "menu_access") {
       const [jabatanData, siteData] = await Promise.all([
         fetchJabatanForAdmin(),

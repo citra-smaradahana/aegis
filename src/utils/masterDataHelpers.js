@@ -262,6 +262,22 @@ export async function deleteProsedur(id) {
   invalidateMasterDataCache();
 }
 
+// Compat helpers for AdminSettings
+export async function fetchProsedurForAdminByDepartemenId(departemenId) {
+  if (!departemenId) return [];
+  const { data } = await supabase
+    .from("master_prosedur")
+    .select("id, name, sort_order, departemen_id")
+    .eq("departemen_id", departemenId)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  return data || [];
+}
+
+export async function insertProsedurWithDepartemen(departemenId, name) {
+  return insertProsedur(name, departemenId);
+}
+
 /** Jabatan */
 export async function fetchJabatanForAdmin() {
   const { data } = await supabase
@@ -594,11 +610,21 @@ export async function fetchProsedur(departemenId = null) {
   const { data, error } = await query;
   if (error) return [];
 
-  // Return array of strings for backward compatibility if no dept selected,
-  // or logic needs to handle objects.
-  // Existing code expects array of strings.
-  // But if we filter by department, we likely want just names.
-  const result = (data || []).map((r) => r.name);
+  // Custom sort: SSP comes first, then IK, then others (A-Z)
+  const rank = (name) => {
+    const up = (name || "").toUpperCase();
+    if (up.startsWith("SSP")) return 0;
+    if (up.startsWith("IK")) return 1;
+    return 2;
+  };
+  const sorted = (data || []).sort((a, b) => {
+    const ra = rank(a.name);
+    const rb = rank(b.name);
+    if (ra !== rb) return ra - rb;
+    return String(a.name || "").localeCompare(String(b.name || ""), "id");
+  });
+
+  const result = sorted.map((r) => r.name);
   setCached(cacheKey, result);
   return result;
 }

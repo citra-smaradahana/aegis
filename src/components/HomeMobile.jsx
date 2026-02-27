@@ -196,7 +196,7 @@ function HomeMobile({ user, onNavigate, validationCount = 0, ftwNeedsFill = fals
     };
   }, []);
 
-  const canAccessMonitoring = user?.role === "evaluator" || user?.role === "admin";
+  const canAccessMonitoring = (viewportWidth > 768) && (user?.role === "evaluator" || user?.role === "admin");
 
   const allMenuItems = [
     { key: "fit-to-work", label: "FTW", fullLabel: "Fit To Work", icon: "👷", color: "#3b82f6", placeholder: false },
