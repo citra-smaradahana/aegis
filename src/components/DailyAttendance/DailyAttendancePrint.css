@@ -104,13 +104,13 @@
 /* === HEADER UMUM (Logo & Dokumen Info) === */
 .iso-header {
   display: flex;
-  border: 1px solid #000;
+  border: 0.5px solid #000;
   margin-bottom: 5px;
 }
 
 .iso-logo {
   width: 25%;
-  border-right: 1px solid #000;
+  border-right: 0.5px solid #000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,7 +127,7 @@
 }
 
 .iso-title {
-  border-bottom: 1px solid #000;
+  border-bottom: 0.5px solid #000;
   text-align: center;
   padding: 5px;
 }
@@ -159,7 +159,7 @@
 
 .iso-meta-col {
   flex: 1;
-  border-right: 1px solid #000;
+  border-right: 0.5px solid #000;
   padding: 2px 5px;
 }
 
@@ -238,35 +238,36 @@
 .checkbox-box {
   width: 12px;
   height: 12px;
-  border: 1px solid #000;
+  border: 0.5px solid #000;
   display: inline-block;
   position: relative;
 }
 
+.checkbox-box.checked {
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+}
+
 .checkbox-box.checked::after {
-  content: "✓";
-  font-size: 10px;
-  font-weight: bold;
-  position: absolute;
-  top: -2px;
-  left: 1px;
-  color: #000;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
+  content: none !important;
 }
 
 /* TABEL DAFTAR HADIR - tidak overflow, tepi rapi */
 .attendance-table {
   width: 100%;
   max-width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-top: 0.5px solid #000;
+  border-left: 0.5px solid #000;
   font-size: 9px;
 }
 
 .attendance-table th,
 .attendance-table td {
-  border: 1px solid #000;
-  padding: 3px;
+  border-right: 0.5px solid #000;
+  border-bottom: 0.5px solid #000;
+  padding: 5px;
   text-align: center;
   vertical-align: middle;
   overflow: hidden;
@@ -359,7 +360,7 @@
   background-color: #e0e0e0;
   font-weight: bold;
   text-align: center;
-  border: 1px solid #000;
+  border: 0.5px solid #000;
   border-top: none; /* Gabung dengan atas */
   padding: 4px;
   font-size: 10px;
@@ -368,15 +369,19 @@
 .p5m-table {
   width: 100%;
   max-width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-top: 0.5px solid #000;
+  border-left: 0.5px solid #000;
   font-size: 10px;
   margin-bottom: 0;
 }
 
 .p5m-table th,
 .p5m-table td {
-  border: 1px solid #000;
-  padding: 4px;
+  border-right: 0.5px solid #000;
+  border-bottom: 0.5px solid #000;
+  padding: 5px;
   vertical-align: top;
   overflow: hidden;
   word-wrap: break-word;
