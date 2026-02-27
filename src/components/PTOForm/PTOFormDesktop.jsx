@@ -568,6 +568,7 @@ function PTOFormDesktop({ user, onBack }) {
         margin: "0 auto",
         width: "100%",
         paddingBottom: "40px",
+        minHeight: "calc(100vh - 240px)",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -783,6 +784,7 @@ function PTOFormDesktop({ user, onBack }) {
         maxWidth: "800px",
         margin: "0 auto",
         width: "100%",
+        minHeight: "calc(100vh - 240px)",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1112,6 +1114,7 @@ function PTOFormDesktop({ user, onBack }) {
         maxWidth: "800px",
         margin: "0 auto",
         width: "100%",
+        minHeight: "calc(100vh - 240px)",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
