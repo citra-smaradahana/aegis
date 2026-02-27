@@ -624,7 +624,7 @@ export async function fetchProsedur(departemenId = null) {
     return String(a.name || "").localeCompare(String(b.name || ""), "id");
   });
 
-  const result = sorted.map((r) => r.name);
+  const result = sorted.map((r) => ({ id: r.id, name: r.name }));
   setCached(cacheKey, result);
   return result;
 }

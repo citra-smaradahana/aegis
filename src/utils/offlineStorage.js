@@ -2,7 +2,7 @@
 class OfflineStorage {
   constructor() {
     this.dbName = 'AegisKMBDB';
-    this.dbVersion = 1;
+    this.dbVersion = 2;
     this.db = null;
     this.init();
   }
@@ -45,6 +45,15 @@ class OfflineStorage {
             autoIncrement: true,
           });
           hazardStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // PTO offline queue
+        if (!db.objectStoreNames.contains('pto')) {
+          const ptoStore = db.createObjectStore('pto', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+          ptoStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
       };
     });
@@ -119,17 +128,19 @@ class OfflineStorage {
     await this.init();
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(
-        ['fitToWork', 'take5', 'hazard'],
+        ['fitToWork', 'take5', 'hazard', 'pto'],
         'readwrite'
       );
 
       const fitToWorkStore = transaction.objectStore('fitToWork');
       const take5Store = transaction.objectStore('take5');
       const hazardStore = transaction.objectStore('hazard');
+      const ptoStore = transaction.objectStore('pto');
 
       fitToWorkStore.clear();
       take5Store.clear();
       hazardStore.clear();
+      ptoStore.clear();
 
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);

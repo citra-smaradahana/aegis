@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
-const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = "mobile" }) => {
+const PendingReportsList = ({
+  user,
+  onSelectReport,
+  selectedReportId,
+  variant = "mobile",
+}) => {
   const useDropdown = variant === "desktop";
   const [pendingReports, setPendingReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,48 +45,15 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
     try {
       console.log("Trying manual query as fallback...");
 
-      // Query PTO pending - filter oleh pelapor (nama_observer) via client
+      // Query PTO pending - select all to avoid column errors
       const { data: ptoData, error: ptoError } = await supabase
         .from("planned_task_observation")
-        .select(
-          `
-          id, 
-          nama_observer, 
-          nrp_pelapor,
-          tanggal, 
-          detail_lokasi, 
-          tindakan_perbaikan, 
-          site, 
-          pic_tindak_lanjut_id, 
-          pic,
-          nrp_pic,
-          foto_temuan
-        `
-        )
+        .select("*")
         .eq("status", "pending");
 
-      console.log("PTO Data with PIC:", ptoData);
-      console.log(
-        "PTO PIC Values:",
-        ptoData?.map((item) => ({
-          id: item.id,
-          pic: item.pic,
-          nrp_pic: item.nrp_pic,
-          foto_temuan: item.foto_temuan,
-        }))
-      );
+      if (ptoError) console.error("PTO Query Error:", ptoError);
 
-      // Debug: Check PIC field values
-      console.log("=== PTO PIC DEBUG ===");
-      ptoData?.forEach((item) => {
-        console.log(`PTO ID ${item.id}:`, {
-          pic: item.pic,
-          nrp_pic: item.nrp_pic,
-          pic_tindak_lanjut_id: item.pic_tindak_lanjut_id,
-          nama_observer: item.nama_observer,
-        });
-      });
-      console.log("=== END PTO PIC DEBUG ===");
+      console.log("PTO Data:", ptoData);
 
       // Get PIC names from users table for PTOs that have pic_tindak_lanjut_id
       const ptoWithPicIds =
@@ -101,33 +73,37 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
             return acc;
           }, {});
         }
-
-        console.log("PIC Names Map:", picNamesMap);
       }
 
-      // Query Take 5 pending (potensi_bahaya, deskripsi_kondisi untuk autofill hazard form)
+      // Query Take 5 pending - select all to avoid column errors
       const { data: take5Data, error: take5Error } = await supabase
         .from("take_5")
-        .select(
-          "id, nama, pelapor_nama, nrp, tanggal, detail_lokasi, deskripsi_kondisi, potensi_bahaya, site, bukti_url"
-        )
+        .select("*")
         .eq("status", "pending")
         .is("hazard_id", null);
 
-      if (ptoError || take5Error) {
-        console.error("Manual query errors:", { ptoError, take5Error });
-        setError("Gagal memuat data pending reports");
+      if (take5Error) console.error("Take 5 Query Error:", take5Error);
+
+      if (ptoError && take5Error) {
+        setError("Gagal memuat data pending reports (PTO & Take 5)");
         return;
       }
 
       // Filter: hanya laporan yang dibuat oleh user login (pelapor)
-      const currentName = (user?.nama || user?.user || "").toString().trim().toLowerCase();
+      const currentName = (user?.nama || user?.user || "")
+        .toString()
+        .trim()
+        .toLowerCase();
       const isPelaporPTO = (item) => {
         const p = (item.nama_observer || "").toString().trim().toLowerCase();
         return !!p && p === currentName;
       };
       const isPelaporTake5 = (item) => {
-        const p = (item.nama || item.pelapor_nama || "").toString().trim().toLowerCase();
+        // Coba beberapa kemungkinan nama kolom
+        const p = (item.pelapor_nama || item.nama || "")
+          .toString()
+          .trim()
+          .toLowerCase();
         return !!p && p === currentName;
       };
 
@@ -143,18 +119,14 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
           deskripsi: item.tindakan_perbaikan || "Tidak ada deskripsi",
           site: item.site,
           pic_tindak_lanjut_id: item.pic_tindak_lanjut_id,
-          nrp_pic:
-            item.pic ||
-            item.nrp_pic ||
-            picNamesMap[item.pic_tindak_lanjut_id] ||
-            "",
+          nrp_pic: picNamesMap[item.pic_tindak_lanjut_id] || "",
           foto_temuan: item.foto_temuan || null,
         })),
         ...(take5Data || []).filter(isPelaporTake5).map((item) => ({
           id: item.id,
           sumber_laporan: "Take5",
-          nama_pelapor: item.nama || item.pelapor_nama || "Unknown",
-          nrp_pelapor: item.pelapor_nrp || item.nrp || "",
+          nama_pelapor: item.pelapor_nama || item.nama || "Unknown",
+          nrp_pelapor: item.nrp || item.pelapor_nrp || "",
           tanggal: item.tanggal,
           detail_lokasi: item.detail_lokasi || "Unknown",
           deskripsi: item.deskripsi_kondisi || "Tidak ada deskripsi",
@@ -165,7 +137,10 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
         })),
       ];
 
-      console.log("Manual query successful (filtered by pelapor):", combinedData);
+      console.log(
+        "Manual query successful (filtered by pelapor):",
+        combinedData,
+      );
       console.log("=== FINAL PTO DATA WITH PIC ===");
       combinedData
         ?.filter((item) => item.sumber_laporan === "PTO")
@@ -189,7 +164,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
             url_length: item.foto_temuan?.length,
             url_start: item.foto_temuan?.substring(0, 50),
             url_end: item.foto_temuan?.substring(-20),
-          }))
+          })),
       );
       setPendingReports(combinedData);
     } catch (err) {
@@ -300,8 +275,7 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
         </select>
         {selectedReportId && (
           <div style={{ marginTop: 8, fontSize: "12px", color: "#9ca3af" }}>
-            Deskripsi:{" "}
-            {selectedReport?.deskripsi || "Tidak ada deskripsi"}
+            Deskripsi: {selectedReport?.deskripsi || "Tidak ada deskripsi"}
           </div>
         )}
       </div>
@@ -347,14 +321,21 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
             ? getReportDisplayText(selectedReport)
             : "Pilih PTO atau Take 5 pending..."}
         </span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          style={{ flexShrink: 0 }}
+        >
           <path d="m6 9 6 6 6-6" />
         </svg>
       </div>
       {selectedReportId && (
         <div style={{ marginTop: 8, fontSize: "12px", color: "#6b7280" }}>
-          Deskripsi:{" "}
-          {selectedReport?.deskripsi || "Tidak ada deskripsi"}
+          Deskripsi: {selectedReport?.deskripsi || "Tidak ada deskripsi"}
         </div>
       )}
 
@@ -394,7 +375,10 @@ const PendingReportsList = ({ user, onSelectReport, selectedReportId, variant = 
                 flexShrink: 0,
               }}
             >
-              <div className="mobile-popup-title" style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+              <div
+                className="mobile-popup-title"
+                style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}
+              >
                 Pilih Sumber Laporan
               </div>
               <input

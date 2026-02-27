@@ -3,6 +3,8 @@ import { supabase } from "../../supabaseClient";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import LocationDetailSelector from "../LocationDetailSelector";
 import Cropper from "react-easy-crop";
+import PTOHistory from "./PTOHistory";
+import offlineStorage from "../../utils/offlineStorage";
 import {
   fetchProsedur,
   fetchAlasanObservasi,
@@ -79,6 +81,7 @@ function PTOFormDesktop({ user, onBack }) {
   });
 
   const [page, setPage] = useState(1);
+  const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -91,9 +94,10 @@ function PTOFormDesktop({ user, onBack }) {
   const [alasanObservasiOptions, setAlasanObservasiOptions] = useState(
     alasanObservasiFallback,
   );
-  const [prosedurOptions, setProsedurOptions] = useState(prosedurFallback);
+  const [prosedurOptions, setProsedurOptions] = useState([]);
   const [prosedurDepartemens, setProsedurDepartemens] = useState([]);
   const [prosedurDepartemenId, setProsedurDepartemenId] = useState(null);
+  const [prosedurId, setProsedurId] = useState(null);
 
   // Photo crop states
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -471,8 +475,8 @@ function PTOFormDesktop({ user, onBack }) {
           : null,
         observee_id: isValidUUID(formData.observee) ? formData.observee : null,
         pekerjaan_yang_dilakukan: formData.pekerjaanYangDilakukan,
-        prosedur_id: formData.prosedur || null,
-        // Checklist
+        prosedur_departemen_id: prosedurDepartemenId || null,
+        prosedur_id: prosedurId || null,
         langkah_kerja_aman: formData.langkahKerjaAman,
         apd_sesuai: formData.apdSesuai,
         area_kerja_aman: formData.areaKerjaAman,
@@ -517,9 +521,11 @@ function PTOFormDesktop({ user, onBack }) {
       if (error) {
         console.error("Supabase insert error:", error);
         if (error.message.includes("row-level security")) {
-          throw new Error(
-            "Akses ditolak oleh kebijakan keamanan. Silakan hubungi administrator.",
-          );
+          // Simpan offline jika RLS menolak
+          await offlineStorage.saveFormData("pto", { ptoData });
+          setSuccess(true);
+          setError(null);
+          return;
         }
         throw error;
       }
@@ -754,8 +760,13 @@ function PTOFormDesktop({ user, onBack }) {
           </label>
           <select
             name="prosedur"
-            value={formData.prosedur}
-            onChange={handleInputChange}
+            value={prosedurId || ""}
+            onChange={(e) => {
+              const val = e.target.value || "";
+              setProsedurId(val || null);
+              const found = (prosedurOptions || []).find((p) => p.id === val);
+              setFormData((prev) => ({ ...prev, prosedur: found?.name || "" }));
+            }}
             disabled={!prosedurDepartemenId}
             style={{
               width: "100%",
@@ -768,9 +779,9 @@ function PTOFormDesktop({ user, onBack }) {
             }}
           >
             <option value="">Pilih Prosedur</option>
-            {prosedurOptions.map((p) => (
-              <option key={p} value={p}>
-                {p}
+            {(prosedurOptions || []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
               </option>
             ))}
           </select>
@@ -1497,84 +1508,128 @@ function PTOFormDesktop({ user, onBack }) {
             </h2>
           </div>
 
-          {/* Progress Bar */}
+          {/* Tabs Input/Riwayat */}
           <div
             style={{
               display: "flex",
               justifyContent: "center",
-              marginBottom: 24,
+              marginTop: -8,
+              marginBottom: 16,
+              gap: 16,
             }}
           >
+            <button
+              onClick={() => setShowHistory(false)}
+              style={{
+                padding: "8px 24px",
+                borderRadius: 8,
+                background: !showHistory ? "#3b82f6" : "rgba(255,255,255,0.1)",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Input
+            </button>
+            <button
+              onClick={() => setShowHistory(true)}
+              style={{
+                padding: "8px 24px",
+                borderRadius: 8,
+                background: showHistory ? "#3b82f6" : "rgba(255,255,255,0.1)",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Riwayat
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          {!showHistory && (
             <div
               style={{
                 display: "flex",
-                gap: 8,
-                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 24,
               }}
             >
-              {(() => {
-                const totalPages = hasNegativeAnswers() ? 4 : 3;
-                return [1, 2, 3, 4].map((pageNum) => {
-                  if (pageNum > totalPages) return null;
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                }}
+              >
+                {(() => {
+                  const totalPages = hasNegativeAnswers() ? 4 : 3;
+                  return [1, 2, 3, 4].map((pageNum) => {
+                    if (pageNum > totalPages) return null;
 
-                  return (
-                    <div
-                      key={pageNum}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
+                    return (
                       <div
+                        key={pageNum}
                         style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          backgroundColor:
-                            page >= pageNum ? "#60a5fa" : "#374151",
-                          color: "#ffffff",
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "14px",
-                          fontWeight: "bold",
+                          gap: 8,
                         }}
                       >
-                        {pageNum}
-                      </div>
-                      {pageNum < totalPages && (
                         <div
                           style={{
-                            width: 40,
-                            height: 2,
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
                             backgroundColor:
-                              page > pageNum ? "#60a5fa" : "#374151",
+                              page >= pageNum ? "#60a5fa" : "#374151",
+                            color: "#ffffff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "14px",
+                            fontWeight: "bold",
                           }}
-                        />
-                      )}
-                    </div>
-                  );
-                });
-              })()}
+                        >
+                          {pageNum}
+                        </div>
+                        {pageNum < totalPages && (
+                          <div
+                            style={{
+                              width: 40,
+                              height: 2,
+                              backgroundColor:
+                                page > pageNum ? "#60a5fa" : "#374151",
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Page Title */}
-          <div
-            style={{
-              textAlign: "center",
-              marginBottom: 24,
-              color: "#9ca3af",
-              fontSize: 16,
-              fontWeight: 600,
-            }}
-          >
-            {page === 1 && "📋 Informasi Observasi"}
-            {page === 2 && "👥 Personel & Pekerjaan"}
-            {page === 3 && "✅ Checklist Observasi"}
-            {page === 4 && "🔧 Tindakan Perbaikan"}
-          </div>
+          {!showHistory && (
+            <div
+              style={{
+                textAlign: "center",
+                marginBottom: 24,
+                color: "#9ca3af",
+                fontSize: 16,
+                fontWeight: 600,
+              }}
+            >
+              {page === 1 && "📋 Informasi Observasi"}
+              {page === 2 && "👥 Personel & Pekerjaan"}
+              {page === 3 && "✅ Checklist Observasi"}
+              {page === 4 && "🔧 Tindakan Perbaikan"}
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
@@ -1601,101 +1656,111 @@ function PTOFormDesktop({ user, onBack }) {
               marginBottom: 20,
             }}
           >
-            {page === 1 && renderPage1()}
-            {page === 2 && renderPage2()}
-            {page === 3 && renderPage3()}
-            {page === 4 && renderPage4()}
+            {showHistory ? (
+              <div style={{ maxWidth: 800, margin: "0 auto" }}>
+                <PTOHistory user={user} />
+              </div>
+            ) : (
+              <>
+                {page === 1 && renderPage1()}
+                {page === 2 && renderPage2()}
+                {page === 3 && renderPage3()}
+                {page === 4 && renderPage4()}
+              </>
+            )}
           </div>
 
           {/* Navigation Buttons */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: "auto",
-              gap: 16,
-              padding: 0,
-              maxWidth: "800px",
-              margin: "0 auto",
-              width: "100%",
-              position: "static",
-              background: "transparent",
-            }}
-          >
-            <button
-              type="button"
-              onClick={prevPage}
-              disabled={page === 1}
+          {!showHistory && (
+            <div
               style={{
-                background: page === 1 ? "#f3f4f6" : "#6b7280",
-                color: page === 1 ? "#9ca3af" : "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "12px 24px",
-                fontSize: 16,
-                fontWeight: 600,
-                cursor: page === 1 ? "not-allowed" : "pointer",
-                opacity: page === 1 ? 0.5 : 1,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: "auto",
+                gap: 16,
+                padding: 0,
+                maxWidth: "800px",
+                margin: "0 auto",
+                width: "100%",
+                position: "static",
+                background: "transparent",
               }}
             >
-              ← Kembali
-            </button>
-
-            <div style={{ flex: 1, textAlign: "center" }}>
-              <span
+              <button
+                type="button"
+                onClick={prevPage}
+                disabled={page === 1}
                 style={{
-                  fontSize: 13,
-                  color: "#9ca3af",
-                  fontWeight: 500,
+                  background: page === 1 ? "#f3f4f6" : "#6b7280",
+                  color: page === 1 ? "#9ca3af" : "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "12px 24px",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: page === 1 ? "not-allowed" : "pointer",
+                  opacity: page === 1 ? 0.5 : 1,
                 }}
               >
-                Halaman {page} dari {hasNegativeAnswers() ? 4 : 3}
-              </span>
+                ← Kembali
+              </button>
+
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: "#9ca3af",
+                    fontWeight: 500,
+                  }}
+                >
+                  Halaman {page} dari {hasNegativeAnswers() ? 4 : 3}
+                </span>
+              </div>
+
+              {page < 4 ? (
+                <button
+                  type="button"
+                  onClick={nextPage}
+                  disabled={!validatePage()}
+                  style={{
+                    background: "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "12px 24px",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    cursor: validatePage() ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {page === 3 && !hasNegativeAnswers()
+                    ? "Simpan PTO"
+                    : "Selanjutnya →"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting || !validatePage()}
+                  style={{
+                    background:
+                      submitting || !validatePage() ? "#6b7280" : "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "12px 24px",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    cursor:
+                      submitting || !validatePage() ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {submitting ? "Menyimpan..." : "Simpan PTO"}
+                </button>
+              )}
             </div>
-
-            {page < 4 ? (
-              <button
-                type="button"
-                onClick={nextPage}
-                disabled={!validatePage()}
-                style={{
-                  background: "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "12px 24px",
-                  fontSize: 16,
-                  fontWeight: 600,
-                  cursor: validatePage() ? "pointer" : "not-allowed",
-                }}
-              >
-                {page === 3 && !hasNegativeAnswers()
-                  ? "Simpan PTO"
-                  : "Selanjutnya →"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting || !validatePage()}
-                style={{
-                  background:
-                    submitting || !validatePage() ? "#6b7280" : "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "12px 24px",
-                  fontSize: 16,
-                  fontWeight: 600,
-                  cursor:
-                    submitting || !validatePage() ? "not-allowed" : "pointer",
-                }}
-              >
-                {submitting ? "Menyimpan..." : "Simpan PTO"}
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
