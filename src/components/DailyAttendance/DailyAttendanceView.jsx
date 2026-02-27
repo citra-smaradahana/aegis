@@ -10,7 +10,12 @@ import "./DailyAttendance.css";
  * Halaman View & Approval Laporan Harian
  * Menampilkan preview dan tombol Approve untuk PJO/Asst PJO.
  */
-const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) => {
+const DailyAttendanceView = ({
+  meetingId,
+  user: userProp,
+  onBack,
+  embedded,
+}) => {
   const sessionUser = userProp || sessionManager.getSession();
   const printRef = useRef();
   const [loading, setLoading] = useState(true);
@@ -21,7 +26,7 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
   const [approvalErrorMsg, setApprovalErrorMsg] = useState(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" && window.innerWidth <= 768
+    typeof window !== "undefined" && window.innerWidth <= 768,
   );
 
   useEffect(() => {
@@ -78,7 +83,8 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
             .select("nama, jabatan")
             .eq("id", data.approver_id)
             .maybeSingle();
-          meetingData.approver_name = approver?.nama || data.approver_name || "";
+          meetingData.approver_name =
+            approver?.nama || data.approver_name || "";
           meetingData.approver_jabatan = approver?.jabatan || "";
         } catch (_) {
           meetingData.approver_jabatan = meetingData.approver_jabatan || "";
@@ -97,7 +103,9 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
   const handleApprove = async () => {
     if (!sessionUser?.id || !meeting || meeting.status !== "Pending") return;
     if (!isPJOOrAsst) {
-      setApprovalErrorMsg("Hanya PJO atau Asst PJO yang dapat melakukan approval.");
+      setApprovalErrorMsg(
+        "Hanya PJO atau Asst PJO yang dapat melakukan approval.",
+      );
       return;
     }
     try {
@@ -123,7 +131,7 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
               approver_name: sessionUser.nama || "",
               approver_jabatan: sessionUser.jabatan || "",
             }
-          : null
+          : null,
       );
     } catch (e) {
       console.error("Gagal approve:", e);
@@ -136,6 +144,15 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Daily_Attendance_${meeting?.date}_${meeting?.site}`,
+    pageStyle: `
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    `,
   });
 
   const handleDownloadPdf = async () => {
@@ -143,7 +160,8 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
     try {
       setIsDownloadingPdf(true);
       const filename = `Daily_Attendance_${meeting?.date}_${meeting?.site || "report"}`;
-      await downloadPdfFromElement(printRef, filename);
+      // Force portrait orientation for Daily Attendance
+      await downloadPdfFromElement(printRef, filename, { orientation: "portrait" });
     } catch (err) {
       console.error("Gagal download PDF:", err);
       alert("Gagal mengunduh PDF. Silakan coba lagi.");
@@ -198,11 +216,10 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
     return (
       <div className="p-8">
         <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-6 text-center">
-          <p className="text-red-200 mb-4">{error || "Laporan tidak ditemukan."}</p>
-          <button
-            onClick={() => onBack && onBack()}
-            style={btnOutline}
-          >
+          <p className="text-red-200 mb-4">
+            {error || "Laporan tidak ditemukan."}
+          </p>
+          <button onClick={() => onBack && onBack()} style={btnOutline}>
             ← Kembali
           </button>
         </div>
@@ -228,8 +245,14 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
     topics: meeting.agenda_items || [],
     issues: meeting.issues || [],
     actions: meeting.actions || [],
-    images: Array.isArray(meeting.images) ? meeting.images : (meeting.images ? [meeting.images] : []),
-    lampiranDiHalamanBerikutnya: meeting.lampiran_di_halaman_berikutnya === true || meeting.lampiran_di_halaman_berikutnya === "true",
+    images: Array.isArray(meeting.images)
+      ? meeting.images
+      : meeting.images
+        ? [meeting.images]
+        : [],
+    lampiranDiHalamanBerikutnya:
+      meeting.lampiran_di_halaman_berikutnya === true ||
+      meeting.lampiran_di_halaman_berikutnya === "true",
     creatorName: meeting.creator_name || "",
     creatorJabatan: meeting.creator_jabatan || "",
     approverName: approverDisplay,
@@ -264,10 +287,7 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <button
-            onClick={() => onBack && onBack()}
-            style={btnOutline}
-          >
+          <button onClick={() => onBack && onBack()} style={btnOutline}>
             ← Kembali
           </button>
           <div>
@@ -287,8 +307,7 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
                     meeting.status === "Approved"
                       ? "rgba(34, 197, 94, 0.2)"
                       : "rgba(245, 158, 11, 0.2)",
-                  color:
-                    meeting.status === "Approved" ? "#22c55e" : "#f59e0b",
+                  color: meeting.status === "Approved" ? "#22c55e" : "#f59e0b",
                 }}
               >
                 {meeting.status === "Approved" ? "Disetujui" : "Pending"}
@@ -297,20 +316,42 @@ const DailyAttendanceView = ({ meetingId, user: userProp, onBack, embedded }) =>
           </div>
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <button
-            onClick={isMobile ? handleDownloadPdf : handlePrint}
-            disabled={isMobile && isDownloadingPdf}
-            style={{
-              ...btnPrimary,
-              opacity: isMobile && isDownloadingPdf ? 0.7 : 1,
-            }}
-          >
-            {isMobile
-              ? isDownloadingPdf
-                ? "⏳ Mengunduh..."
-                : "📥 Download PDF"
-              : "Cetak PDF"}
-          </button>
+          {/* Tombol Cetak & PDF hanya aktif jika status Approved */}
+          {meeting.status === "Approved" ? (
+            <>
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                style={{
+                  ...btnPrimary,
+                  opacity: isDownloadingPdf ? 0.7 : 1,
+                }}
+              >
+                {isDownloadingPdf ? "⏳ Mengunduh..." : "📥 Download PDF (A4 Portrait)"}
+              </button>
+              {!isMobile && (
+                <button onClick={handlePrint} style={btnOutline}>
+                  🖨️ Cetak (Print Dialog)
+                </button>
+              )}
+            </>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "0 12px",
+                background: "#f3f4f6",
+                borderRadius: 8,
+                fontSize: 13,
+                color: "#6b7280",
+                border: "1px solid #e5e7eb",
+              }}
+            >
+              ⚠ Menunggu Approval untuk Cetak/Download
+            </div>
+          )}
+
           {isPJOOrAsst && meeting.status === "Pending" && (
             <button
               onClick={handleApprove}

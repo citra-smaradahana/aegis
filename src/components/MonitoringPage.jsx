@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 import { fetchSitesFTWStatusMap } from "../utils/masterDataHelpers";
-import { getTodayWITA, getDateWITARelative, getMonthBoundaryWITA } from "../utils/dateTimeHelpers";
+import {
+  getTodayWITA,
+  getDateWITARelative,
+  getMonthBoundaryWITA,
+} from "../utils/dateTimeHelpers";
 import {
   BarChart,
   Bar,
@@ -19,6 +24,16 @@ import {
   Cell,
 } from "recharts";
 import { CUSTOM_INPUT_SITES } from "../config/siteLocations";
+import TargetSettings from "./TargetSettings";
+
+const MONITORING_TABS = [
+  { key: "fit_to_work_stats", label: "Fit To Work" },
+  { key: "take_5_stats", label: "Take 5" },
+  { key: "hazard_stats", label: "Hazard" },
+  { key: "pto_stats", label: "PTO" },
+  { key: "target_monthly", label: "Target Bulanan" },
+  { key: "target_settings", label: "Pengaturan Target" },
+];
 
 const TABLE_OPTIONS = [
   { value: "fit_to_work", label: "Fit To Work" },
@@ -27,8 +42,8 @@ const TABLE_OPTIONS = [
   { value: "tasklist", label: "Hazard Report" },
 ];
 
-function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
-  const [selectedTable, setSelectedTable] = useState("");
+function MonitoringPage({ user }) {
+  const [selectedTable, setSelectedTable] = useState("fit_to_work_stats");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [dateFromPreset, setDateFromPreset] = useState("");
@@ -112,12 +127,51 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     pto: [],
   });
 
+  // Target Monthly Statistics State
+  const [targetMonthlyStats, setTargetMonthlyStats] = useState([]);
+  const [targetMonthlySearch, setTargetMonthlySearch] = useState("");
+  const [targetMonthlyLoading, setTargetMonthlyLoading] = useState(false);
+  const [targetModuleFilter, setTargetModuleFilter] = useState("all");
+  const [exportSource, setExportSource] = useState("hazard");
+
+  // Target Monthly Date Filter
+  const [targetMonth, setTargetMonth] = useState(() =>
+    String(new Date().getMonth() + 1).padStart(2, "0"),
+  );
+  const [targetYear, setTargetYear] = useState(() =>
+    String(new Date().getFullYear()),
+  );
+
+  // Jabatan Hierarchy for Sorting
+  const JABATAN_RANK = [
+    "Penanggung Jawab Operasional",
+    "Asst. Penanggung Jawab Operasional",
+    "SHERQ Officer",
+    "Technical Service",
+    "Field Leading Hand",
+    "Plant Leading Hand",
+    "Admin Site Project",
+    "Operator MMU",
+    "Operator Plant",
+    "Operator WOPP",
+    "Mekanik",
+    "Quality Controller",
+    "Crew",
+  ];
+
+  const getJabatanRank = (j) => {
+    const idx = JABATAN_RANK.indexOf(j);
+    return idx === -1 ? 999 : idx;
+  };
+
   // Pagination untuk tabel Data Pengisian Fit To Work
   const [fitToWorkTablePage, setFitToWorkTablePage] = useState(0);
   const [fitToWorkTablePageSize, setFitToWorkTablePageSize] = useState(10);
 
   // Detect mobile untuk posisi filter fixed (sidebar 240px di desktop)
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 768,
+  );
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handler);
@@ -130,31 +184,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
   const [take5ChartAggregatedData, setTake5ChartAggregatedData] = useState([]);
   const [ptoChartAggregatedData, setPtoChartAggregatedData] = useState([]);
 
-  // Initialize based on subMenu
-  useEffect(() => {
-    if (subMenu === "Statistik Fit To Work") {
-      setSelectedTable("fit_to_work_stats");
-      fetchFitToWorkStats();
-    } else if (subMenu === "Take 5") {
-      setSelectedTable("take_5_stats");
-      fetchTake5Stats();
-    } else if (subMenu === "Hazard") {
-      setSelectedTable("hazard_stats");
-      fetchHazardStats();
-    } else if (subMenu === "PTO") {
-      setSelectedTable("pto_stats");
-      fetchPtoStats();
-    }
-  }, [subMenu]);
-
-  // Reset pagination saat data berubah
-  useEffect(() => {
-    if (selectedTable === "fit_to_work_stats") {
-      setFitToWorkTablePage(0);
-    }
-  }, [fitToWorkStats.listData?.length, selectedTable]);
-
-  // Fetch data when filters change
+  // Fetch data when tab changes
   useEffect(() => {
     if (selectedTable === "fit_to_work_stats") {
       fetchFitToWorkStats();
@@ -164,8 +194,33 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       fetchHazardStats();
     } else if (selectedTable === "pto_stats") {
       fetchPtoStats();
+    } else if (selectedTable === "target_monthly") {
+      fetchTargetMonthlyStats();
     }
-  }, [dateFrom, dateTo, site]);
+  }, [selectedTable]);
+
+  // Reset pagination saat data berubah
+  useEffect(() => {
+    if (selectedTable === "fit_to_work_stats") {
+      setFitToWorkTablePage(0);
+    }
+  }, [fitToWorkStats.listData?.length, selectedTable]);
+
+  // Fetch data when filters change (kecuali tab Pengaturan Target)
+  useEffect(() => {
+    if (selectedTable === "target_settings") return;
+    if (selectedTable === "fit_to_work_stats") {
+      fetchFitToWorkStats();
+    } else if (selectedTable === "take_5_stats") {
+      fetchTake5Stats();
+    } else if (selectedTable === "hazard_stats") {
+      fetchHazardStats();
+    } else if (selectedTable === "pto_stats") {
+      fetchPtoStats();
+    } else if (selectedTable === "target_monthly") {
+      fetchTargetMonthlyStats();
+    }
+  }, [dateFrom, dateTo, site, targetMonth, targetYear]);
 
   // Helper function untuk generate date dari preset (WITA)
   const getDateFromPreset = (preset) => {
@@ -269,8 +324,15 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
       const [fitRes, usersRes, absentRes, ftwStatusMap] = await Promise.all([
         query,
-        supabase.from("users").select("id, site").not("site", "is", null),
-        supabase.from("fit_to_work_absent").select("user_id, tanggal").gte("tanggal", startDt).lte("tanggal", endDt),
+        supabase
+          .from("users")
+          .select("id, site, created_at")
+          .not("site", "is", null),
+        supabase
+          .from("fit_to_work_absent")
+          .select("user_id, tanggal")
+          .gte("tanggal", startDt)
+          .lte("tanggal", endDt),
         fetchSitesFTWStatusMap(),
       ]);
 
@@ -284,34 +346,31 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       const users = (usersRes.data || []).filter((u) => u.site);
       const absentList = absentRes.data || [];
 
-      // Hanya hitung kewajiban untuk site dengan FTW enabled
-      let usersBySite = {};
-      users.forEach((u) => {
-        if (ftwStatusMap[u.site] === false) return;
-        if (site && u.site !== site) return;
-        usersBySite[u.site] = (usersBySite[u.site] || 0) + 1;
-      });
-
       const userIdToSite = {};
-      users.forEach((u) => { userIdToSite[u.id] = u.site; });
+      users.forEach((u) => {
+        userIdToSite[u.id] = u.site;
+      });
 
       let absentByDateSite = {};
       absentList.forEach((a) => {
         const s = userIdToSite[a.user_id];
         if (!s || ftwStatusMap[s] === false || (site && s !== site)) return;
         if (!absentByDateSite[a.tanggal]) absentByDateSite[a.tanggal] = {};
-        absentByDateSite[a.tanggal][s] = (absentByDateSite[a.tanggal][s] || 0) + 1;
+        absentByDateSite[a.tanggal][s] =
+          (absentByDateSite[a.tanggal][s] || 0) + 1;
       });
 
       const stats = calculateFitToWorkStats(fitToWorkData || [], {
-        usersBySite,
+        users,
         absentByDateSite,
+        ftwStatusMap,
+        siteFilter: site,
       });
       setFitToWorkStats(stats);
 
       const individualData = calculateIndividualStats(
         fitToWorkData || [],
-        "fit_to_work"
+        "fit_to_work",
       );
       setIndividualStats((prev) => ({ ...prev, fitToWork: individualData }));
     } catch (error) {
@@ -345,53 +404,82 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       }
 
       try {
-        let query = supabase.from("fit_to_work").select("*").gte("tanggal", rangeFromStr).lte("tanggal", rangeToStr);
+        let query = supabase
+          .from("fit_to_work")
+          .select("*")
+          .gte("tanggal", rangeFromStr)
+          .lte("tanggal", rangeToStr);
         if (site) query = query.eq("site", site);
 
         const [fitRes, usersRes, absentRes, ftwStatusMap] = await Promise.all([
           query,
-          supabase.from("users").select("id, site").not("site", "is", null),
-          supabase.from("fit_to_work_absent").select("user_id, tanggal").gte("tanggal", rangeFromStr).lte("tanggal", rangeToStr),
+          supabase
+            .from("users")
+            .select("id, site, created_at")
+            .not("site", "is", null),
+          supabase
+            .from("fit_to_work_absent")
+            .select("user_id, tanggal")
+            .gte("tanggal", rangeFromStr)
+            .lte("tanggal", rangeToStr),
           fetchSitesFTWStatusMap(),
         ]);
 
         if (fitRes.error) throw fitRes.error;
         const fitData = fitRes.data || [];
-        const users = (usersRes.data || []).filter((u) => u.site && (!site || u.site === site));
+        const users = (usersRes.data || []).filter(
+          (u) => u.site && (!site || u.site === site),
+        );
         const absentList = absentRes.data || [];
 
-        let usersBySite = {};
-        users.forEach((u) => {
-          if (ftwStatusMap[u.site] === false) return;
-          usersBySite[u.site] = (usersBySite[u.site] || 0) + 1;
-        });
         const userIdToSite = {};
-        users.forEach((u) => { userIdToSite[u.id] = u.site; });
+        users.forEach((u) => {
+          userIdToSite[u.id] = u.site;
+        });
         let absentByDateSite = {};
         absentList.forEach((a) => {
           const s = userIdToSite[a.user_id];
           if (!s || ftwStatusMap[s] === false) return;
           if (!absentByDateSite[a.tanggal]) absentByDateSite[a.tanggal] = {};
-          absentByDateSite[a.tanggal][s] = (absentByDateSite[a.tanggal][s] || 0) + 1;
+          absentByDateSite[a.tanggal][s] =
+            (absentByDateSite[a.tanggal][s] || 0) + 1;
         });
 
-        // Build daily stats for chart range manually (WITA)
+        // Build daily stats for chart range manually (WITA) - kewajiban per tanggal hanya user yang sudah ada
         const daily = [];
         let cur = new Date(rangeFromStr + "T12:00:00+08:00");
         const endD = new Date(rangeToStr + "T12:00:00+08:00");
         while (cur <= endD) {
           const dateStr = cur.toISOString().slice(0, 10);
           const dayData = fitData.filter((item) => item.tanggal === dateStr);
-          let total = 0, absent = 0;
-          Object.entries(usersBySite).forEach(([s, n]) => {
+          const usersBySiteForDate = getUsersBySiteForDate(
+            users,
+            dateStr,
+            ftwStatusMap,
+            site || null,
+          );
+          let total = 0,
+            absent = 0;
+          Object.entries(usersBySiteForDate).forEach(([s, n]) => {
             total += n;
             absent += (absentByDateSite[dateStr] || {})[s] || 0;
           });
           const kewajiban = Math.max(0, total - absent);
           const pengisian = dayData.length;
-          const fitToWork = dayData.filter((item) => item.status_fatigue === "Fit To Work").length;
-          const notFitToWork = dayData.filter((item) => item.status_fatigue === "Not Fit To Work").length;
-          daily.push({ date: dateStr, kewajiban, pengisian, total: pengisian, fitToWork, notFitToWork });
+          const fitToWork = dayData.filter(
+            (item) => item.status_fatigue === "Fit To Work",
+          ).length;
+          const notFitToWork = dayData.filter(
+            (item) => item.status_fatigue === "Not Fit To Work",
+          ).length;
+          daily.push({
+            date: dateStr,
+            kewajiban,
+            pengisian,
+            total: pengisian,
+            fitToWork,
+            notFitToWork,
+          });
           cur.setTime(cur.getTime() + 24 * 60 * 60 * 1000);
         }
 
@@ -400,26 +488,61 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           daily.forEach((d) => {
             const dt = new Date(d.date);
             const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-            if (!byMonth[key]) byMonth[key] = { label: "", kewajiban: 0, pengisian: 0, fitToWork: 0, notFitToWork: 0 };
+            if (!byMonth[key])
+              byMonth[key] = {
+                label: "",
+                kewajiban: 0,
+                pengisian: 0,
+                fitToWork: 0,
+                notFitToWork: 0,
+              };
             byMonth[key].kewajiban += d.kewajiban ?? 0;
             byMonth[key].pengisian += d.pengisian ?? d.total ?? 0;
             byMonth[key].fitToWork += d.fitToWork ?? 0;
             byMonth[key].notFitToWork += d.notFitToWork ?? 0;
-            const names = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+            const names = [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "Mei",
+              "Jun",
+              "Jul",
+              "Agu",
+              "Sep",
+              "Okt",
+              "Nov",
+              "Des",
+            ];
             byMonth[key].label = `${names[dt.getMonth()]} ${dt.getFullYear()}`;
           });
-          setChartAggregatedData(Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v));
+          setChartAggregatedData(
+            Object.entries(byMonth)
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([, v]) => v),
+          );
         } else if (chartViewMode === "yearly") {
           const byYear = {};
           daily.forEach((d) => {
             const y = new Date(d.date).getFullYear();
-            if (!byYear[y]) byYear[y] = { label: String(y), kewajiban: 0, pengisian: 0, fitToWork: 0, notFitToWork: 0 };
+            if (!byYear[y])
+              byYear[y] = {
+                label: String(y),
+                kewajiban: 0,
+                pengisian: 0,
+                fitToWork: 0,
+                notFitToWork: 0,
+              };
             byYear[y].kewajiban += d.kewajiban ?? 0;
             byYear[y].pengisian += d.pengisian ?? d.total ?? 0;
             byYear[y].fitToWork += d.fitToWork ?? 0;
             byYear[y].notFitToWork += d.notFitToWork ?? 0;
           });
-          setChartAggregatedData(Object.entries(byYear).sort((a, b) => a[0] - b[0]).map(([, v]) => v));
+          setChartAggregatedData(
+            Object.entries(byYear)
+              .sort((a, b) => a[0] - b[0])
+              .map(([, v]) => v),
+          );
         }
       } catch (err) {
         console.error("Error fetching chart data:", err);
@@ -450,7 +573,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       } else return;
 
       try {
-        let query = supabase.from("take_5").select("*").gte("created_at", rangeFromStr).lte("created_at", rangeToStr);
+        let query = supabase
+          .from("take_5")
+          .select("*")
+          .gte("created_at", rangeFromStr)
+          .lte("created_at", rangeToStr);
         if (site) query = query.eq("site", site);
         query = query.limit(50000);
         const { data, error } = await query;
@@ -462,13 +589,21 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         const endD = new Date(rangeToStr + "T12:00:00+08:00");
         while (cur <= endD) {
           const dateStr = cur.toISOString().slice(0, 10);
-          const dayData = list.filter((item) => (item.created_at || "").slice(0, 10) === dateStr);
+          const dayData = list.filter(
+            (item) => (item.created_at || "").slice(0, 10) === dateStr,
+          );
           daily.push({
             date: dateStr,
             total: dayData.length,
-            open: dayData.filter((i) => (i.status || "").toLowerCase() === "open").length,
-            done: dayData.filter((i) => (i.status || "").toLowerCase() === "done").length,
-            closed: dayData.filter((i) => (i.status || "").toLowerCase() === "closed").length,
+            open: dayData.filter(
+              (i) => (i.status || "").toLowerCase() === "open",
+            ).length,
+            done: dayData.filter(
+              (i) => (i.status || "").toLowerCase() === "done",
+            ).length,
+            closed: dayData.filter(
+              (i) => (i.status || "").toLowerCase() === "closed",
+            ).length,
           });
           cur.setTime(cur.getTime() + 24 * 60 * 60 * 1000);
         }
@@ -478,26 +613,61 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           daily.forEach((d) => {
             const dt = new Date(d.date + "T12:00:00");
             const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-            if (!byMonth[key]) byMonth[key] = { label: "", total: 0, open: 0, done: 0, closed: 0 };
+            if (!byMonth[key])
+              byMonth[key] = {
+                label: "",
+                total: 0,
+                open: 0,
+                done: 0,
+                closed: 0,
+              };
             byMonth[key].total += d.total ?? 0;
             byMonth[key].open += d.open ?? 0;
             byMonth[key].done += d.done ?? 0;
             byMonth[key].closed += d.closed ?? 0;
-            const names = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+            const names = [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "Mei",
+              "Jun",
+              "Jul",
+              "Agu",
+              "Sep",
+              "Okt",
+              "Nov",
+              "Des",
+            ];
             byMonth[key].label = `${names[dt.getMonth()]} ${dt.getFullYear()}`;
           });
-          setTake5ChartAggregatedData(Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v));
+          setTake5ChartAggregatedData(
+            Object.entries(byMonth)
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([, v]) => v),
+          );
         } else if (chartViewMode === "yearly") {
           const byYear = {};
           daily.forEach((d) => {
             const y = new Date(d.date + "T12:00:00").getFullYear();
-            if (!byYear[y]) byYear[y] = { label: String(y), total: 0, open: 0, done: 0, closed: 0 };
+            if (!byYear[y])
+              byYear[y] = {
+                label: String(y),
+                total: 0,
+                open: 0,
+                done: 0,
+                closed: 0,
+              };
             byYear[y].total += d.total ?? 0;
             byYear[y].open += d.open ?? 0;
             byYear[y].done += d.done ?? 0;
             byYear[y].closed += d.closed ?? 0;
           });
-          setTake5ChartAggregatedData(Object.entries(byYear).sort((a, b) => a[0] - b[0]).map(([, v]) => v));
+          setTake5ChartAggregatedData(
+            Object.entries(byYear)
+              .sort((a, b) => a[0] - b[0])
+              .map(([, v]) => v),
+          );
         }
       } catch (err) {
         console.error("Error fetching Take 5 chart data:", err);
@@ -528,7 +698,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       } else return;
 
       try {
-        let query = supabase.from("planned_task_observation").select("*").gte("tanggal", rangeFromStr).lte("tanggal", rangeToStr);
+        let query = supabase
+          .from("planned_task_observation")
+          .select("*")
+          .gte("tanggal", rangeFromStr)
+          .lte("tanggal", rangeToStr);
         if (site) query = query.eq("site", site);
         query = query.limit(50000);
         const { data, error } = await query;
@@ -540,12 +714,18 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         const endD = new Date(rangeToStr + "T12:00:00+08:00");
         while (cur <= endD) {
           const dateStr = cur.toISOString().slice(0, 10);
-          const dayData = list.filter((item) => (item.tanggal || "") === dateStr);
+          const dayData = list.filter(
+            (item) => (item.tanggal || "") === dateStr,
+          );
           daily.push({
             date: dateStr,
             total: dayData.length,
-            pending: dayData.filter((i) => (i.status || "").toLowerCase() === "pending").length,
-            closed: dayData.filter((i) => (i.status || "").toLowerCase() === "closed").length,
+            pending: dayData.filter(
+              (i) => (i.status || "").toLowerCase() === "pending",
+            ).length,
+            closed: dayData.filter(
+              (i) => (i.status || "").toLowerCase() === "closed",
+            ).length,
           });
           cur.setTime(cur.getTime() + 24 * 60 * 60 * 1000);
         }
@@ -555,24 +735,47 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           daily.forEach((d) => {
             const dt = new Date(d.date + "T12:00:00");
             const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-            if (!byMonth[key]) byMonth[key] = { label: "", total: 0, pending: 0, closed: 0 };
+            if (!byMonth[key])
+              byMonth[key] = { label: "", total: 0, pending: 0, closed: 0 };
             byMonth[key].total += d.total ?? 0;
             byMonth[key].pending += d.pending ?? 0;
             byMonth[key].closed += d.closed ?? 0;
-            const names = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+            const names = [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "Mei",
+              "Jun",
+              "Jul",
+              "Agu",
+              "Sep",
+              "Okt",
+              "Nov",
+              "Des",
+            ];
             byMonth[key].label = `${names[dt.getMonth()]} ${dt.getFullYear()}`;
           });
-          setPtoChartAggregatedData(Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v));
+          setPtoChartAggregatedData(
+            Object.entries(byMonth)
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([, v]) => v),
+          );
         } else if (chartViewMode === "yearly") {
           const byYear = {};
           daily.forEach((d) => {
             const y = new Date(d.date + "T12:00:00").getFullYear();
-            if (!byYear[y]) byYear[y] = { label: String(y), total: 0, pending: 0, closed: 0 };
+            if (!byYear[y])
+              byYear[y] = { label: String(y), total: 0, pending: 0, closed: 0 };
             byYear[y].total += d.total ?? 0;
             byYear[y].pending += d.pending ?? 0;
             byYear[y].closed += d.closed ?? 0;
           });
-          setPtoChartAggregatedData(Object.entries(byYear).sort((a, b) => a[0] - b[0]).map(([, v]) => v));
+          setPtoChartAggregatedData(
+            Object.entries(byYear)
+              .sort((a, b) => a[0] - b[0])
+              .map(([, v]) => v),
+          );
         }
       } catch (err) {
         console.error("Error fetching PTO chart data:", err);
@@ -590,7 +793,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (dateFrom) query = query.gte("created_at", dateFrom);
       if (dateTo) query = query.lte("created_at", dateTo);
       if (site) query = query.eq("site", site);
-      query = query.limit(50000);
+      query = query.order("created_at", { ascending: true });
 
       console.log("=== TAKE 5 QUERY DEBUG ===");
       console.log("Site filter:", site);
@@ -638,7 +841,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       // Calculate individual statistics
       const individualData = calculateIndividualStats(
         take5Data || [],
-        "take_5"
+        "take_5",
       );
       setIndividualStats((prev) => ({ ...prev, take5: individualData }));
     } catch (error) {
@@ -657,7 +860,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (dateFrom) query = query.gte("created_at", dateFrom);
       if (dateTo) query = query.lte("created_at", dateTo);
       if (site) query = query.eq("lokasi", site);
-      query = query.limit(50000);
+      query = query.order("created_at", { ascending: true });
 
       const { data: tasklistData, error: tasklistError } = await query;
 
@@ -684,7 +887,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (dateFrom) hazardQuery = hazardQuery.gte("created_at", dateFrom);
       if (dateTo) hazardQuery = hazardQuery.lte("created_at", dateTo);
       if (site) hazardQuery = hazardQuery.eq("lokasi", site);
-      hazardQuery = hazardQuery.limit(50000);
+      hazardQuery = hazardQuery.order("created_at", { ascending: true });
 
       const { data: hazardData, error: hazardError } = await hazardQuery;
 
@@ -776,7 +979,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
-      query = query.limit(50000);
+      query = query.order("tanggal", { ascending: true });
 
       const { data: ptoData, error } = await query;
 
@@ -798,9 +1001,194 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     }
   };
 
+  const fetchTargetMonthlyStats = async () => {
+    setTargetMonthlyLoading(true);
+    try {
+      // 1. Fetch Targets
+      let targetQuery = supabase.from("target_per_jabatan_site").select("*");
+      if (site) targetQuery = targetQuery.eq("site", site);
+      const { data: targets, error: targetError } = await targetQuery;
+      if (targetError) throw targetError;
+
+      if (!targets || targets.length === 0) {
+        setTargetMonthlyStats([]);
+        setTargetMonthlyLoading(false);
+        return;
+      }
+
+      // 2. Fetch Users
+      let userQuery = supabase
+        .from("users")
+        .select("id, nama, jabatan, site")
+        .not("site", "is", null);
+      if (site) userQuery = userQuery.eq("site", site);
+      const { data: users, error: userError } = await userQuery;
+      if (userError) throw userError;
+
+      // 3. Map Users to Targets
+      const targetedUsers = (users || [])
+        .map((u) => {
+          // Find targets for this user's site and jabatan
+          const userTargets = (targets || []).filter(
+            (t) => t.site === u.site && t.jabatan === u.jabatan,
+          );
+          if (userTargets.length === 0) return null;
+
+          const targetMap = {};
+          userTargets.forEach((t) => {
+            targetMap[t.module] = t.target_per_bulan;
+          });
+
+          return {
+            ...u,
+            targets: targetMap,
+            actuals: { hazard: 0, take_5: 0, pto: 0 },
+          };
+        })
+        .filter(Boolean); // Remove nulls (users without targets)
+
+      if (targetedUsers.length === 0) {
+        setTargetMonthlyStats([]);
+        setTargetMonthlyLoading(false);
+        return;
+      }
+
+      // 4. Fetch Actuals (Hazard, Take 5, PTO)
+      // Use selected Month and Year
+      const y = parseInt(targetYear);
+      const m = parseInt(targetMonth) - 1; // JS Month is 0-indexed
+      const firstDay = new Date(y, m, 1);
+      const lastDay = new Date(y, m + 1, 0);
+      const startDateStr =
+        getTodayWITA().slice(0, 0) +
+        new Date(firstDay.getTime() - firstDay.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 10);
+      const endDateStr =
+        getTodayWITA().slice(0, 0) +
+        new Date(lastDay.getTime() - lastDay.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 10);
+
+      // Use WITA adjustment if needed, but standard ISO date string is usually fine for database comparison if stored as date/timestamp
+      // Let's stick to local YYYY-MM-DD construction to avoid timezone issues
+      const startStr = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+      const endStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(lastDay.getDate()).padStart(2, "0")}`;
+
+      // Fetch Hazard Reports (by pelapor_nama or pic_nama? Assuming pelapor_nama)
+      // Note: Hazard reports might use name instead of ID. We'll match by name.
+      let hazardQuery = supabase
+        .from("hazard_report")
+        .select("pelapor_nama, lokasi, created_at")
+        .gte("created_at", startStr)
+        .lte("created_at", endStr);
+      if (site) hazardQuery = hazardQuery.eq("lokasi", site);
+      const { data: hazards } = await hazardQuery;
+
+      // Fetch Take 5 (by user_id or pic?)
+      let take5Query = supabase
+        .from("take_5")
+        .select("user_id, site, created_at")
+        .gte("created_at", startStr)
+        .lte("created_at", endStr);
+      if (site) take5Query = take5Query.eq("site", site);
+      const { data: take5s } = await take5Query;
+
+      // Fetch PTO (by observer_id or nama?)
+      let ptoQuery = supabase
+        .from("planned_task_observation")
+        .select("*")
+        .gte("tanggal", startStr)
+        .lte("tanggal", endStr);
+      if (site) ptoQuery = ptoQuery.eq("site", site);
+      const { data: ptos } = await ptoQuery;
+
+      // 5. Aggregate Actuals
+      const nameMap = new Map(); // name -> count
+      const idMap = new Map(); // id -> count
+
+      // Count Hazards (by Name)
+      (hazards || []).forEach((h) => {
+        const name = (h.pelapor_nama || "").trim();
+        if (name)
+          nameMap.set(
+            `hazard_${name}`,
+            (nameMap.get(`hazard_${name}`) || 0) + 1,
+          );
+      });
+
+      // Count Take 5 (by User ID)
+      (take5s || []).forEach((t) => {
+        if (t.user_id) {
+          idMap.set(
+            `take5_${t.user_id}`,
+            (idMap.get(`take5_${t.user_id}`) || 0) + 1,
+          );
+        }
+      });
+
+      // Count PTO (Try by user_id or created_by or observer_id)
+      // I'll check if `user_id` exists in `ptos[0]`. If not, try `created_by`.
+      // For now, let's assume `user_id` is used.
+      // If PTO doesn't have user_id, this count will be 0.
+      (ptos || []).forEach((p) => {
+        const uid = p.user_id || p.observer_id || p.created_by;
+        if (uid) {
+          idMap.set(`pto_${uid}`, (idMap.get(`pto_${uid}`) || 0) + 1);
+        }
+      });
+
+      // 6. Assign Actuals to Targeted Users
+      const finalStats = targetedUsers.map((u) => {
+        // Hazard: Match by Name
+        const hazardCount = nameMap.get(`hazard_${u.nama.trim()}`) || 0;
+
+        // Take 5: Match by ID
+        const take5Count = idMap.get(`take5_${u.id}`) || 0;
+
+        // PTO: Match by ID
+        const ptoCount = idMap.get(`pto_${u.id}`) || 0;
+
+        return {
+          ...u,
+          actuals: {
+            hazard: hazardCount,
+            take_5: take5Count,
+            pto: ptoCount,
+          },
+        };
+      });
+
+      setTargetMonthlyStats(finalStats);
+    } catch (e) {
+      console.error("Error fetching target monthly stats:", e);
+      setTargetMonthlyStats([]);
+    } finally {
+      setTargetMonthlyLoading(false);
+    }
+  };
+
+  // Helper: hitung user per site yang sudah terdaftar pada/before dateStr (kewajiban tidak terpengaruh user baru)
+  const getUsersBySiteForDate = (users, dateStr, ftwStatusMap, siteFilter) => {
+    const bySite = {};
+    users.forEach((u) => {
+      if (ftwStatusMap[u.site] === false) return;
+      if (siteFilter && u.site !== siteFilter) return;
+      const created = u.created_at ? String(u.created_at).slice(0, 10) : null;
+      if (created && created > dateStr) return; // User belum ada pada tanggal ini
+      bySite[u.site] = (bySite[u.site] || 0) + 1;
+    });
+    return bySite;
+  };
+
   // Calculate Fit To Work Statistics
   const calculateFitToWorkStats = (data, extra = {}) => {
-    const { usersBySite = {}, absentByDateSite = {} } = extra;
+    const {
+      users = [],
+      absentByDateSite = {},
+      ftwStatusMap = {},
+      siteFilter,
+    } = extra;
     // Filter data berdasarkan date range dan site
     let filteredData = [...data];
 
@@ -826,26 +1214,27 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       summaryDateStr = getTodayWITA();
     }
     const summaryData = filteredData.filter(
-      (item) => item.tanggal === summaryDateStr
+      (item) => item.tanggal === summaryDateStr,
     );
 
     const totalSubmissions = summaryData.length;
     // Status saat ini (setelah validasi)
     const fitToWork = summaryData.filter(
-      (item) => item.status_fatigue === "Fit To Work"
+      (item) => item.status_fatigue === "Fit To Work",
     ).length;
     const notFitToWork = summaryData.filter(
-      (item) => item.status_fatigue === "Not Fit To Work"
+      (item) => item.status_fatigue === "Not Fit To Work",
     ).length;
     // Berdasarkan initial_status_fatigue (saat pengisian pertama, sebelum validasi)
     const initialNotFitToWork = summaryData.filter(
       (item) =>
-        (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work"
+        (item.initial_status_fatigue || item.status_fatigue) ===
+        "Not Fit To Work",
     ).length;
     const improvedToFit = summaryData.filter(
       (item) =>
-        (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
-        item.status_fatigue === "Fit To Work"
+        (item.initial_status_fatigue || item.status_fatigue) ===
+          "Not Fit To Work" && item.status_fatigue === "Fit To Work",
     ).length;
 
     // Calculate percentage of Fit To Work employees
@@ -872,11 +1261,15 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       } else if (item.status_fatigue === "Not Fit To Work") {
         siteStats[item.site].notFitToWork++;
       }
-      if ((item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work") {
+      if (
+        (item.initial_status_fatigue || item.status_fatigue) ===
+        "Not Fit To Work"
+      ) {
         siteStats[item.site].initialNotFit++;
       }
       if (
-        (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
+        (item.initial_status_fatigue || item.status_fatigue) ===
+          "Not Fit To Work" &&
         item.status_fatigue === "Fit To Work"
       ) {
         siteStats[item.site].improvedToFit++;
@@ -895,10 +1288,16 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
         const dayData = filteredData.filter((item) => item.tanggal === dateStr);
         const pengisian = dayData.length;
+        const usersBySiteForDate = getUsersBySiteForDate(
+          users,
+          dateStr,
+          ftwStatusMap,
+          siteFilter,
+        );
         const kewajiban = (() => {
           let total = 0;
           let absent = 0;
-          Object.entries(usersBySite).forEach(([s, n]) => {
+          Object.entries(usersBySiteForDate).forEach(([s, n]) => {
             total += n;
             absent += (absentByDateSite[dateStr] || {})[s] || 0;
           });
@@ -909,21 +1308,25 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           total: pengisian,
           pengisian,
           kewajiban,
-          persentasePengisian: kewajiban > 0 ? parseFloat(((pengisian / kewajiban) * 100).toFixed(1)) : 0,
+          persentasePengisian:
+            kewajiban > 0
+              ? parseFloat(((pengisian / kewajiban) * 100).toFixed(1))
+              : 0,
           fitToWork: dayData.filter(
-            (item) => item.status_fatigue === "Fit To Work"
+            (item) => item.status_fatigue === "Fit To Work",
           ).length,
           notFitToWork: dayData.filter(
-            (item) => item.status_fatigue === "Not Fit To Work"
+            (item) => item.status_fatigue === "Not Fit To Work",
           ).length,
           initialNotFit: dayData.filter(
             (item) =>
-              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work"
+              (item.initial_status_fatigue || item.status_fatigue) ===
+              "Not Fit To Work",
           ).length,
           improvedToFit: dayData.filter(
             (item) =>
-              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
-              item.status_fatigue === "Fit To Work"
+              (item.initial_status_fatigue || item.status_fatigue) ===
+                "Not Fit To Work" && item.status_fatigue === "Fit To Work",
           ).length,
         });
       }
@@ -936,10 +1339,16 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
         const dayData = filteredData.filter((item) => item.tanggal === dateStr);
         const pengisian = dayData.length;
+        const usersBySiteForDate = getUsersBySiteForDate(
+          users,
+          dateStr,
+          ftwStatusMap,
+          siteFilter,
+        );
         const kewajiban = (() => {
           let total = 0;
           let absent = 0;
-          Object.entries(usersBySite).forEach(([s, n]) => {
+          Object.entries(usersBySiteForDate).forEach(([s, n]) => {
             total += n;
             absent += (absentByDateSite[dateStr] || {})[s] || 0;
           });
@@ -950,21 +1359,25 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           total: pengisian,
           pengisian,
           kewajiban,
-          persentasePengisian: kewajiban > 0 ? parseFloat(((pengisian / kewajiban) * 100).toFixed(1)) : 0,
+          persentasePengisian:
+            kewajiban > 0
+              ? parseFloat(((pengisian / kewajiban) * 100).toFixed(1))
+              : 0,
           fitToWork: dayData.filter(
-            (item) => item.status_fatigue === "Fit To Work"
+            (item) => item.status_fatigue === "Fit To Work",
           ).length,
           notFitToWork: dayData.filter(
-            (item) => item.status_fatigue === "Not Fit To Work"
+            (item) => item.status_fatigue === "Not Fit To Work",
           ).length,
           initialNotFit: dayData.filter(
             (item) =>
-              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work"
+              (item.initial_status_fatigue || item.status_fatigue) ===
+              "Not Fit To Work",
           ).length,
           improvedToFit: dayData.filter(
             (item) =>
-              (item.initial_status_fatigue || item.status_fatigue) === "Not Fit To Work" &&
-              item.status_fatigue === "Fit To Work"
+              (item.initial_status_fatigue || item.status_fatigue) ===
+                "Not Fit To Work" && item.status_fatigue === "Fit To Work",
           ).length,
         });
 
@@ -1003,7 +1416,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       statusChanges,
       recentReports: summaryData.slice(0, 10),
       listData: [...filteredData].sort(
-        (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+        (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
       ), // Data terbaru dulu (by jam input)
     };
   };
@@ -1034,13 +1447,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     const totalReports = filteredData.length;
     const openReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "open"
+      (item) => item.status?.toLowerCase() === "open",
     ).length;
     const doneReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "done"
+      (item) => item.status?.toLowerCase() === "done",
     ).length;
     const closedReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "closed"
+      (item) => item.status?.toLowerCase() === "closed",
     ).length;
 
     const completionRate =
@@ -1099,23 +1512,23 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           date: dateStr,
           total: dayData.length,
           submit: dayData.filter(
-            (item) => item.status?.toLowerCase() === "submit"
+            (item) => item.status?.toLowerCase() === "submit",
           ).length,
           open: dayData.filter((item) => item.status?.toLowerCase() === "open")
             .length,
           progress: dayData.filter(
-            (item) => item.status?.toLowerCase() === "progress"
+            (item) => item.status?.toLowerCase() === "progress",
           ).length,
           done: dayData.filter((item) => item.status?.toLowerCase() === "done")
             .length,
           rejectOpen: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at open"
+            (item) => item.status?.toLowerCase() === "reject at open",
           ).length,
           rejectDone: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at done"
+            (item) => item.status?.toLowerCase() === "reject at done",
           ).length,
           closed: dayData.filter(
-            (item) => item.status?.toLowerCase() === "closed"
+            (item) => item.status?.toLowerCase() === "closed",
           ).length,
         });
       }
@@ -1136,23 +1549,23 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           date: dateStr,
           total: dayData.length,
           submit: dayData.filter(
-            (item) => item.status?.toLowerCase() === "submit"
+            (item) => item.status?.toLowerCase() === "submit",
           ).length,
           open: dayData.filter((item) => item.status?.toLowerCase() === "open")
             .length,
           progress: dayData.filter(
-            (item) => item.status?.toLowerCase() === "progress"
+            (item) => item.status?.toLowerCase() === "progress",
           ).length,
           done: dayData.filter((item) => item.status?.toLowerCase() === "done")
             .length,
           rejectOpen: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at open"
+            (item) => item.status?.toLowerCase() === "reject at open",
           ).length,
           rejectDone: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at done"
+            (item) => item.status?.toLowerCase() === "reject at done",
           ).length,
           closed: dayData.filter(
-            (item) => item.status?.toLowerCase() === "closed"
+            (item) => item.status?.toLowerCase() === "closed",
           ).length,
         });
 
@@ -1167,7 +1580,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     // Semua data (untuk download/analisa lengkap)
     const listData = [...filteredData].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      (a, b) => new Date(a.created_at) - new Date(b.created_at),
     );
 
     return {
@@ -1210,25 +1623,25 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     const totalReports = filteredData.length;
     const submitReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "submit"
+      (item) => item.status?.toLowerCase() === "submit",
     ).length;
     const openReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "open"
+      (item) => item.status?.toLowerCase() === "open",
     ).length;
     const progressReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "progress"
+      (item) => item.status?.toLowerCase() === "progress",
     ).length;
     const doneReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "done"
+      (item) => item.status?.toLowerCase() === "done",
     ).length;
     const rejectOpenReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "reject at open"
+      (item) => item.status?.toLowerCase() === "reject at open",
     ).length;
     const rejectDoneReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "reject at done"
+      (item) => item.status?.toLowerCase() === "reject at done",
     ).length;
     const closedReports = filteredData.filter(
-      (item) => item.status?.toLowerCase() === "closed"
+      (item) => item.status?.toLowerCase() === "closed",
     ).length;
 
     console.log("calculateHazardStats - Status counts:", {
@@ -1343,23 +1756,23 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           date: dateStr,
           total: dayData.length,
           submit: dayData.filter(
-            (item) => item.status?.toLowerCase() === "submit"
+            (item) => item.status?.toLowerCase() === "submit",
           ).length,
           open: dayData.filter((item) => item.status?.toLowerCase() === "open")
             .length,
           progress: dayData.filter(
-            (item) => item.status?.toLowerCase() === "progress"
+            (item) => item.status?.toLowerCase() === "progress",
           ).length,
           done: dayData.filter((item) => item.status?.toLowerCase() === "done")
             .length,
           rejectOpen: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at open"
+            (item) => item.status?.toLowerCase() === "reject at open",
           ).length,
           rejectDone: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at done"
+            (item) => item.status?.toLowerCase() === "reject at done",
           ).length,
           closed: dayData.filter(
-            (item) => item.status?.toLowerCase() === "closed"
+            (item) => item.status?.toLowerCase() === "closed",
           ).length,
         });
       }
@@ -1380,23 +1793,23 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           date: dateStr,
           total: dayData.length,
           submit: dayData.filter(
-            (item) => item.status?.toLowerCase() === "submit"
+            (item) => item.status?.toLowerCase() === "submit",
           ).length,
           open: dayData.filter((item) => item.status?.toLowerCase() === "open")
             .length,
           progress: dayData.filter(
-            (item) => item.status?.toLowerCase() === "progress"
+            (item) => item.status?.toLowerCase() === "progress",
           ).length,
           done: dayData.filter((item) => item.status?.toLowerCase() === "done")
             .length,
           rejectOpen: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at open"
+            (item) => item.status?.toLowerCase() === "reject at open",
           ).length,
           rejectDone: dayData.filter(
-            (item) => item.status?.toLowerCase() === "reject at done"
+            (item) => item.status?.toLowerCase() === "reject at done",
           ).length,
           closed: dayData.filter(
-            (item) => item.status?.toLowerCase() === "closed"
+            (item) => item.status?.toLowerCase() === "closed",
           ).length,
         });
 
@@ -1413,7 +1826,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     // Semua data (untuk download/analisa lengkap)
     const listData = [...filteredData].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      (a, b) => new Date(a.created_at) - new Date(b.created_at),
     );
 
     console.log("calculateHazardStats - Recent reports:", recentReports);
@@ -1457,10 +1870,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     const totalReports = filteredData.length;
     const pendingReports = filteredData.filter(
-      (item) => (item.status || "").toLowerCase() === "pending"
+      (item) => (item.status || "").toLowerCase() === "pending",
     ).length;
     const closedReports = filteredData.filter(
-      (item) => (item.status || "").toLowerCase() === "closed"
+      (item) => (item.status || "").toLowerCase() === "closed",
     ).length;
     const completionRate =
       totalReports > 0 ? ((closedReports / totalReports) * 100).toFixed(1) : 0;
@@ -1492,10 +1905,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           date: dateStr,
           total: dayData.length,
           pending: dayData.filter(
-            (item) => (item.status || "").toLowerCase() === "pending"
+            (item) => (item.status || "").toLowerCase() === "pending",
           ).length,
           closed: dayData.filter(
-            (item) => (item.status || "").toLowerCase() === "closed"
+            (item) => (item.status || "").toLowerCase() === "closed",
           ).length,
         });
       }
@@ -1509,10 +1922,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           date: dateStr,
           total: dayData.length,
           pending: dayData.filter(
-            (item) => (item.status || "").toLowerCase() === "pending"
+            (item) => (item.status || "").toLowerCase() === "pending",
           ).length,
           closed: dayData.filter(
-            (item) => (item.status || "").toLowerCase() === "closed"
+            (item) => (item.status || "").toLowerCase() === "closed",
           ).length,
         });
         currentDate.setTime(currentDate.getTime() + 24 * 60 * 60 * 1000);
@@ -1524,7 +1937,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       .slice(0, 10);
 
     const listData = [...filteredData].sort(
-      (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
+      (a, b) => new Date(a.tanggal) - new Date(b.tanggal),
     );
 
     return {
@@ -1539,46 +1952,17 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     };
   };
 
-  // Set default table and fetch data based on subMenu
-  useEffect(() => {
-    console.log("MonitoringPage - subMenu:", subMenu);
-    if (subMenu === "Statistik Fit To Work") {
-      console.log(
-        "MonitoringPage - Setting selectedTable to fit_to_work_stats"
-      );
-      setSelectedTable("fit_to_work_stats");
-      // Fetch data immediately with delay to ensure state is set
-      setTimeout(() => {
-        fetchFitToWorkStats();
-      }, 100);
-    } else if (subMenu === "Take 5") {
-      console.log("MonitoringPage - Setting selectedTable to take_5_stats");
-      setSelectedTable("take_5_stats");
-      // Fetch data immediately with delay to ensure state is set
-      setTimeout(() => {
-        fetchTake5Stats();
-      }, 100);
-    } else if (subMenu === "Hazard") {
-      console.log("MonitoringPage - Setting selectedTable to hazard_stats");
-      setSelectedTable("hazard_stats");
-      // Fetch data immediately with delay to ensure state is set
-      setTimeout(() => {
-        fetchHazardStats();
-      }, 100);
-    } else if (subMenu === "PTO") {
-      console.log("MonitoringPage - Setting selectedTable to pto_stats");
-      setSelectedTable("pto_stats");
-      setTimeout(() => {
-        fetchPtoStats();
-      }, 100);
-    }
-  }, [subMenu]);
-
   // Fetch data dari Supabase sesuai filter (for other tables)
   useEffect(() => {
-    console.log("MonitoringPage - selectedTable:", selectedTable);
-    if (!selectedTable || selectedTable === "fit_to_work_stats" || selectedTable === "take_5_stats" || selectedTable === "hazard_stats" || selectedTable === "pto_stats") {
-      return; // Skip for stats dashboards - they have their own fetch
+    if (
+      !selectedTable ||
+      selectedTable === "fit_to_work_stats" ||
+      selectedTable === "take_5_stats" ||
+      selectedTable === "hazard_stats" ||
+      selectedTable === "pto_stats" ||
+      selectedTable === "target_settings"
+    ) {
+      return; // Skip: stats dashboards dan target_settings punya fetch sendiri
     }
 
     setLoading(true);
@@ -1589,7 +1973,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     if (nama) {
       if (selectedTable === "tasklist") {
         query = query.or(
-          `pic_nama.eq.${nama},pelapor_nama.eq.${nama},evaluator_nama.eq.${nama}`
+          `pic_nama.eq.${nama},pelapor_nama.eq.${nama},evaluator_nama.eq.${nama}`,
         );
       } else if (selectedTable === "fit_to_work") {
         query = query.eq("nama", nama);
@@ -1630,10 +2014,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, selectedTable);
-    XLSX.writeFile(
-      workbook,
-      `${selectedTable}_${getTodayWITA()}.xlsx`
-    );
+    XLSX.writeFile(workbook, `${selectedTable}_${getTodayWITA()}.xlsx`);
   }
 
   // Download Fit To Work Statistics as Excel
@@ -1646,9 +2027,18 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     const summaryData = [
       { Metric: "Total Submissions", Value: fitToWorkStats.totalSubmissions },
       { Metric: "Fit To Work", Value: fitToWorkStats.fitToWork },
-      { Metric: "Not Fit To Work (saat ini)", Value: fitToWorkStats.notFitToWork },
-      { Metric: "Awalnya Not Fit To Work", Value: fitToWorkStats.initialNotFitToWork ?? 0 },
-      { Metric: "Berubah jadi Fit To Work", Value: fitToWorkStats.improvedToFit ?? 0 },
+      {
+        Metric: "Not Fit To Work (saat ini)",
+        Value: fitToWorkStats.notFitToWork,
+      },
+      {
+        Metric: "Awalnya Not Fit To Work",
+        Value: fitToWorkStats.initialNotFitToWork ?? 0,
+      },
+      {
+        Metric: "Berubah jadi Fit To Work",
+        Value: fitToWorkStats.improvedToFit ?? 0,
+      },
       {
         Metric: "Persentase Karyawan Fit",
         Value: `${fitToWorkStats.fitToWorkPercentage}%`,
@@ -1687,15 +2077,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     // Data Lengkap - Semua data mentah untuk analisa mendalam (tanpa id, user_id)
     if (fitToWorkStats.listData && fitToWorkStats.listData.length > 0) {
-      const rawData = fitToWorkStats.listData.map(({ id, user_id, ...rest }) => rest);
+      const rawData = fitToWorkStats.listData.map(
+        ({ id, user_id, ...rest }) => rest,
+      );
       const rawSheet = XLSX.utils.json_to_sheet(rawData);
       XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
     }
 
-    XLSX.writeFile(
-      workbook,
-      `Fit_To_Work_Statistics_${getTodayWITA()}.xlsx`
-    );
+    XLSX.writeFile(workbook, `Fit_To_Work_Statistics_${getTodayWITA()}.xlsx`);
   }
 
   // Download Fit To Work Statistics as PDF
@@ -1723,16 +2112,28 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     yPos += 8;
     doc.text(`Fit To Work: ${fitToWorkStats.fitToWork}`, 20, yPos);
     yPos += 8;
-    doc.text(`Not Fit To Work (saat ini): ${fitToWorkStats.notFitToWork}`, 20, yPos);
+    doc.text(
+      `Not Fit To Work (saat ini): ${fitToWorkStats.notFitToWork}`,
+      20,
+      yPos,
+    );
     yPos += 8;
-    doc.text(`Awalnya Not Fit To Work: ${fitToWorkStats.initialNotFitToWork ?? 0}`, 20, yPos);
+    doc.text(
+      `Awalnya Not Fit To Work: ${fitToWorkStats.initialNotFitToWork ?? 0}`,
+      20,
+      yPos,
+    );
     yPos += 8;
-    doc.text(`Berubah jadi Fit To Work: ${fitToWorkStats.improvedToFit ?? 0}`, 20, yPos);
+    doc.text(
+      `Berubah jadi Fit To Work: ${fitToWorkStats.improvedToFit ?? 0}`,
+      20,
+      yPos,
+    );
     yPos += 8;
     doc.text(
       `Persentase Karyawan Fit: ${fitToWorkStats.fitToWorkPercentage}%`,
       20,
-      yPos
+      yPos,
     );
     yPos += 15;
 
@@ -1754,7 +2155,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               ? ((stats.fitToWork / stats.total) * 100).toFixed(1)
               : 0
           }%`,
-        ]
+        ],
       );
 
       autoTable(doc, {
@@ -1838,6 +2239,12 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     const workbook = XLSX.utils.book_new();
 
+    // Data Lengkap - Semua data mentah untuk analisa mendalam (semua field)
+    if (take5Stats.listData && take5Stats.listData.length > 0) {
+      const rawSheet = XLSX.utils.json_to_sheet(take5Stats.listData);
+      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Take 5");
+    }
+
     // Summary sheet
     const summaryData = [
       ["Metrik", "Nilai"],
@@ -1880,13 +2287,6 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       ];
       const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
       XLSX.utils.book_append_sheet(workbook, dailySheet, "Daily Statistics");
-    }
-
-    // Data Lengkap - Semua data mentah untuk analisa mendalam (tanpa id, user_id)
-    if (take5Stats.listData && take5Stats.listData.length > 0) {
-      const rawData = take5Stats.listData.map(({ id, user_id, ...rest }) => rest);
-      const rawSheet = XLSX.utils.json_to_sheet(rawData);
-      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
     }
 
     XLSX.writeFile(workbook, "statistik-take5.xlsx");
@@ -1938,7 +2338,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           stats.open.toString(),
           stats.done.toString(),
           stats.closed.toString(),
-        ]
+        ],
       );
 
       autoTable(doc, {
@@ -1984,6 +2384,12 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     const workbook = XLSX.utils.book_new();
 
+    // Data Lengkap - Semua data mentah untuk analisa mendalam (semua field)
+    if (ptoStats.listData && ptoStats.listData.length > 0) {
+      const rawSheet = XLSX.utils.json_to_sheet(ptoStats.listData);
+      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data PTO");
+    }
+
     const summaryData = [
       ["Metrik", "Nilai"],
       ["Total Laporan", ptoStats.totalReports],
@@ -2020,12 +2426,6 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       ];
       const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
       XLSX.utils.book_append_sheet(workbook, dailySheet, "Daily Statistics");
-    }
-
-    if (ptoStats.listData && ptoStats.listData.length > 0) {
-      const rawData = ptoStats.listData.map(({ id, observer_id, observee_id, observer_tambahan_id, pic_tindak_lanjut_id, created_by, prosedur_id, ...rest }) => rest);
-      const rawSheet = XLSX.utils.json_to_sheet(rawData);
-      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
     }
 
     XLSX.writeFile(workbook, `statistik-pto_${getTodayWITA()}.xlsx`);
@@ -2111,6 +2511,12 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
     const workbook = XLSX.utils.book_new();
 
+    // Data Lengkap - Semua data mentah untuk analisa mendalam (semua field)
+    if (hazardStats.listData && hazardStats.listData.length > 0) {
+      const rawSheet = XLSX.utils.json_to_sheet(hazardStats.listData);
+      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Hazard");
+    }
+
     // Summary sheet
     const summaryData = [
       ["Metrik", "Nilai"],
@@ -2190,13 +2596,6 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       ];
       const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
       XLSX.utils.book_append_sheet(workbook, dailySheet, "Daily Statistics");
-    }
-
-    // Data Lengkap - Semua data mentah untuk analisa mendalam (tanpa id, user_id)
-    if (hazardStats.listData && hazardStats.listData.length > 0) {
-      const rawData = hazardStats.listData.map(({ id, user_id, ...rest }) => rest);
-      const rawSheet = XLSX.utils.json_to_sheet(rawData);
-      XLSX.utils.book_append_sheet(workbook, rawSheet, "Data Lengkap");
     }
 
     XLSX.writeFile(workbook, "statistik-hazard.xlsx");
@@ -2296,7 +2695,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           stats.rejectOpen.toString(),
           stats.rejectDone.toString(),
           stats.closed.toString(),
-        ]
+        ],
       );
 
       autoTable(doc, {
@@ -2383,7 +2782,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
         if (report.bukti_url || report.evidence_url) {
           try {
             const imageUrl = await getImageFromStorage(
-              report.bukti_url || report.evidence_url
+              report.bukti_url || report.evidence_url,
             );
             if (imageUrl) {
               // Add report info
@@ -2394,7 +2793,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   report.deskripsi_temuan || report.deskripsi || "N/A"
                 }`,
                 20,
-                yPos
+                yPos,
               );
               yPos += 5;
               doc.text(`Site: ${report.lokasi || "N/A"}`, 20, yPos);
@@ -2574,192 +2973,6 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       <div style={{ padding: "0" }}>
         {/* Content Container - Centered */}
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: isMobile ? 0 : 240,
-              right: 0,
-              zIndex: 100,
-              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
-              padding: "20px 0",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            }}
-          >
-            <div
-              style={{
-                maxWidth: "1400px",
-                margin: "0 auto",
-                padding: "0 20px",
-                display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-            <div
-              style={{
-                display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "flex-end",
-              }}
-            >
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-              >
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    color: "#e5e7eb",
-                  }}
-                >
-                  Dari:
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  style={{
-                    padding: "8px 12px",
-                    height: 38,
-                    boxSizing: "border-box",
-                    borderRadius: "6px",
-                    border: "1px solid #ddd",
-                    fontSize: "14px",
-                    minWidth: "180px",
-                  }}
-                />
-              </div>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-              >
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    color: "#e5e7eb",
-                  }}
-                >
-                  Sampai:
-                </label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  style={{
-                    padding: "8px 12px",
-                    height: 38,
-                    boxSizing: "border-box",
-                    borderRadius: "6px",
-                    border: "1px solid #ddd",
-                    fontSize: "14px",
-                    minWidth: "180px",
-                  }}
-                />
-              </div>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-              >
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    color: "#e5e7eb",
-                  }}
-                >
-                  Site:
-                </label>
-                <select
-                  value={site}
-                  onChange={(e) => setSite(e.target.value)}
-                  style={{
-                    padding: "8px 12px",
-                    height: 38,
-                    boxSizing: "border-box",
-                    borderRadius: "6px",
-                    border: "1px solid #ddd",
-                    fontSize: "14px",
-                    minWidth: "150px",
-                  }}
-                >
-                  <option value="">Semua Site</option>
-                  {CUSTOM_INPUT_SITES.map((siteOption) => (
-                    <option key={siteOption} value={siteOption}>
-                      {siteOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Reset & Download Buttons */}
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <button
-                onClick={() => {
-                  setDateFrom("");
-                  setDateTo("");
-                  setSite("");
-                }}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  background: "#f8f9fa",
-                  color: "#374151",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                Reset Filter
-              </button>
-              <button
-                onClick={handleDownloadFitToWorkExcel}
-                disabled={!fitToWorkStats}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "6px",
-                  border: "none",
-                  background: "#10b981",
-                  color: "#fff",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                📊 Excel
-              </button>
-              <button
-                onClick={handleDownloadFitToWorkPDF}
-                disabled={!fitToWorkStats}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "6px",
-                  border: "none",
-                  background: "#ef4444",
-                  color: "#fff",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                📄 PDF
-              </button>
-            </div>
-            </div>
-          </div>
-          {/* Spacer agar konten tidak tertutup filter fixed */}
-          <div style={{ height: 100 }} />
           {/* Header */}
           <div style={{ marginBottom: "30px" }}>
             <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
@@ -2770,7 +2983,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
               Work
               {fitToWorkStats.summaryDate && (
                 <span style={{ display: "block", marginTop: 4, fontSize: 13 }}>
-                  Data untuk {new Date(fitToWorkStats.summaryDate + "T12:00:00").toLocaleDateString("id-ID", {
+                  Data untuk{" "}
+                  {new Date(
+                    fitToWorkStats.summaryDate + "T12:00:00",
+                  ).toLocaleDateString("id-ID", {
                     weekday: "long",
                     day: "numeric",
                     month: "long",
@@ -3060,7 +3276,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                       </div>
                     </div>
                   </div>
-                )
+                ),
               )}
             </div>
           </div>
@@ -3218,7 +3434,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           fontWeight: "bold",
                         }}
                       >
-                        {day.persentasePengisian != null ? `${day.persentasePengisian}%` : "-"}
+                        {day.persentasePengisian != null
+                          ? `${day.persentasePengisian}%`
+                          : "-"}
                       </td>
                       <td
                         style={{
@@ -3269,7 +3487,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         }}
                       >
                         {(day.pengisian ?? day.total) > 0
-                          ? ((day.fitToWork / (day.pengisian ?? day.total)) * 100).toFixed(1)
+                          ? (
+                              (day.fitToWork / (day.pengisian ?? day.total)) *
+                              100
+                            ).toFixed(1)
                           : 0}
                         %
                       </td>
@@ -3280,30 +3501,87 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
 
               {/* Pie Chart & Bar Chart - Bersebelahan (filter mempengaruhi keduanya) */}
               {fitToWorkStats.dailyStats.length > 0 && (
-                <div style={{ marginTop: "24px", display: "flex", gap: "24px", flexWrap: "wrap", alignItems: "flex-start" }}>
+                <div
+                  style={{
+                    marginTop: "24px",
+                    display: "flex",
+                    gap: "24px",
+                    flexWrap: "wrap",
+                    alignItems: "flex-start",
+                  }}
+                >
                   {/* Pie Chart - mengikuti filter Harian/Bulanan/Tahunan */}
                   {(() => {
-                    let totalFit = 0, totalNotFit = 0;
-                    if (chartViewMode === "daily" || chartAggregatedData.length === 0) {
-                      totalFit = fitToWorkStats.dailyStats.reduce((s, d) => s + (d.fitToWork ?? 0), 0);
-                      totalNotFit = fitToWorkStats.dailyStats.reduce((s, d) => s + (d.notFitToWork ?? 0), 0);
+                    let totalFit = 0,
+                      totalNotFit = 0;
+                    if (
+                      chartViewMode === "daily" ||
+                      chartAggregatedData.length === 0
+                    ) {
+                      totalFit = fitToWorkStats.dailyStats.reduce(
+                        (s, d) => s + (d.fitToWork ?? 0),
+                        0,
+                      );
+                      totalNotFit = fitToWorkStats.dailyStats.reduce(
+                        (s, d) => s + (d.notFitToWork ?? 0),
+                        0,
+                      );
                     } else {
-                      totalFit = chartAggregatedData.reduce((s, d) => s + (d.fitToWork ?? 0), 0);
-                      totalNotFit = chartAggregatedData.reduce((s, d) => s + (d.notFitToWork ?? 0), 0);
+                      totalFit = chartAggregatedData.reduce(
+                        (s, d) => s + (d.fitToWork ?? 0),
+                        0,
+                      );
+                      totalNotFit = chartAggregatedData.reduce(
+                        (s, d) => s + (d.notFitToWork ?? 0),
+                        0,
+                      );
                     }
                     const pieData = [
-                      { name: "Fit To Work", value: totalFit, color: "#22c55e" },
-                      { name: "Not Fit To Work", value: totalNotFit, color: "#ef4444" },
+                      {
+                        name: "Fit To Work",
+                        value: totalFit,
+                        color: "#22c55e",
+                      },
+                      {
+                        name: "Not Fit To Work",
+                        value: totalNotFit,
+                        color: "#ef4444",
+                      },
                     ].filter((d) => d.value > 0);
                     return pieData.length > 0 ? (
-                      <div style={{ flex: "1 1 280px", minWidth: 280, maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <h4 style={{ marginBottom: "4px", color: "#1a1a1a", fontSize: "14px" }}>
+                      <div
+                        style={{
+                          flex: "1 1 280px",
+                          minWidth: 280,
+                          maxWidth: 400,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                        }}
+                      >
+                        <h4
+                          style={{
+                            marginBottom: "4px",
+                            color: "#1a1a1a",
+                            fontSize: "14px",
+                          }}
+                        >
                           Perbandingan Fit To Work vs Not Fit To Work
                         </h4>
-                        <span style={{ marginBottom: "12px", color: "#6b7280", fontSize: "12px" }}>
+                        <span
+                          style={{
+                            marginBottom: "12px",
+                            color: "#6b7280",
+                            fontSize: "12px",
+                          }}
+                        >
                           {chartViewMode === "daily" && "(7 Hari)"}
-                          {chartViewMode === "monthly" && chartAggregatedData.length > 0 && "(12 Bulan)"}
-                          {chartViewMode === "yearly" && chartAggregatedData.length > 0 && "(5 Tahun)"}
+                          {chartViewMode === "monthly" &&
+                            chartAggregatedData.length > 0 &&
+                            "(12 Bulan)"}
+                          {chartViewMode === "yearly" &&
+                            chartAggregatedData.length > 0 &&
+                            "(5 Tahun)"}
                         </span>
                         <ResponsiveContainer width="100%" height={220}>
                           <PieChart>
@@ -3330,70 +3608,123 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   })()}
 
                   {/* Bar Chart - Kewajiban vs Pengisian */}
-                  <div style={{ flex: "1 1 400px", minWidth: 400, height: "360px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
-                    <h4 style={{ margin: 0, color: "#1a1a1a", fontSize: "14px" }}>
-                      Grafik Kewajiban vs Pengisian
-                      {chartViewMode === "daily" && " (7 Hari)"}
-                      {chartViewMode === "monthly" && " (12 Bulan)"}
-                      {chartViewMode === "yearly" && " (5 Tahun)"}
-                    </h4>
-                    <div style={{ display: "flex", gap: "4px" }}>
-                      {["daily", "monthly", "yearly"].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setChartViewMode(m)}
+                  <div
+                    style={{
+                      flex: "1 1 400px",
+                      minWidth: 400,
+                      height: "360px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "16px",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                      }}
+                    >
+                      <h4
+                        style={{
+                          margin: 0,
+                          color: "#1a1a1a",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Grafik Kewajiban vs Pengisian
+                        {chartViewMode === "daily" && " (7 Hari)"}
+                        {chartViewMode === "monthly" && " (12 Bulan)"}
+                        {chartViewMode === "yearly" && " (5 Tahun)"}
+                      </h4>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        {["daily", "monthly", "yearly"].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setChartViewMode(m)}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              border:
+                                chartViewMode === m
+                                  ? "2px solid #3b82f6"
+                                  : "1px solid #d1d5db",
+                              background:
+                                chartViewMode === m ? "#eff6ff" : "#fff",
+                              color:
+                                chartViewMode === m ? "#1d4ed8" : "#374151",
+                              fontSize: "12px",
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {m === "daily" && "Harian"}
+                            {m === "monthly" && "Bulanan"}
+                            {m === "yearly" && "Tahunan"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart
+                        data={
+                          chartViewMode === "daily"
+                            ? fitToWorkStats.dailyStats.map((d) => ({
+                                tanggal: new Date(
+                                  d.date + "T12:00:00",
+                                ).toLocaleDateString("id-ID", {
+                                  day: "numeric",
+                                  month: "short",
+                                }),
+                                Kewajiban: d.kewajiban ?? 0,
+                                Pengisian: d.pengisian ?? d.total ?? 0,
+                              }))
+                            : chartAggregatedData.map((d) => ({
+                                tanggal: d.label ?? "-",
+                                Kewajiban: d.kewajiban ?? 0,
+                                Pengisian: d.pengisian ?? 0,
+                              }))
+                        }
+                        margin={{ top: 10, right: 20, left: 10, bottom: 40 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="tanggal"
+                          tick={{ fontSize: 12 }}
+                          height={40}
+                        />
+                        <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar
+                          dataKey="Kewajiban"
+                          fill="#6b7280"
+                          name="Kewajiban"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="Pengisian"
+                          fill="#3b82f6"
+                          name="Pengisian"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    {chartViewMode !== "daily" &&
+                      chartAggregatedData.length === 0 && (
+                        <div
                           style={{
-                            padding: "6px 12px",
-                            borderRadius: "6px",
-                            border: chartViewMode === m ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                            background: chartViewMode === m ? "#eff6ff" : "#fff",
-                            color: chartViewMode === m ? "#1d4ed8" : "#374151",
-                            fontSize: "12px",
-                            fontWeight: 500,
-                            cursor: "pointer",
+                            textAlign: "center",
+                            color: "#6b7280",
+                            fontSize: "13px",
+                            marginTop: "8px",
                           }}
                         >
-                          {m === "daily" && "Harian"}
-                          {m === "monthly" && "Bulanan"}
-                          {m === "yearly" && "Tahunan"}
-                        </button>
-                      ))}
-                    </div>
+                          Memuat data...
+                        </div>
+                      )}
                   </div>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart
-                      data={
-                        chartViewMode === "daily"
-                          ? fitToWorkStats.dailyStats.map((d) => ({
-                              tanggal: new Date(d.date + "T12:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
-                              Kewajiban: d.kewajiban ?? 0,
-                              Pengisian: d.pengisian ?? d.total ?? 0,
-                            }))
-                          : chartAggregatedData.map((d) => ({
-                              tanggal: d.label ?? "-",
-                              Kewajiban: d.kewajiban ?? 0,
-                              Pengisian: d.pengisian ?? 0,
-                            }))
-                      }
-                      margin={{ top: 10, right: 20, left: 10, bottom: 40 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="tanggal" tick={{ fontSize: 12 }} height={40} />
-                      <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="Kewajiban" fill="#6b7280" name="Kewajiban" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Pengisian" fill="#3b82f6" name="Pengisian" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  {chartViewMode !== "daily" && chartAggregatedData.length === 0 && (
-                    <div style={{ textAlign: "center", color: "#6b7280", fontSize: "13px", marginTop: "8px" }}>
-                      Memuat data...
-                    </div>
-                  )}
-                </div>
                 </div>
               )}
             </div>
@@ -3437,7 +3768,13 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                       gap: "12px",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <span style={{ fontSize: "13px", color: "#374151" }}>
                         Tampilkan
                       </span>
@@ -3470,31 +3807,94 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Tanggal Input
                         </th>
-                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Jam Input
                         </th>
-                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Nama Pekerja
                         </th>
-                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           NRP Pekerja
                         </th>
-                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Jabatan
                         </th>
-                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Site
                         </th>
-                        <th style={{ textAlign: "left", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Jumlah Jam Tidur
                         </th>
-                        <th style={{ textAlign: "center", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Status Awal
                         </th>
-                        <th style={{ textAlign: "center", padding: "12px", color: "#1a1a1a", fontWeight: "bold" }}>
+                        <th
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Status Akhir
                         </th>
                       </tr>
@@ -3503,10 +3903,14 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                       {(fitToWorkStats.listData || [])
                         .slice(
                           fitToWorkTablePage * fitToWorkTablePageSize,
-                          fitToWorkTablePage * fitToWorkTablePageSize + fitToWorkTablePageSize
+                          fitToWorkTablePage * fitToWorkTablePageSize +
+                            fitToWorkTablePageSize,
                         )
                         .map((row, index) => {
-                          const statusAwal = row.initial_status_fatigue || row.status_fatigue || "-";
+                          const statusAwal =
+                            row.initial_status_fatigue ||
+                            row.status_fatigue ||
+                            "-";
                           const statusAkhir = row.status_fatigue || "-";
                           return (
                             <tr
@@ -3515,22 +3919,35 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                             >
                               <td style={{ padding: "12px", color: "#1a1a1a" }}>
                                 {row.tanggal
-                                  ? new Date(row.tanggal + "T12:00:00").toLocaleDateString("id-ID")
+                                  ? new Date(
+                                      row.tanggal + "T12:00:00",
+                                    ).toLocaleDateString("id-ID")
                                   : "-"}
                               </td>
                               <td style={{ padding: "12px", color: "#1a1a1a" }}>
                                 {row.created_at
-                                  ? new Date(row.created_at).toLocaleTimeString("id-ID", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      second: "2-digit",
-                                    })
+                                  ? new Date(row.created_at).toLocaleTimeString(
+                                      "id-ID",
+                                      {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        second: "2-digit",
+                                      },
+                                    )
                                   : "-"}
                               </td>
-                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.nama || "-"}</td>
-                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.nrp || "-"}</td>
-                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.jabatan || "-"}</td>
-                              <td style={{ padding: "12px", color: "#1a1a1a" }}>{row.site || "-"}</td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                                {row.nama || "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                                {row.nrp || "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                                {row.jabatan || "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                                {row.site || "-"}
+                              </td>
                               <td style={{ padding: "12px", color: "#1a1a1a" }}>
                                 {row.total_jam_tidur != null
                                   ? `${Math.floor(row.total_jam_tidur)} jam`
@@ -3541,7 +3958,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                                   padding: "12px",
                                   textAlign: "center",
                                   fontWeight: "bold",
-                                  color: statusAwal === "Fit To Work" ? "#166534" : "#dc2626",
+                                  color:
+                                    statusAwal === "Fit To Work"
+                                      ? "#166534"
+                                      : "#dc2626",
                                 }}
                               >
                                 {statusAwal}
@@ -3551,7 +3971,10 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                                   padding: "12px",
                                   textAlign: "center",
                                   fontWeight: "bold",
-                                  color: statusAkhir === "Fit To Work" ? "#166534" : "#dc2626",
+                                  color:
+                                    statusAkhir === "Fit To Work"
+                                      ? "#166534"
+                                      : "#dc2626",
                                 }}
                               >
                                 {statusAkhir}
@@ -3580,22 +4003,29 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                       -{" "}
                       {Math.min(
                         (fitToWorkTablePage + 1) * fitToWorkTablePageSize,
-                        fitToWorkStats.listData.length
+                        fitToWorkStats.listData.length,
                       )}{" "}
                       dari {fitToWorkStats.listData.length}
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
                         type="button"
-                        onClick={() => setFitToWorkTablePage((p) => Math.max(0, p - 1))}
+                        onClick={() =>
+                          setFitToWorkTablePage((p) => Math.max(0, p - 1))
+                        }
                         disabled={fitToWorkTablePage === 0}
                         style={{
                           padding: "6px 14px",
                           borderRadius: "6px",
                           border: "1px solid #d1d5db",
-                          background: fitToWorkTablePage === 0 ? "#f3f4f6" : "#fff",
-                          color: fitToWorkTablePage === 0 ? "#9ca3af" : "#374151",
-                          cursor: fitToWorkTablePage === 0 ? "not-allowed" : "pointer",
+                          background:
+                            fitToWorkTablePage === 0 ? "#f3f4f6" : "#fff",
+                          color:
+                            fitToWorkTablePage === 0 ? "#9ca3af" : "#374151",
+                          cursor:
+                            fitToWorkTablePage === 0
+                              ? "not-allowed"
+                              : "pointer",
                           fontSize: "13px",
                         }}
                       >
@@ -3605,14 +4035,21 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         type="button"
                         onClick={() =>
                           setFitToWorkTablePage((p) =>
-                            p + 1 < Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                            p + 1 <
+                            Math.ceil(
+                              fitToWorkStats.listData.length /
+                                fitToWorkTablePageSize,
+                            )
                               ? p + 1
-                              : p
+                              : p,
                           )
                         }
                         disabled={
                           fitToWorkTablePage + 1 >=
-                          Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                          Math.ceil(
+                            fitToWorkStats.listData.length /
+                              fitToWorkTablePageSize,
+                          )
                         }
                         style={{
                           padding: "6px 14px",
@@ -3620,17 +4057,26 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                           border: "1px solid #d1d5db",
                           background:
                             fitToWorkTablePage + 1 >=
-                            Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                            Math.ceil(
+                              fitToWorkStats.listData.length /
+                                fitToWorkTablePageSize,
+                            )
                               ? "#f3f4f6"
                               : "#fff",
                           color:
                             fitToWorkTablePage + 1 >=
-                            Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                            Math.ceil(
+                              fitToWorkStats.listData.length /
+                                fitToWorkTablePageSize,
+                            )
                               ? "#9ca3af"
                               : "#374151",
                           cursor:
                             fitToWorkTablePage + 1 >=
-                            Math.ceil(fitToWorkStats.listData.length / fitToWorkTablePageSize)
+                            Math.ceil(
+                              fitToWorkStats.listData.length /
+                                fitToWorkTablePageSize,
+                            )
                               ? "not-allowed"
                               : "pointer",
                           fontSize: "13px",
@@ -3663,671 +4109,616 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       <div style={{ padding: "0" }}>
         {/* Content Container - Centered (lebar sama dengan Fit To Work) */}
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: isMobile ? 0 : 240,
-              right: 0,
-              zIndex: 100,
-              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
-              padding: "20px 0",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            }}
-          >
-            <div
-              style={{
-                maxWidth: "1400px",
-                margin: "0 auto",
-                padding: "0 20px",
-                display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-            <div
-              style={{
-                display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "flex-end",
-              }}
-            >
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#e5e7eb",
-                }}
-              >
-                Dari:
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  height: 38,
-                  boxSizing: "border-box",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
-                  minWidth: "180px",
-                }}
-              />
-            </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#e5e7eb",
-                }}
-              >
-                Sampai:
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  height: 38,
-                  boxSizing: "border-box",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
-                  minWidth: "180px",
-                }}
-              />
-            </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#e5e7eb",
-                }}
-              >
-                Site:
-              </label>
-              <select
-                value={site}
-                onChange={(e) => setSite(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  height: 38,
-                  boxSizing: "border-box",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
-                  minWidth: "150px",
-                }}
-              >
-                <option value="">Semua Site</option>
-                {CUSTOM_INPUT_SITES.map((siteOption) => (
-                  <option key={siteOption} value={siteOption}>
-                    {siteOption}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Header */}
+          <div style={{ marginBottom: "30px" }}>
+            <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
+              📊 Dashboard Statistik Take 5
+            </h2>
+            <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
+              Monitoring pelaporan Take 5 dan status penyelesaian
+            </p>
           </div>
 
-          {/* Reset & Download Buttons */}
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button
-              onClick={() => {
-                setDateFrom("");
-                setDateTo("");
-                setSite("");
-              }}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "1px solid #ddd",
-                background: "#f8f9fa",
-                color: "#374151",
-                fontSize: "14px",
-                cursor: "pointer",
-                fontWeight: "500",
-              }}
-            >
-              Reset Filter
-            </button>
-            <button
-              onClick={handleDownloadTake5Excel}
-              disabled={!take5Stats}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-                background: "#10b981",
-                color: "#fff",
-                fontSize: "14px",
-                cursor: "pointer",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              📊 Excel
-            </button>
-            <button
-              onClick={handleDownloadTake5PDF}
-              disabled={!take5Stats}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-                background: "#ef4444",
-                color: "#fff",
-                fontSize: "14px",
-                cursor: "pointer",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              📄 PDF
-            </button>
-          </div>
-          </div>
-        </div>
-        {/* Spacer agar konten tidak tertutup filter fixed */}
-        <div style={{ height: 100 }} />
-        {/* Header */}
-        <div style={{ marginBottom: "30px" }}>
-          <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
-            📊 Dashboard Statistik Take 5
-          </h2>
-          <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
-            Monitoring pelaporan Take 5 dan status penyelesaian
-          </p>
-        </div>
-
-        {/* Summary Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "16px",
-            marginBottom: "30px",
-          }}
-        >
-          {/* Total Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Total Laporan</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {take5Stats.totalReports}
-            </div>
-          </div>
-
-          {/* Open Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>
-              Laporan Terbuka
-            </div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {take5Stats.openReports}
-            </div>
-          </div>
-
-          {/* Done Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>
-              Laporan Selesai
-            </div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {take5Stats.doneReports}
-            </div>
-          </div>
-
-          {/* Completion Rate */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>
-              Tingkat Penyelesaian
-            </div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {take5Stats.completionRate}%
-            </div>
-          </div>
-        </div>
-
-        {/* Site Statistics */}
-        <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
-            📈 Statistik per Site {site && `- ${site}`}
-          </h3>
+          {/* Summary Cards */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
               gap: "16px",
+              marginBottom: "30px",
             }}
           >
-            {Object.entries(take5Stats.siteStats).map(([siteName, stats]) => (
+            {/* Total Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Total Laporan
+              </div>
               <div
-                key={siteName}
                 style={{
-                  background: "white",
-                  padding: "20px",
-                  borderRadius: "12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  border: "1px solid #e5e7eb",
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
                 }}
               >
-                <h4 style={{ color: "#232946", marginBottom: "15px" }}>
-                  {siteName}
-                </h4>
+                {take5Stats.totalReports}
+              </div>
+            </div>
+
+            {/* Open Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Laporan Terbuka
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {take5Stats.openReports}
+              </div>
+            </div>
+
+            {/* Done Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Laporan Selesai
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {take5Stats.doneReports}
+              </div>
+            </div>
+
+            {/* Completion Rate */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Tingkat Penyelesaian
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {take5Stats.completionRate}%
+              </div>
+            </div>
+          </div>
+
+          {/* Site Statistics */}
+          <div style={{ marginBottom: "30px" }}>
+            <h3
+              style={{
+                color: "#ffffff",
+                marginBottom: "20px",
+                fontWeight: "600",
+              }}
+            >
+              📈 Statistik per Site {site && `- ${site}`}
+            </h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: "16px",
+              }}
+            >
+              {Object.entries(take5Stats.siteStats).map(([siteName, stats]) => (
                 <div
+                  key={siteName}
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "10px",
+                    background: "white",
+                    padding: "20px",
+                    borderRadius: "12px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    border: "1px solid #e5e7eb",
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Total</div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#232946",
-                      }}
-                    >
-                      {stats.total}
+                  <h4 style={{ color: "#232946", marginBottom: "15px" }}>
+                    {siteName}
+                  </h4>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "10px",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "12px", color: "#666" }}>
+                        Total
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: "bold",
+                          color: "#232946",
+                        }}
+                      >
+                        {stats.total}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      Terbuka
+                    <div>
+                      <div style={{ fontSize: "12px", color: "#666" }}>
+                        Terbuka
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: "bold",
+                          color: "#f59e0b",
+                        }}
+                      >
+                        {stats.open}
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#f59e0b",
-                      }}
-                    >
-                      {stats.open}
+                    <div>
+                      <div style={{ fontSize: "12px", color: "#666" }}>
+                        Selesai
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: "bold",
+                          color: "#10b981",
+                        }}
+                      >
+                        {stats.done}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      Selesai
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#10b981",
-                      }}
-                    >
-                      {stats.done}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      Tertutup
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#6b7280",
-                      }}
-                    >
-                      {stats.closed}
+                    <div>
+                      <div style={{ fontSize: "12px", color: "#666" }}>
+                        Tertutup
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: "bold",
+                          color: "#6b7280",
+                        }}
+                      >
+                        {stats.closed}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Daily Statistics */}
-        <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
-            📅 Statistik{" "}
-            {dateFrom && dateTo
-              ? `${dateFrom} s/d ${dateTo}`
-              : "7 Hari Terakhir"}
-          </h3>
-          <div
-            style={{
-              background: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                  <th
-                    style={{
-                      textAlign: "left",
-                      padding: "12px",
-                      color: "#232946",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Tanggal
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#232946",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Total
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#f59e0b",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Terbuka
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#10b981",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Selesai
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#6b7280",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Tertutup
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {take5Stats.dailyStats.map((day, index) => (
-                  <tr
-                    key={day.date}
-                    style={{ borderBottom: "1px solid #e5e7eb" }}
-                  >
-                    <td style={{ padding: "12px", color: "#232946" }}>
-                      {new Date(day.date).toLocaleDateString("id-ID", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#232946",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {day.total}
-                    </td>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#f59e0b",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {day.open}
-                    </td>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#10b981",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {day.done}
-                    </td>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#6b7280",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {day.closed}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
-        {(() => {
-          const isDaily = chartViewMode === "daily";
-          const agg = take5ChartAggregatedData;
-          let totalOpen = 0, totalDone = 0, totalClosed = 0;
-          if (isDaily || agg.length === 0) {
-            (take5Stats.dailyStats || []).forEach((d) => {
-              totalOpen += d.open ?? 0;
-              totalDone += d.done ?? 0;
-              totalClosed += d.closed ?? 0;
-            });
-          } else {
-            agg.forEach((d) => {
-              totalOpen += d.open ?? 0;
-              totalDone += d.done ?? 0;
-              totalClosed += d.closed ?? 0;
-            });
-          }
-          const pieData = [
-            { name: "Terbuka", value: totalOpen, color: "#f59e0b" },
-            { name: "Selesai", value: totalDone, color: "#10b981" },
-            { name: "Tertutup", value: totalClosed, color: "#6b7280" },
-          ].filter((d) => d.value > 0);
-          const barData = isDaily || agg.length === 0
-            ? (take5Stats.dailyStats || []).map((d) => ({
-                tanggal: new Date(d.date + "T12:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" }),
-                Total: d.total ?? 0,
-                Terbuka: d.open ?? 0,
-                Selesai: d.done ?? 0,
-                Tertutup: d.closed ?? 0,
-              }))
-            : agg.map((d) => ({
-                tanggal: d.label ?? "-",
-                Total: d.total ?? 0,
-                Terbuka: d.open ?? 0,
-                Selesai: d.done ?? 0,
-                Tertutup: d.closed ?? 0,
-              }));
-          const hasCharts = pieData.length > 0 || barData.length > 0;
-          if (!hasCharts && isDaily) return null;
-          return (
+          {/* Daily Statistics */}
+          <div style={{ marginBottom: "30px" }}>
+            <h3
+              style={{
+                color: "#ffffff",
+                marginBottom: "20px",
+                fontWeight: "600",
+              }}
+            >
+              📅 Statistik{" "}
+              {dateFrom && dateTo
+                ? `${dateFrom} s/d ${dateTo}`
+                : "7 Hari Terakhir"}
+            </h3>
             <div
               style={{
-                marginBottom: "30px",
                 background: "white",
-                padding: "24px",
+                padding: "20px",
                 borderRadius: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 border: "1px solid #e5e7eb",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-                <h3 style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}>
-                  📊 Distribusi Laporan
-                </h3>
-                <div style={{ display: "flex", gap: "4px" }}>
-                  {["daily", "monthly", "yearly"].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setChartViewMode(m)}
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                    <th
                       style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: chartViewMode === m ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                        background: chartViewMode === m ? "#eff6ff" : "#fff",
-                        color: chartViewMode === m ? "#1d4ed8" : "#374151",
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        cursor: "pointer",
+                        textAlign: "left",
+                        padding: "12px",
+                        color: "#232946",
+                        fontWeight: "bold",
                       }}
                     >
-                      {m === "daily" && "Harian"}
-                      {m === "monthly" && "Bulanan"}
-                      {m === "yearly" && "Tahunan"}
-                    </button>
+                      Tanggal
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#232946",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Total
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#f59e0b",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Terbuka
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#10b981",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Selesai
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#6b7280",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Tertutup
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {take5Stats.dailyStats.map((day, index) => (
+                    <tr
+                      key={day.date}
+                      style={{ borderBottom: "1px solid #e5e7eb" }}
+                    >
+                      <td style={{ padding: "12px", color: "#232946" }}>
+                        {new Date(day.date).toLocaleDateString("id-ID", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#232946",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.total}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#f59e0b",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.open}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#10b981",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.done}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#6b7280",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.closed}
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </div>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
+          {(() => {
+            const isDaily = chartViewMode === "daily";
+            const agg = take5ChartAggregatedData;
+            let totalOpen = 0,
+              totalDone = 0,
+              totalClosed = 0;
+            if (isDaily || agg.length === 0) {
+              (take5Stats.dailyStats || []).forEach((d) => {
+                totalOpen += d.open ?? 0;
+                totalDone += d.done ?? 0;
+                totalClosed += d.closed ?? 0;
+              });
+            } else {
+              agg.forEach((d) => {
+                totalOpen += d.open ?? 0;
+                totalDone += d.done ?? 0;
+                totalClosed += d.closed ?? 0;
+              });
+            }
+            const pieData = [
+              { name: "Terbuka", value: totalOpen, color: "#f59e0b" },
+              { name: "Selesai", value: totalDone, color: "#10b981" },
+              { name: "Tertutup", value: totalClosed, color: "#6b7280" },
+            ].filter((d) => d.value > 0);
+            const barData =
+              isDaily || agg.length === 0
+                ? (take5Stats.dailyStats || []).map((d) => ({
+                    tanggal: new Date(d.date + "T12:00:00").toLocaleDateString(
+                      "id-ID",
+                      { weekday: "short", day: "numeric", month: "short" },
+                    ),
+                    Total: d.total ?? 0,
+                    Terbuka: d.open ?? 0,
+                    Selesai: d.done ?? 0,
+                    Tertutup: d.closed ?? 0,
+                  }))
+                : agg.map((d) => ({
+                    tanggal: d.label ?? "-",
+                    Total: d.total ?? 0,
+                    Terbuka: d.open ?? 0,
+                    Selesai: d.done ?? 0,
+                    Tertutup: d.closed ?? 0,
+                  }));
+            const hasCharts = pieData.length > 0 || barData.length > 0;
+            if (!hasCharts && isDaily) return null;
+            return (
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                  gap: "24px",
+                  marginBottom: "30px",
+                  background: "white",
+                  padding: "24px",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  border: "1px solid #e5e7eb",
                 }}
               >
-                {pieData.length > 0 && (
-                  <div>
-                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
-                      Distribusi Status Laporan
-                      {chartViewMode === "daily" && " (7 Hari)"}
-                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
-                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
-                    </h4>
-                    <div style={{ width: "100%", maxWidth: 380, height: 300, margin: "0 auto" }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={55}
-                            outerRadius={90}
-                            paddingAngle={2}
-                            dataKey="value"
-                            label={({ name, value }) => `${name}: ${value}`}
-                          >
-                            {pieData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(v) => [v, ""]} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <h3
+                    style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}
+                  >
+                    📊 Distribusi Laporan
+                  </h3>
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    {["daily", "monthly", "yearly"].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setChartViewMode(m)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border:
+                            chartViewMode === m
+                              ? "2px solid #3b82f6"
+                              : "1px solid #d1d5db",
+                          background: chartViewMode === m ? "#eff6ff" : "#fff",
+                          color: chartViewMode === m ? "#1d4ed8" : "#374151",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {m === "daily" && "Harian"}
+                        {m === "monthly" && "Bulanan"}
+                        {m === "yearly" && "Tahunan"}
+                      </button>
+                    ))}
                   </div>
-                )}
-                {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
-                  <div>
-                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
-                      Statistik {chartViewMode === "daily" ? "Harian" : chartViewMode === "monthly" ? "Bulanan" : "Tahunan"}
-                      {chartViewMode === "daily" && " (7 Hari)"}
-                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
-                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
-                    </h4>
-                    <div style={{ width: "100%", height: 300 }}>
-                      {barData.length > 0 ? (
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: "24px",
+                  }}
+                >
+                  {pieData.length > 0 && (
+                    <div>
+                      <h4
+                        style={{
+                          color: "#374151",
+                          marginBottom: "12px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Distribusi Status Laporan
+                        {chartViewMode === "daily" && " (7 Hari)"}
+                        {chartViewMode === "monthly" &&
+                          agg.length > 0 &&
+                          " (12 Bulan)"}
+                        {chartViewMode === "yearly" &&
+                          agg.length > 0 &&
+                          " (5 Tahun)"}
+                      </h4>
+                      <div
+                        style={{
+                          width: "100%",
+                          maxWidth: 380,
+                          height: 300,
+                          margin: "0 auto",
+                        }}
+                      >
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={barData} margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="tanggal" tick={{ fontSize: 11 }} height={40} />
-                            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                            <Tooltip />
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={55}
+                              outerRadius={90}
+                              paddingAngle={2}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {pieData.map((entry, i) => (
+                                <Cell key={i} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [v, ""]} />
                             <Legend />
-                            <Bar dataKey="Total" fill="#3b82f6" name="Total" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Terbuka" fill="#f59e0b" name="Terbuka" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Selesai" fill="#10b981" name="Selesai" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Tertutup" fill="#6b7280" name="Tertutup" radius={[4, 4, 0, 0]} />
-                          </BarChart>
+                          </PieChart>
                         </ResponsiveContainer>
-                      ) : (
-                        <div style={{ textAlign: "center", color: "#6b7280", fontSize: "13px", paddingTop: "80px" }}>
-                          Memuat data...
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
+                    <div>
+                      <h4
+                        style={{
+                          color: "#374151",
+                          marginBottom: "12px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Statistik{" "}
+                        {chartViewMode === "daily"
+                          ? "Harian"
+                          : chartViewMode === "monthly"
+                            ? "Bulanan"
+                            : "Tahunan"}
+                        {chartViewMode === "daily" && " (7 Hari)"}
+                        {chartViewMode === "monthly" &&
+                          agg.length > 0 &&
+                          " (12 Bulan)"}
+                        {chartViewMode === "yearly" &&
+                          agg.length > 0 &&
+                          " (5 Tahun)"}
+                      </h4>
+                      <div style={{ width: "100%", height: 300 }}>
+                        {barData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={barData}
+                              margin={{
+                                top: 10,
+                                right: 20,
+                                left: 10,
+                                bottom: 40,
+                              }}
+                            >
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#e5e7eb"
+                              />
+                              <XAxis
+                                dataKey="tanggal"
+                                tick={{ fontSize: 11 }}
+                                height={40}
+                              />
+                              <YAxis
+                                tick={{ fontSize: 12 }}
+                                allowDecimals={false}
+                              />
+                              <Tooltip />
+                              <Legend />
+                              <Bar
+                                dataKey="Total"
+                                fill="#3b82f6"
+                                name="Total"
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar
+                                dataKey="Terbuka"
+                                fill="#f59e0b"
+                                name="Terbuka"
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar
+                                dataKey="Selesai"
+                                fill="#10b981"
+                                name="Selesai"
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar
+                                dataKey="Tertutup"
+                                fill="#6b7280"
+                                name="Tertutup"
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div
+                            style={{
+                              textAlign: "center",
+                              color: "#6b7280",
+                              fontSize: "13px",
+                              paddingTop: "80px",
+                            }}
+                          >
+                            Memuat data...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
-        {/* Individual Statistics */}
-        {renderIndividualStatsTable(individualStats.take5, "take_5")}
+          {/* Individual Statistics */}
+          {renderIndividualStatsTable(individualStats.take5, "take_5")}
         </div>
       </div>
     );
@@ -4347,648 +4738,439 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       <div style={{ padding: "0" }}>
         {/* Content Container - Centered (lebar sama dengan Fit To Work) */}
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          {/* Filter Panel - Fixed di atas layar browser, centered di area konten */}
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: isMobile ? 0 : 240,
-              right: 0,
-              zIndex: 100,
-              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
-              padding: "20px 0",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            }}
-          >
-            <div
-              style={{
-                maxWidth: "1400px",
-                margin: "0 auto",
-                padding: "0 20px",
-                display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-            <div
-              style={{
-                display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "flex-end",
-              }}
-            >
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#e5e7eb",
-                }}
-              >
-                Dari:
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  height: 38,
-                  boxSizing: "border-box",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
-                  minWidth: "180px",
-                }}
-              />
-            </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#e5e7eb",
-                }}
-              >
-                Sampai:
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  height: 38,
-                  boxSizing: "border-box",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
-                  minWidth: "180px",
-                }}
-              />
-            </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <label
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: "#e5e7eb",
-                }}
-              >
-                Site:
-              </label>
-              <select
-                value={site}
-                onChange={(e) => setSite(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  height: 38,
-                  boxSizing: "border-box",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
-                  minWidth: "150px",
-                }}
-              >
-                <option value="">Semua Site</option>
-                {CUSTOM_INPUT_SITES.map((siteOption) => (
-                  <option key={siteOption} value={siteOption}>
-                    {siteOption}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Header */}
+          <div style={{ marginBottom: "30px" }}>
+            <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
+              📊 Dashboard Statistik Hazard
+            </h2>
+            <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
+              Monitoring pelaporan Hazard dan status penyelesaian
+            </p>
           </div>
 
-          {/* Reset & Download Buttons */}
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button
-              onClick={() => {
-                setDateFrom("");
-                setDateTo("");
-                setSite("");
-              }}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "1px solid #ddd",
-                background: "#f8f9fa",
-                color: "#374151",
-                fontSize: "14px",
-                cursor: "pointer",
-                fontWeight: "500",
-              }}
-            >
-              Reset Filter
-            </button>
-            <button
-              onClick={handleDownloadHazardExcel}
-              disabled={!hazardStats}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-                background: "#10b981",
-                color: "#fff",
-                fontSize: "14px",
-                cursor: "pointer",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              📊 Excel
-            </button>
-            <button
-              onClick={handleDownloadHazardPDF}
-              disabled={!hazardStats}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-                background: "#ef4444",
-                color: "#fff",
-                fontSize: "14px",
-                cursor: "pointer",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              📄 PDF
-            </button>
-          </div>
-          </div>
-        </div>
-        {/* Spacer agar konten tidak tertutup filter fixed */}
-        <div style={{ height: 100 }} />
-        {/* Header */}
-        <div style={{ marginBottom: "30px" }}>
-          <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
-            📊 Dashboard Statistik Hazard
-          </h2>
-          <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
-            Monitoring pelaporan Hazard dan status penyelesaian
-          </p>
-        </div>
-
-        {/* Summary Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "16px",
-            marginBottom: "30px",
-          }}
-        >
-          {/* Total Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Total Laporan</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.totalReports}
-            </div>
-          </div>
-
-          {/* Submit Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(107, 114, 128, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Submit</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.submitReports}
-            </div>
-          </div>
-
-          {/* Open Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Open</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.openReports}
-            </div>
-          </div>
-
-          {/* Progress Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Progress</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.progressReports}
-            </div>
-          </div>
-
-          {/* Done Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Done</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.doneReports}
-            </div>
-          </div>
-
-          {/* Completion Rate */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>
-              Tingkat Penyelesaian
-            </div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.completionRate}%
-            </div>
-          </div>
-        </div>
-
-        {/* Completion Accuracy Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "16px",
-            marginBottom: "30px",
-          }}
-        >
-          <h3
-            style={{
-              color: "#ffffff",
-              marginBottom: "20px",
-              gridColumn: "1 / -1",
-              fontWeight: "600",
-            }}
-          >
-            ⏰ Statistik Ketepatan Penyelesaian
-          </h3>
-
-          {/* Closed On Time */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed On Time</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.closedOnTime || 0}
-            </div>
-            <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
-              Selesai tepat waktu
-            </div>
-          </div>
-
-          {/* Overdue Reports */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>
-              Overdue Reports
-            </div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.overdueReports || 0}
-            </div>
-            <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
-              Melewati due date
-            </div>
-          </div>
-
-          {/* Closed Overdue */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
-            }}
-          >
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed Overdue</div>
-            <div
-              style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}
-            >
-              {hazardStats.closedOverdue || 0}
-            </div>
-            <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
-              Selesai terlambat
-            </div>
-          </div>
-        </div>
-
-        {/* Site Statistics */}
-        <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
-            📈 Statistik per Site {site && `- ${site}`}
-          </h3>
+          {/* Summary Cards */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
               gap: "16px",
+              marginBottom: "30px",
             }}
           >
-            {Object.entries(hazardStats.siteStats).map(([siteName, stats]) => (
-              <div
-                key={siteName}
-                style={{
-                  background: "white",
-                  padding: "20px",
-                  borderRadius: "12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                <h4 style={{ color: "#232946", marginBottom: "15px" }}>
-                  {siteName}
-                </h4>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "10px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Total</div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#232946",
-                      }}
-                    >
-                      {stats.total}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      Submit
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#6b7280",
-                      }}
-                    >
-                      {stats.submit}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Open</div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#f59e0b",
-                      }}
-                    >
-                      {stats.open}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      Progress
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#8b5cf6",
-                      }}
-                    >
-                      {stats.progress}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Done</div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#10b981",
-                      }}
-                    >
-                      {stats.done}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      Closed
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        color: "#6b7280",
-                      }}
-                    >
-                      {stats.closed}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Daily Statistics */}
-        <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>
-            📅 Statistik{" "}
-            {dateFrom && dateTo
-              ? `${dateFrom} s/d ${dateTo}`
-              : "7 Hari Terakhir"}
-          </h3>
-          <div
-            style={{
-              background: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              border: "1px solid #e5e7eb",
-              overflow: "auto",
-            }}
-          >
-            <table
+            {/* Total Reports */}
+            <div
               style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                minWidth: "800px",
+                background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
               }}
             >
-              <thead>
-                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                  <th
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Total Laporan
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.totalReports}
+              </div>
+            </div>
+
+            {/* Submit Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(107, 114, 128, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Submit</div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.submitReports}
+              </div>
+            </div>
+
+            {/* Open Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Open</div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.openReports}
+              </div>
+            </div>
+
+            {/* Progress Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Progress</div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.progressReports}
+              </div>
+            </div>
+
+            {/* Done Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Done</div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.doneReports}
+              </div>
+            </div>
+
+            {/* Completion Rate */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Tingkat Penyelesaian
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.completionRate}%
+              </div>
+            </div>
+          </div>
+
+          {/* Completion Accuracy Cards */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "16px",
+              marginBottom: "30px",
+            }}
+          >
+            <h3
+              style={{
+                color: "#ffffff",
+                marginBottom: "20px",
+                gridColumn: "1 / -1",
+                fontWeight: "600",
+              }}
+            >
+              ⏰ Statistik Ketepatan Penyelesaian
+            </h3>
+
+            {/* Closed On Time */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Closed On Time
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.closedOnTime || 0}
+              </div>
+              <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
+                Selesai tepat waktu
+              </div>
+            </div>
+
+            {/* Overdue Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Overdue Reports
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.overdueReports || 0}
+              </div>
+              <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
+                Melewati due date
+              </div>
+            </div>
+
+            {/* Closed Overdue */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Closed Overdue
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {hazardStats.closedOverdue || 0}
+              </div>
+              <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
+                Selesai terlambat
+              </div>
+            </div>
+          </div>
+
+          {/* Site Statistics */}
+          <div style={{ marginBottom: "30px" }}>
+            <h3
+              style={{
+                color: "#ffffff",
+                marginBottom: "20px",
+                fontWeight: "600",
+              }}
+            >
+              📈 Statistik per Site {site && `- ${site}`}
+            </h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                gap: "16px",
+              }}
+            >
+              {Object.entries(hazardStats.siteStats).map(
+                ([siteName, stats]) => (
+                  <div
+                    key={siteName}
                     style={{
-                      textAlign: "left",
-                      padding: "12px",
-                      color: "#232946",
-                      fontWeight: "bold",
+                      background: "white",
+                      padding: "20px",
+                      borderRadius: "12px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                      border: "1px solid #e5e7eb",
                     }}
                   >
-                    Tanggal
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#232946",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Total
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#6b7280",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Submit
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#f59e0b",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Open
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#8b5cf6",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Progress
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#10b981",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Done
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#ef4444",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Reject
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      padding: "12px",
-                      color: "#6b7280",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Closed
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {hazardStats.dailyStats.map((day, index) => (
-                  <tr
-                    key={day.date}
-                    style={{ borderBottom: "1px solid #e5e7eb" }}
-                  >
-                    <td style={{ padding: "12px", color: "#232946" }}>
-                      {new Date(day.date).toLocaleDateString("id-ID", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                    <td
+                    <h4 style={{ color: "#232946", marginBottom: "15px" }}>
+                      {siteName}
+                    </h4>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "10px",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Total
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#232946",
+                          }}
+                        >
+                          {stats.total}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Submit
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#6b7280",
+                          }}
+                        >
+                          {stats.submit}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Open
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#f59e0b",
+                          }}
+                        >
+                          {stats.open}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Progress
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#8b5cf6",
+                          }}
+                        >
+                          {stats.progress}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Done
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#10b981",
+                          }}
+                        >
+                          {stats.done}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Closed
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#6b7280",
+                          }}
+                        >
+                          {stats.closed}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+
+          {/* Daily Statistics */}
+          <div style={{ marginBottom: "30px" }}>
+            <h3
+              style={{
+                color: "#ffffff",
+                marginBottom: "20px",
+                fontWeight: "600",
+              }}
+            >
+              📅 Statistik{" "}
+              {dateFrom && dateTo
+                ? `${dateFrom} s/d ${dateTo}`
+                : "7 Hari Terakhir"}
+            </h3>
+            <div
+              style={{
+                background: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                border: "1px solid #e5e7eb",
+                overflow: "auto",
+              }}
+            >
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  minWidth: "800px",
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "12px",
+                        color: "#232946",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Tanggal
+                    </th>
+                    <th
                       style={{
                         textAlign: "center",
                         padding: "12px",
@@ -4996,9 +5178,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      {day.total}
-                    </td>
-                    <td
+                      Total
+                    </th>
+                    <th
                       style={{
                         textAlign: "center",
                         padding: "12px",
@@ -5006,9 +5188,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      {day.submit}
-                    </td>
-                    <td
+                      Submit
+                    </th>
+                    <th
                       style={{
                         textAlign: "center",
                         padding: "12px",
@@ -5016,9 +5198,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      {day.open}
-                    </td>
-                    <td
+                      Open
+                    </th>
+                    <th
                       style={{
                         textAlign: "center",
                         padding: "12px",
@@ -5026,9 +5208,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      {day.progress}
-                    </td>
-                    <td
+                      Progress
+                    </th>
+                    <th
                       style={{
                         textAlign: "center",
                         padding: "12px",
@@ -5036,9 +5218,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      {day.done}
-                    </td>
-                    <td
+                      Done
+                    </th>
+                    <th
                       style={{
                         textAlign: "center",
                         padding: "12px",
@@ -5046,9 +5228,9 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      {day.rejectOpen + day.rejectDone}
-                    </td>
-                    <td
+                      Reject
+                    </th>
+                    <th
                       style={{
                         textAlign: "center",
                         padding: "12px",
@@ -5056,119 +5238,278 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                         fontWeight: "bold",
                       }}
                     >
-                      {day.closed}
-                    </td>
+                      Closed
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {hazardStats.dailyStats.map((day, index) => (
+                    <tr
+                      key={day.date}
+                      style={{ borderBottom: "1px solid #e5e7eb" }}
+                    >
+                      <td style={{ padding: "12px", color: "#232946" }}>
+                        {new Date(day.date).toLocaleDateString("id-ID", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#232946",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.total}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#6b7280",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.submit}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#f59e0b",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.open}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#8b5cf6",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.progress}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#10b981",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.done}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#ef4444",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.rejectOpen + day.rejectDone}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#6b7280",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.closed}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        {/* Distribusi Laporan - Satu container, dua chart kiri kanan */}
-        {(() => {
-          const pieData = [
-            { name: "Submit", value: hazardStats.submitReports || 0, color: "#6b7280" },
-            { name: "Open", value: hazardStats.openReports || 0, color: "#f59e0b" },
-            { name: "Progress", value: hazardStats.progressReports || 0, color: "#8b5cf6" },
-            { name: "Done", value: hazardStats.doneReports || 0, color: "#10b981" },
-            { name: "Reject Open", value: hazardStats.rejectOpenReports || 0, color: "#ef4444" },
-            { name: "Reject Done", value: hazardStats.rejectDoneReports || 0, color: "#f97316" },
-            { name: "Closed", value: hazardStats.closedReports || 0, color: "#3b82f6" },
-          ].filter((d) => d.value > 0);
-          const timelinessData = [
-            { name: "Closed On Time", value: hazardStats.closedOnTime || 0, color: "#10b981" },
-            { name: "Overdue", value: hazardStats.overdueReports || 0, color: "#f59e0b" },
-            { name: "Closed Over Due", value: hazardStats.closedOverdue || 0, color: "#ef4444" },
-          ].filter((d) => d.value > 0);
-          const hasCharts = pieData.length > 0 || timelinessData.length > 0;
-          if (!hasCharts) return null;
-          return (
-            <div
-              style={{
-                marginBottom: "30px",
-                background: "white",
-                padding: "24px",
-                borderRadius: "12px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                border: "1px solid #e5e7eb",
-              }}
-            >
-              <h3 style={{ color: "#1a1a1a", marginBottom: "20px", fontWeight: "600" }}>
-                📊 Distribusi Laporan
-              </h3>
+          {/* Distribusi Laporan - Satu container, dua chart kiri kanan */}
+          {(() => {
+            const pieData = [
+              {
+                name: "Submit",
+                value: hazardStats.submitReports || 0,
+                color: "#6b7280",
+              },
+              {
+                name: "Open",
+                value: hazardStats.openReports || 0,
+                color: "#f59e0b",
+              },
+              {
+                name: "Progress",
+                value: hazardStats.progressReports || 0,
+                color: "#8b5cf6",
+              },
+              {
+                name: "Done",
+                value: hazardStats.doneReports || 0,
+                color: "#10b981",
+              },
+              {
+                name: "Reject Open",
+                value: hazardStats.rejectOpenReports || 0,
+                color: "#ef4444",
+              },
+              {
+                name: "Reject Done",
+                value: hazardStats.rejectDoneReports || 0,
+                color: "#f97316",
+              },
+              {
+                name: "Closed",
+                value: hazardStats.closedReports || 0,
+                color: "#3b82f6",
+              },
+            ].filter((d) => d.value > 0);
+            const timelinessData = [
+              {
+                name: "Closed On Time",
+                value: hazardStats.closedOnTime || 0,
+                color: "#10b981",
+              },
+              {
+                name: "Overdue",
+                value: hazardStats.overdueReports || 0,
+                color: "#f59e0b",
+              },
+              {
+                name: "Closed Over Due",
+                value: hazardStats.closedOverdue || 0,
+                color: "#ef4444",
+              },
+            ].filter((d) => d.value > 0);
+            const hasCharts = pieData.length > 0 || timelinessData.length > 0;
+            if (!hasCharts) return null;
+            return (
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                  gap: "24px",
+                  marginBottom: "30px",
+                  background: "white",
+                  padding: "24px",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  border: "1px solid #e5e7eb",
                 }}
               >
-                {pieData.length > 0 && (
-                  <div>
-                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
-                      Distribusi Status Laporan
-                    </h4>
-                    <div style={{ width: "100%", maxWidth: 420, height: 300, margin: "0 auto" }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={55}
-                            outerRadius={90}
-                            paddingAngle={2}
-                            dataKey="value"
-                            label={({ name, value }) => `${name}: ${value}`}
-                          >
-                            {pieData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(v) => [v, ""]} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
+                <h3
+                  style={{
+                    color: "#1a1a1a",
+                    marginBottom: "20px",
+                    fontWeight: "600",
+                  }}
+                >
+                  📊 Distribusi Laporan
+                </h3>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: "24px",
+                  }}
+                >
+                  {pieData.length > 0 && (
+                    <div>
+                      <h4
+                        style={{
+                          color: "#374151",
+                          marginBottom: "12px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Distribusi Status Laporan
+                      </h4>
+                      <div
+                        style={{
+                          width: "100%",
+                          maxWidth: 420,
+                          height: 300,
+                          margin: "0 auto",
+                        }}
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={55}
+                              outerRadius={90}
+                              paddingAngle={2}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {pieData.map((entry, i) => (
+                                <Cell key={i} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [v, ""]} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {timelinessData.length > 0 && (
-                  <div>
-                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
-                      Ketepatan Penyelesaian
-                    </h4>
-                    <div style={{ width: "100%", maxWidth: 420, height: 300, margin: "0 auto" }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={timelinessData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={55}
-                            outerRadius={90}
-                            paddingAngle={2}
-                            dataKey="value"
-                            label={({ name, value }) => `${name}: ${value}`}
-                          >
-                            {timelinessData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(v) => [v, ""]} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
+                  )}
+                  {timelinessData.length > 0 && (
+                    <div>
+                      <h4
+                        style={{
+                          color: "#374151",
+                          marginBottom: "12px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Ketepatan Penyelesaian
+                      </h4>
+                      <div
+                        style={{
+                          width: "100%",
+                          maxWidth: 420,
+                          height: 300,
+                          margin: "0 auto",
+                        }}
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={timelinessData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={55}
+                              outerRadius={90}
+                              paddingAngle={2}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {timelinessData.map((entry, i) => (
+                                <Cell key={i} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [v, ""]} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
-        {/* Individual Statistics */}
-        {renderIndividualStatsTable(individualStats.hazard, "hazard")}
+          {/* Individual Statistics */}
+          {renderIndividualStatsTable(individualStats.hazard, "hazard")}
         </div>
       </div>
     );
@@ -5188,291 +5529,1328 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
       <div style={{ padding: "0" }}>
         {/* Content Container - Centered (lebar sama dengan Fit To Work) */}
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          {/* Filter Panel */}
+          <div style={{ marginBottom: "30px" }}>
+            <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
+              📊 Dashboard Statistik PTO
+            </h2>
+            <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
+              Monitoring Planned Task Observation (PTO) dan status penyelesaian
+            </p>
+          </div>
           <div
             style={{
-              position: "fixed",
-              top: 0,
-              left: isMobile ? 0 : 240,
-              right: 0,
-              zIndex: 100,
-              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
-              padding: "20px 0",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "16px",
+              marginBottom: "30px",
             }}
           >
             <div
               style={{
-                maxWidth: "1400px",
-                margin: "0 auto",
-                padding: "0 20px",
-                display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
+                background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
               }}
             >
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "12px", fontWeight: "bold", color: "#e5e7eb" }}>Dari:</label>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                style={{ padding: "8px 12px", height: 38, boxSizing: "border-box", borderRadius: "6px", border: "1px solid #ddd", fontSize: "14px", minWidth: "180px" }} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "12px", fontWeight: "bold", color: "#e5e7eb" }}>Sampai:</label>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                style={{ padding: "8px 12px", height: 38, boxSizing: "border-box", borderRadius: "6px", border: "1px solid #ddd", fontSize: "14px", minWidth: "180px" }} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "12px", fontWeight: "bold", color: "#e5e7eb" }}>Site:</label>
-              <select value={site} onChange={(e) => setSite(e.target.value)}
-                style={{ padding: "8px 12px", height: 38, boxSizing: "border-box", borderRadius: "6px", border: "1px solid #ddd", fontSize: "14px", minWidth: "150px" }}>
-                <option value="">Semua Site</option>
-                {CUSTOM_INPUT_SITES.map((siteOption) => (
-                  <option key={siteOption} value={siteOption}>{siteOption}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button onClick={() => { setDateFrom(""); setDateTo(""); setSite(""); }}
-              style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid #ddd", background: "#f8f9fa", color: "#374151", fontSize: "14px", cursor: "pointer", fontWeight: "500" }}>
-              Reset Filter
-            </button>
-            <button onClick={handleDownloadPtoExcel} disabled={!ptoStats}
-              style={{ padding: "8px 16px", borderRadius: "6px", border: "none", background: "#10b981", color: "#fff", fontSize: "14px", cursor: "pointer", fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
-              📊 Excel
-            </button>
-            <button onClick={handleDownloadPtoPdf} disabled={!ptoStats}
-              style={{ padding: "8px 16px", borderRadius: "6px", border: "none", background: "#ef4444", color: "#fff", fontSize: "14px", cursor: "pointer", fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
-              📄 PDF
-            </button>
-          </div>
-            </div>
-          </div>
-        <div style={{ height: 100 }} />
-        <div style={{ marginBottom: "30px" }}>
-          <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>📊 Dashboard Statistik PTO</h2>
-          <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>Monitoring Planned Task Observation (PTO) dan status penyelesaian</p>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "30px" }}>
-          <div style={{ background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}>
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Total Laporan</div>
-            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.totalReports}</div>
-          </div>
-          <div style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)" }}>
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Pending</div>
-            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.pendingReports}</div>
-          </div>
-          <div style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)" }}>
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed</div>
-            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.closedReports}</div>
-          </div>
-          <div style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", color: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)" }}>
-            <div style={{ fontSize: "14px", opacity: 0.9 }}>Tingkat Penyelesaian</div>
-            <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>{ptoStats.completionRate}%</div>
-          </div>
-        </div>
-        <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>📈 Statistik per Site {site && `- ${site}`}</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "16px" }}>
-            {Object.entries(ptoStats.siteStats || {}).map(([siteName, stats]) => (
-              <div key={siteName} style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "1px solid #e5e7eb" }}>
-                <h4 style={{ color: "#232946", marginBottom: "15px" }}>{siteName}</h4>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Total</div>
-                    <div style={{ fontSize: "18px", fontWeight: "bold", color: "#232946" }}>{stats.total}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Pending</div>
-                    <div style={{ fontSize: "18px", fontWeight: "bold", color: "#f59e0b" }}>{stats.pending}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Closed</div>
-                    <div style={{ fontSize: "18px", fontWeight: "bold", color: "#10b981" }}>{stats.closed}</div>
-                  </div>
-                </div>
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Total Laporan
               </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ marginBottom: "30px" }}>
-          <h3 style={{ color: "#ffffff", marginBottom: "20px", fontWeight: "600" }}>📅 Statistik {dateFrom && dateTo ? `${dateFrom} s/d ${dateTo}` : "7 Hari Terakhir"}</h3>
-          <div style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "1px solid #e5e7eb" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                  <th style={{ textAlign: "left", padding: "12px", color: "#232946", fontWeight: "bold" }}>Tanggal</th>
-                  <th style={{ textAlign: "center", padding: "12px", color: "#232946", fontWeight: "bold" }}>Total</th>
-                  <th style={{ textAlign: "center", padding: "12px", color: "#f59e0b", fontWeight: "bold" }}>Pending</th>
-                  <th style={{ textAlign: "center", padding: "12px", color: "#10b981", fontWeight: "bold" }}>Closed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(ptoStats.dailyStats || []).map((day) => (
-                  <tr key={day.date} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "12px", color: "#232946" }}>{new Date(day.date).toLocaleDateString("id-ID", { weekday: "short", month: "short", day: "numeric" })}</td>
-                    <td style={{ textAlign: "center", padding: "12px", color: "#232946", fontWeight: "bold" }}>{day.total}</td>
-                    <td style={{ textAlign: "center", padding: "12px", color: "#f59e0b", fontWeight: "bold" }}>{day.pending}</td>
-                    <td style={{ textAlign: "center", padding: "12px", color: "#10b981", fontWeight: "bold" }}>{day.closed}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
-        {(() => {
-          const isDaily = chartViewMode === "daily";
-          const agg = ptoChartAggregatedData;
-          let totalPending = 0, totalClosed = 0;
-          if (isDaily || agg.length === 0) {
-            (ptoStats.dailyStats || []).forEach((d) => {
-              totalPending += d.pending ?? 0;
-              totalClosed += d.closed ?? 0;
-            });
-          } else {
-            agg.forEach((d) => {
-              totalPending += d.pending ?? 0;
-              totalClosed += d.closed ?? 0;
-            });
-          }
-          const pieData = [
-            { name: "Pending", value: totalPending, color: "#f59e0b" },
-            { name: "Closed", value: totalClosed, color: "#10b981" },
-          ].filter((d) => d.value > 0);
-          const barData = isDaily || agg.length === 0
-            ? (ptoStats.dailyStats || []).map((d) => ({
-                tanggal: new Date(d.date + "T12:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" }),
-                Total: d.total ?? 0,
-                Pending: d.pending ?? 0,
-                Closed: d.closed ?? 0,
-              }))
-            : agg.map((d) => ({
-                tanggal: d.label ?? "-",
-                Total: d.total ?? 0,
-                Pending: d.pending ?? 0,
-                Closed: d.closed ?? 0,
-              }));
-          const hasCharts = pieData.length > 0 || barData.length > 0;
-          if (!hasCharts && isDaily) return null;
-          return (
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {ptoStats.totalReports}
+              </div>
+            </div>
             <div
               style={{
-                marginBottom: "30px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Pending</div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {ptoStats.pendingReports}
+              </div>
+            </div>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed</div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {ptoStats.closedReports}
+              </div>
+            </div>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                Tingkat Penyelesaian
+              </div>
+              <div
+                style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  marginTop: "8px",
+                }}
+              >
+                {ptoStats.completionRate}%
+              </div>
+            </div>
+          </div>
+          <div style={{ marginBottom: "30px" }}>
+            <h3
+              style={{
+                color: "#ffffff",
+                marginBottom: "20px",
+                fontWeight: "600",
+              }}
+            >
+              📈 Statistik per Site {site && `- ${site}`}
+            </h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: "16px",
+              }}
+            >
+              {Object.entries(ptoStats.siteStats || {}).map(
+                ([siteName, stats]) => (
+                  <div
+                    key={siteName}
+                    style={{
+                      background: "white",
+                      padding: "20px",
+                      borderRadius: "12px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                      border: "1px solid #e5e7eb",
+                    }}
+                  >
+                    <h4 style={{ color: "#232946", marginBottom: "15px" }}>
+                      {siteName}
+                    </h4>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "10px",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Total
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#232946",
+                          }}
+                        >
+                          {stats.total}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Pending
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#f59e0b",
+                          }}
+                        >
+                          {stats.pending}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#666" }}>
+                          Closed
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#10b981",
+                          }}
+                        >
+                          {stats.closed}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+          <div style={{ marginBottom: "30px" }}>
+            <h3
+              style={{
+                color: "#ffffff",
+                marginBottom: "20px",
+                fontWeight: "600",
+              }}
+            >
+              📅 Statistik{" "}
+              {dateFrom && dateTo
+                ? `${dateFrom} s/d ${dateTo}`
+                : "7 Hari Terakhir"}
+            </h3>
+            <div
+              style={{
                 background: "white",
-                padding: "24px",
+                padding: "20px",
                 borderRadius: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 border: "1px solid #e5e7eb",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-                <h3 style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}>
-                  📊 Distribusi Laporan
-                </h3>
-                <div style={{ display: "flex", gap: "4px" }}>
-                  {["daily", "monthly", "yearly"].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setChartViewMode(m)}
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                    <th
                       style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: chartViewMode === m ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                        background: chartViewMode === m ? "#eff6ff" : "#fff",
-                        color: chartViewMode === m ? "#1d4ed8" : "#374151",
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        cursor: "pointer",
+                        textAlign: "left",
+                        padding: "12px",
+                        color: "#232946",
+                        fontWeight: "bold",
                       }}
                     >
-                      {m === "daily" && "Harian"}
-                      {m === "monthly" && "Bulanan"}
-                      {m === "yearly" && "Tahunan"}
-                    </button>
+                      Tanggal
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#232946",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Total
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#f59e0b",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Pending
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "center",
+                        padding: "12px",
+                        color: "#10b981",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Closed
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(ptoStats.dailyStats || []).map((day) => (
+                    <tr
+                      key={day.date}
+                      style={{ borderBottom: "1px solid #e5e7eb" }}
+                    >
+                      <td style={{ padding: "12px", color: "#232946" }}>
+                        {new Date(day.date).toLocaleDateString("id-ID", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#232946",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.total}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#f59e0b",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.pending}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          padding: "12px",
+                          color: "#10b981",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {day.closed}
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </div>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
+          {(() => {
+            const isDaily = chartViewMode === "daily";
+            const agg = ptoChartAggregatedData;
+            let totalPending = 0,
+              totalClosed = 0;
+            if (isDaily || agg.length === 0) {
+              (ptoStats.dailyStats || []).forEach((d) => {
+                totalPending += d.pending ?? 0;
+                totalClosed += d.closed ?? 0;
+              });
+            } else {
+              agg.forEach((d) => {
+                totalPending += d.pending ?? 0;
+                totalClosed += d.closed ?? 0;
+              });
+            }
+            const pieData = [
+              { name: "Pending", value: totalPending, color: "#f59e0b" },
+              { name: "Closed", value: totalClosed, color: "#10b981" },
+            ].filter((d) => d.value > 0);
+            const barData =
+              isDaily || agg.length === 0
+                ? (ptoStats.dailyStats || []).map((d) => ({
+                    tanggal: new Date(d.date + "T12:00:00").toLocaleDateString(
+                      "id-ID",
+                      { weekday: "short", day: "numeric", month: "short" },
+                    ),
+                    Total: d.total ?? 0,
+                    Pending: d.pending ?? 0,
+                    Closed: d.closed ?? 0,
+                  }))
+                : agg.map((d) => ({
+                    tanggal: d.label ?? "-",
+                    Total: d.total ?? 0,
+                    Pending: d.pending ?? 0,
+                    Closed: d.closed ?? 0,
+                  }));
+            const hasCharts = pieData.length > 0 || barData.length > 0;
+            if (!hasCharts && isDaily) return null;
+            return (
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                  gap: "24px",
+                  marginBottom: "30px",
+                  background: "white",
+                  padding: "24px",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  border: "1px solid #e5e7eb",
                 }}
               >
-                {pieData.length > 0 && (
-                  <div>
-                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
-                      Distribusi Status Laporan
-                      {chartViewMode === "daily" && " (7 Hari)"}
-                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
-                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
-                    </h4>
-                    <div style={{ width: "100%", maxWidth: 380, height: 300, margin: "0 auto" }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={55}
-                            outerRadius={90}
-                            paddingAngle={2}
-                            dataKey="value"
-                            label={({ name, value }) => `${name}: ${value}`}
-                          >
-                            {pieData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(v) => [v, ""]} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <h3
+                    style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}
+                  >
+                    📊 Distribusi Laporan
+                  </h3>
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    {["daily", "monthly", "yearly"].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setChartViewMode(m)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border:
+                            chartViewMode === m
+                              ? "2px solid #3b82f6"
+                              : "1px solid #d1d5db",
+                          background: chartViewMode === m ? "#eff6ff" : "#fff",
+                          color: chartViewMode === m ? "#1d4ed8" : "#374151",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {m === "daily" && "Harian"}
+                        {m === "monthly" && "Bulanan"}
+                        {m === "yearly" && "Tahunan"}
+                      </button>
+                    ))}
                   </div>
-                )}
-                {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
-                  <div>
-                    <h4 style={{ color: "#374151", marginBottom: "12px", fontSize: "15px", fontWeight: "600" }}>
-                      Statistik {chartViewMode === "daily" ? "Harian" : chartViewMode === "monthly" ? "Bulanan" : "Tahunan"}
-                      {chartViewMode === "daily" && " (7 Hari)"}
-                      {chartViewMode === "monthly" && agg.length > 0 && " (12 Bulan)"}
-                      {chartViewMode === "yearly" && agg.length > 0 && " (5 Tahun)"}
-                    </h4>
-                    <div style={{ width: "100%", height: 300 }}>
-                      {barData.length > 0 ? (
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: "24px",
+                  }}
+                >
+                  {pieData.length > 0 && (
+                    <div>
+                      <h4
+                        style={{
+                          color: "#374151",
+                          marginBottom: "12px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Distribusi Status Laporan
+                        {chartViewMode === "daily" && " (7 Hari)"}
+                        {chartViewMode === "monthly" &&
+                          agg.length > 0 &&
+                          " (12 Bulan)"}
+                        {chartViewMode === "yearly" &&
+                          agg.length > 0 &&
+                          " (5 Tahun)"}
+                      </h4>
+                      <div
+                        style={{
+                          width: "100%",
+                          maxWidth: 380,
+                          height: 300,
+                          margin: "0 auto",
+                        }}
+                      >
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={barData} margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="tanggal" tick={{ fontSize: 11 }} height={40} />
-                            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                            <Tooltip />
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={55}
+                              outerRadius={90}
+                              paddingAngle={2}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {pieData.map((entry, i) => (
+                                <Cell key={i} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [v, ""]} />
                             <Legend />
-                            <Bar dataKey="Total" fill="#3b82f6" name="Total" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Pending" fill="#f59e0b" name="Pending" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Closed" fill="#10b981" name="Closed" radius={[4, 4, 0, 0]} />
-                          </BarChart>
+                          </PieChart>
                         </ResponsiveContainer>
-                      ) : (
-                        <div style={{ textAlign: "center", color: "#6b7280", fontSize: "13px", paddingTop: "80px" }}>
-                          Memuat data...
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
+                    <div>
+                      <h4
+                        style={{
+                          color: "#374151",
+                          marginBottom: "12px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Statistik{" "}
+                        {chartViewMode === "daily"
+                          ? "Harian"
+                          : chartViewMode === "monthly"
+                            ? "Bulanan"
+                            : "Tahunan"}
+                        {chartViewMode === "daily" && " (7 Hari)"}
+                        {chartViewMode === "monthly" &&
+                          agg.length > 0 &&
+                          " (12 Bulan)"}
+                        {chartViewMode === "yearly" &&
+                          agg.length > 0 &&
+                          " (5 Tahun)"}
+                      </h4>
+                      <div style={{ width: "100%", height: 300 }}>
+                        {barData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={barData}
+                              margin={{
+                                top: 10,
+                                right: 20,
+                                left: 10,
+                                bottom: 40,
+                              }}
+                            >
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#e5e7eb"
+                              />
+                              <XAxis
+                                dataKey="tanggal"
+                                tick={{ fontSize: 11 }}
+                                height={40}
+                              />
+                              <YAxis
+                                tick={{ fontSize: 12 }}
+                                allowDecimals={false}
+                              />
+                              <Tooltip />
+                              <Legend />
+                              <Bar
+                                dataKey="Total"
+                                fill="#3b82f6"
+                                name="Total"
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar
+                                dataKey="Pending"
+                                fill="#f59e0b"
+                                name="Pending"
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar
+                                dataKey="Closed"
+                                fill="#10b981"
+                                name="Closed"
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div
+                            style={{
+                              textAlign: "center",
+                              color: "#6b7280",
+                              fontSize: "13px",
+                              paddingTop: "80px",
+                            }}
+                          >
+                            Memuat data...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {renderIndividualStatsTable(individualStats.pto, "pto")}
+        </div>
+      </div>
+    );
+  };
+
+  const handleDownloadTargetExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Helper to create sheet data
+    const createSheetData = (type) => {
+      const headers = ["Nama", "Jabatan", "Target", "Aktual", "Persentase"];
+      const data = [headers];
+
+      // Sort users by Jabatan then Name
+      const sortedUsers = [...targetMonthlyStats].sort((a, b) => {
+        const rankA = getJabatanRank(a.jabatan);
+        const rankB = getJabatanRank(b.jabatan);
+        if (rankA !== rankB) return rankA - rankB;
+        return a.nama.localeCompare(b.nama);
+      });
+
+      sortedUsers.forEach((user) => {
+        let target = 0;
+        let actual = 0;
+        if (type === "hazard") {
+          target = user.targets?.hazard || 0;
+          actual = user.actuals?.hazard || 0;
+        } else if (type === "take_5") {
+          target = user.targets?.take_5 || 0;
+          actual = user.actuals?.take_5 || 0;
+        } else if (type === "pto") {
+          target = user.targets?.pto || 0;
+          actual = user.actuals?.pto || 0;
+        }
+
+        const percentage = target > 0 ? Math.round((actual / target) * 100) : 0;
+
+        data.push([user.nama, user.jabatan, target, actual, `${percentage}%`]);
+      });
+      return data;
+    };
+
+    // Add sheets
+    const hazardData = createSheetData("hazard");
+    const hazardSheet = XLSX.utils.aoa_to_sheet(hazardData);
+    XLSX.utils.book_append_sheet(wb, hazardSheet, "Hazard Report");
+
+    const take5Data = createSheetData("take_5");
+    const take5Sheet = XLSX.utils.aoa_to_sheet(take5Data);
+    XLSX.utils.book_append_sheet(wb, take5Sheet, "Take 5");
+
+    const ptoData = createSheetData("pto");
+    const ptoSheet = XLSX.utils.aoa_to_sheet(ptoData);
+    XLSX.utils.book_append_sheet(wb, ptoSheet, "PTO");
+
+    XLSX.writeFile(wb, `Target_Bulanan_${targetMonth}-${targetYear}.xlsx`);
+  };
+
+  const handleDownloadTargetPDF = () => {
+    const doc = new jsPDF();
+    const type = exportSource; // Use the separate exportSource state for PDF
+    const titleMap = {
+      hazard: "Hazard Report",
+      take_5: "Take 5",
+      pto: "PTO",
+    };
+
+    doc.setFontSize(18);
+    doc.text(`Monitoring Target Bulanan - ${titleMap[type]}`, 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Periode: ${targetMonth}/${targetYear}`, 14, 30);
+
+    const tableColumn = ["Nama", "Jabatan", "Target", "Aktual", "Persentase"];
+    const tableRows = [];
+
+    // Sort users by Jabatan then Name
+    const sortedUsers = [...targetMonthlyStats].sort((a, b) => {
+      const rankA = getJabatanRank(a.jabatan);
+      const rankB = getJabatanRank(b.jabatan);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.nama.localeCompare(b.nama);
+    });
+
+    sortedUsers.forEach((user) => {
+      let target = 0;
+      let actual = 0;
+      if (type === "hazard") {
+        target = user.targets?.hazard || 0;
+        actual = user.actuals?.hazard || 0;
+      } else if (type === "take_5") {
+        target = user.targets?.take_5 || 0;
+        actual = user.actuals?.take_5 || 0;
+      } else if (type === "pto") {
+        target = user.targets?.pto || 0;
+        actual = user.actuals?.pto || 0;
+      }
+
+      const percentage = target > 0 ? Math.round((actual / target) * 100) : 0;
+
+      tableRows.push([
+        user.nama,
+        user.jabatan,
+        target,
+        actual,
+        `${percentage}%`,
+      ]);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40,
+    });
+
+    doc.save(
+      `Target_Bulanan_${titleMap[type]}_${targetMonth}-${targetYear}.pdf`,
+    );
+  };
+
+  // Render Target Monthly Dashboard
+  const renderTargetMonthlyStats = () => {
+    if (targetMonthlyLoading) {
+      return (
+        <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+          Memuat data target bulanan...
+        </div>
+      );
+    }
+
+    // Filter by User (Dropdown)
+    const filteredUsers = targetMonthlyStats.filter((u) => {
+      if (!targetMonthlySearch) return true;
+      return u.nama === targetMonthlySearch;
+    });
+
+    // Process data for Table and Chart based on Module Filter
+    const processedData = filteredUsers.map((user) => {
+      let target = 0;
+      let actual = 0;
+
+      // Calculate totals for single column mode
+      if (targetModuleFilter === "all") {
+        target =
+          (user.targets?.hazard || 0) +
+          (user.targets?.take_5 || 0) +
+          (user.targets?.pto || 0);
+        actual =
+          (user.actuals?.hazard || 0) +
+          (user.actuals?.take_5 || 0) +
+          (user.actuals?.pto || 0);
+      } else if (targetModuleFilter === "hazard") {
+        target = user.targets?.hazard || 0;
+        actual = user.actuals?.hazard || 0;
+      } else if (targetModuleFilter === "take_5") {
+        target = user.targets?.take_5 || 0;
+        actual = user.actuals?.take_5 || 0;
+      } else if (targetModuleFilter === "pto") {
+        target = user.targets?.pto || 0;
+        actual = user.actuals?.pto || 0;
+      }
+
+      const percentage = target > 0 ? Math.round((actual / target) * 100) : 0;
+
+      return {
+        ...user,
+        displayTarget: target,
+        displayActual: actual,
+        displayPercentage: percentage,
+        // Individual stats for breakdown
+        hazardTarget: user.targets?.hazard || 0,
+        hazardActual: user.actuals?.hazard || 0,
+        take5Target: user.targets?.take_5 || 0,
+        take5Actual: user.actuals?.take_5 || 0,
+        ptoTarget: user.targets?.pto || 0,
+        ptoActual: user.actuals?.pto || 0,
+      };
+    });
+
+    // Sort processed data by Jabatan Rank
+    processedData.sort((a, b) => {
+      const rankA = getJabatanRank(a.jabatan);
+      const rankB = getJabatanRank(b.jabatan);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.nama.localeCompare(b.nama); // Secondary sort by name
+    });
+
+    // Chart Data Preparation: Aggregated Plan vs Actual
+    let chartData = [];
+    if (targetModuleFilter === "all") {
+      const hazardStats = processedData.reduce(
+        (acc, curr) => ({
+          target: acc.target + curr.hazardTarget,
+          actual: acc.actual + curr.hazardActual,
+        }),
+        { target: 0, actual: 0 },
+      );
+      const take5Stats = processedData.reduce(
+        (acc, curr) => ({
+          target: acc.target + curr.take5Target,
+          actual: acc.actual + curr.take5Actual,
+        }),
+        { target: 0, actual: 0 },
+      );
+      const ptoStats = processedData.reduce(
+        (acc, curr) => ({
+          target: acc.target + curr.ptoTarget,
+          actual: acc.actual + curr.ptoActual,
+        }),
+        { target: 0, actual: 0 },
+      );
+
+      chartData = [
+        {
+          name: "Hazard Report",
+          Target: hazardStats.target,
+          Actual: hazardStats.actual,
+        },
+        {
+          name: "Take 5",
+          Target: take5Stats.target,
+          Actual: take5Stats.actual,
+        },
+        {
+          name: "PTO",
+          Target: ptoStats.target,
+          Actual: ptoStats.actual,
+        },
+      ];
+    } else {
+      // Single module aggregated
+      const stats = processedData.reduce(
+        (acc, curr) => ({
+          target: acc.target + curr.displayTarget,
+          actual: acc.actual + curr.displayActual,
+        }),
+        { target: 0, actual: 0 },
+      );
+      chartData = [
+        {
+          name:
+            targetModuleFilter === "hazard"
+              ? "Hazard Report"
+              : targetModuleFilter === "take_5"
+                ? "Take 5"
+                : "PTO",
+          Target: stats.target,
+          Actual: stats.actual,
+        },
+      ];
+    }
+
+    // Get unique list of users for dropdown
+    const uniqueUsers = [
+      ...new Set(targetMonthlyStats.map((u) => u.nama)),
+    ].sort();
+
+    return (
+      <div style={{ padding: "0" }}>
+        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+          <div style={{ marginBottom: "30px" }}>
+            <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
+              🎯 Monitoring Target Bulanan
+            </h2>
+            <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
+              Pencapaian target individu per jabatan dan site
+            </p>
+          </div>
+
+          <div
+            style={{
+              background: "white",
+              padding: "24px",
+              borderRadius: "12px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              paddingBottom: "40px", // Extra padding at bottom for chart labels/legend
+            }}
+          >
+            {/* Controls */}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "16px",
+                marginBottom: "24px",
+                alignItems: "center",
+              }}
+            >
+              {/* User Select */}
+              <div style={{ flex: "1 1 200px", minWidth: "200px" }}>
+                <select
+                  value={targetMonthlySearch}
+                  onChange={(e) => setTargetMonthlySearch(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    boxSizing: "border-box",
+                    backgroundColor: "white",
+                    cursor: "pointer",
+                    height: "42px",
+                  }}
+                >
+                  <option value="">Semua User</option>
+                  {uniqueUsers.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Module Filter */}
+              <div style={{ flex: "0 1 200px", minWidth: "150px" }}>
+                <select
+                  value={targetModuleFilter}
+                  onChange={(e) => setTargetModuleFilter(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    backgroundColor: "white",
+                    cursor: "pointer",
+                    height: "42px",
+                  }}
+                >
+                  <option value="all">Semua Modul</option>
+                  <option value="hazard">Hazard Report</option>
+                  <option value="take_5">Take 5</option>
+                  <option value="pto">PTO</option>
+                </select>
+              </div>
+
+              {/* Month Filter */}
+              <div style={{ flex: "0 1 150px", minWidth: "120px" }}>
+                <select
+                  value={targetMonth}
+                  onChange={(e) => setTargetMonth(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    backgroundColor: "white",
+                    cursor: "pointer",
+                    height: "42px",
+                  }}
+                >
+                  <option value="01">Januari</option>
+                  <option value="02">Februari</option>
+                  <option value="03">Maret</option>
+                  <option value="04">April</option>
+                  <option value="05">Mei</option>
+                  <option value="06">Juni</option>
+                  <option value="07">Juli</option>
+                  <option value="08">Agustus</option>
+                  <option value="09">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">Desember</option>
+                </select>
+              </div>
+
+              {/* Year Filter */}
+              <div style={{ flex: "0 1 100px", minWidth: "100px" }}>
+                <select
+                  value={targetYear}
+                  onChange={(e) => setTargetYear(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    backgroundColor: "white",
+                    cursor: "pointer",
+                    height: "42px",
+                  }}
+                >
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
+
+              {/* Export Source */}
+              <div style={{ flex: "0 1 120px", minWidth: "100px" }}>
+                <select
+                  value={exportSource}
+                  onChange={(e) => setExportSource(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    backgroundColor: "#f3f4f6",
+                    height: "42px",
+                  }}
+                >
+                  <option value="hazard">Hazard</option>
+                  <option value="take_5">Take 5</option>
+                  <option value="pto">PTO</option>
+                </select>
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={handleDownloadTargetExcel}
+                  style={{
+                    padding: "0 16px",
+                    backgroundColor: "#10b981",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    height: "42px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Excel (All)
+                </button>
+                <button
+                  onClick={handleDownloadTargetPDF}
+                  style={{
+                    padding: "0 16px",
+                    backgroundColor: "#ef4444",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    height: "42px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  PDF
+                </button>
               </div>
             </div>
-          );
-        })()}
 
-        {renderIndividualStatsTable(individualStats.pto, "pto")}
+            {/* Table */}
+            <div style={{ overflowX: "auto", marginBottom: "30px" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "14px",
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      borderBottom: "2px solid #e2e8f0",
+                    }}
+                  >
+                    <th
+                      style={{
+                        padding: "12px 16px",
+                        textAlign: "left",
+                        color: "#4b5563",
+                        width: "25%",
+                      }}
+                    >
+                      Nama
+                    </th>
+                    <th
+                      style={{
+                        padding: "12px 16px",
+                        textAlign: "left",
+                        color: "#4b5563",
+                        width: "20%",
+                      }}
+                    >
+                      Jabatan
+                    </th>
+                    {targetModuleFilter === "all" ? (
+                      <>
+                        <th
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            color: "#4b5563",
+                          }}
+                        >
+                          Hazard (A/T)
+                        </th>
+                        <th
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            color: "#4b5563",
+                          }}
+                        >
+                          Take 5 (A/T)
+                        </th>
+                        <th
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            color: "#4b5563",
+                          }}
+                        >
+                          PTO (A/T)
+                        </th>
+                      </>
+                    ) : (
+                      <>
+                        <th
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            color: "#4b5563",
+                          }}
+                        >
+                          Target
+                        </th>
+                        <th
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            color: "#4b5563",
+                          }}
+                        >
+                          Aktual
+                        </th>
+                        <th
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            color: "#4b5563",
+                          }}
+                        >
+                          Persentase
+                        </th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {processedData.length > 0 ? (
+                    processedData.map((user, index) => (
+                      <tr
+                        key={user.id}
+                        style={{
+                          borderBottom: "1px solid #e5e7eb",
+                          backgroundColor:
+                            index % 2 === 0 ? "white" : "#f9fafb",
+                        }}
+                      >
+                        <td
+                          style={{
+                            padding: "12px 16px",
+                            fontWeight: "500",
+                            color: "#111827",
+                          }}
+                        >
+                          {user.nama}
+                        </td>
+                        <td style={{ padding: "12px 16px", color: "#4b5563" }}>
+                          {user.jabatan}
+                        </td>
+                        {targetModuleFilter === "all" ? (
+                          <>
+                            <td
+                              style={{
+                                padding: "12px 16px",
+                                textAlign: "center",
+                                color: "#6b7280",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color:
+                                    user.hazardActual >= user.hazardTarget &&
+                                    user.hazardTarget > 0
+                                      ? "#166534"
+                                      : "#374151",
+                                  fontWeight:
+                                    user.hazardActual >= user.hazardTarget &&
+                                    user.hazardTarget > 0
+                                      ? "600"
+                                      : "400",
+                                }}
+                              >
+                                {user.hazardActual}
+                              </span>{" "}
+                              / {user.hazardTarget}
+                            </td>
+                            <td
+                              style={{
+                                padding: "12px 16px",
+                                textAlign: "center",
+                                color: "#6b7280",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color:
+                                    user.take5Actual >= user.take5Target &&
+                                    user.take5Target > 0
+                                      ? "#166534"
+                                      : "#374151",
+                                  fontWeight:
+                                    user.take5Actual >= user.take5Target &&
+                                    user.take5Target > 0
+                                      ? "600"
+                                      : "400",
+                                }}
+                              >
+                                {user.take5Actual}
+                              </span>{" "}
+                              / {user.take5Target}
+                            </td>
+                            <td
+                              style={{
+                                padding: "12px 16px",
+                                textAlign: "center",
+                                color: "#6b7280",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color:
+                                    user.ptoActual >= user.ptoTarget &&
+                                    user.ptoTarget > 0
+                                      ? "#166534"
+                                      : "#374151",
+                                  fontWeight:
+                                    user.ptoActual >= user.ptoTarget &&
+                                    user.ptoTarget > 0
+                                      ? "600"
+                                      : "400",
+                                }}
+                              >
+                                {user.ptoActual}
+                              </span>{" "}
+                              / {user.ptoTarget}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td
+                              style={{
+                                padding: "12px 16px",
+                                textAlign: "center",
+                                color: "#6b7280",
+                              }}
+                            >
+                              {user.displayTarget}
+                            </td>
+                            <td
+                              style={{
+                                padding: "12px 16px",
+                                textAlign: "center",
+                                color: "#1d4ed8",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {user.displayActual}
+                            </td>
+                            <td
+                              style={{
+                                padding: "12px 16px",
+                                textAlign: "center",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  padding: "4px 8px",
+                                  borderRadius: "9999px",
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                  backgroundColor:
+                                    user.displayPercentage >= 100
+                                      ? "#dcfce7"
+                                      : user.displayPercentage >= 50
+                                        ? "#fef9c3"
+                                        : "#fee2e2",
+                                  color:
+                                    user.displayPercentage >= 100
+                                      ? "#166534"
+                                      : user.displayPercentage >= 50
+                                        ? "#854d0e"
+                                        : "#991b1b",
+                                }}
+                              >
+                                {user.displayPercentage}%
+                              </span>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={targetModuleFilter === "all" ? 5 : 5}
+                        style={{
+                          padding: "24px",
+                          textAlign: "center",
+                          color: "#6b7280",
+                        }}
+                      >
+                        Data tidak ditemukan.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Global Chart */}
+            <div style={{ height: "400px" }}>
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  marginBottom: "16px",
+                  color: "#111827",
+                }}
+              >
+                Grafik Target vs Aktual (Aggregated)
+              </h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    interval={0}
+                    height={30}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip
+                    cursor={{ fill: "transparent" }}
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "none",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: "20px" }} />
+                  <Bar
+                    dataKey="Target"
+                    name="Target"
+                    fill="#9ca3af"
+                    radius={[4, 4, 0, 0]}
+                    barSize={40}
+                  />
+                  <Bar
+                    dataKey="Actual"
+                    name="Aktual"
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                    barSize={40}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -5495,7 +6873,11 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
           { key: "total", label: "Total", width: "15%" },
           { key: "pending", label: "Pending", width: "15%" },
           { key: "closed", label: "Closed", width: "15%" },
-          { key: "completionRate", label: "Tingkat Penyelesaian (%)", width: "20%" },
+          {
+            key: "completionRate",
+            label: "Tingkat Penyelesaian (%)",
+            width: "20%",
+          },
         ];
       }
       if (type === "fit_to_work") {
@@ -5553,7 +6935,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                       ? "take5"
                       : type === "pto"
                         ? "pto"
-                        : "hazard"
+                        : "hazard",
                 )
               }
               style={{
@@ -5580,7 +6962,7 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
                       ? "take5"
                       : type === "pto"
                         ? "pto"
-                        : "hazard"
+                        : "hazard",
                 )
               }
               style={{
@@ -5848,20 +7230,311 @@ function MonitoringPage({ user, subMenu = "Statistik Fit To Work" }) {
     doc.save(fileName);
   }
 
+  // Dynamic Excel/PDF handlers based on active tab
+  const getExcelHandler = () => {
+    if (selectedTable === "fit_to_work_stats")
+      return handleDownloadFitToWorkExcel;
+    if (selectedTable === "take_5_stats") return handleDownloadTake5Excel;
+    if (selectedTable === "hazard_stats") return handleDownloadHazardExcel;
+    if (selectedTable === "pto_stats") return handleDownloadPtoExcel;
+    return () => {};
+  };
+  const getPdfHandler = () => {
+    if (selectedTable === "fit_to_work_stats")
+      return handleDownloadFitToWorkPDF;
+    if (selectedTable === "take_5_stats") return handleDownloadTake5PDF;
+    if (selectedTable === "hazard_stats")
+      return () => handleDownloadHazardPDF(false);
+    if (selectedTable === "pto_stats") return handleDownloadPtoPdf;
+    return () => {};
+  };
+  const isExcelDisabled = () => {
+    if (selectedTable === "fit_to_work_stats") return !fitToWorkStats;
+    if (selectedTable === "take_5_stats") return !take5Stats;
+    if (selectedTable === "hazard_stats") return !hazardStats;
+    if (selectedTable === "pto_stats") return !ptoStats;
+    return true;
+  };
+  const isPdfDisabled = () => {
+    if (selectedTable === "fit_to_work_stats") return !fitToWorkStats;
+    if (selectedTable === "take_5_stats") return !take5Stats;
+    if (selectedTable === "hazard_stats") return !hazardStats;
+    if (selectedTable === "pto_stats") return !ptoStats;
+    return true;
+  };
+  const showFilter =
+    selectedTable !== "target_settings" && selectedTable !== "target_monthly";
+
   return (
     <div
       style={{
         padding: "0 20px 20px 20px",
-        overflow: "auto",
+        overflow: selectedTable === "target_settings" ? "hidden" : "auto",
         scrollbarWidth: "thin",
         scrollbarColor: "rgba(0,0,0,0.3) transparent",
         height: "100vh",
       }}
     >
-      {selectedTable === "fit_to_work_stats" && renderFitToWorkStats()}
-      {selectedTable === "take_5_stats" && renderTake5Stats()}
-      {selectedTable === "hazard_stats" && renderHazardStats()}
-      {selectedTable === "pto_stats" && renderPtoStats()}
+      {/* Konten: Tab di atas, filter & konten di bawah */}
+      <div
+        style={{
+          maxWidth: "1400px",
+          margin: "0 auto",
+          paddingTop: 20,
+          ...(selectedTable === "target_settings" && {
+            display: "flex",
+            flexDirection: "column",
+            height: "calc(100vh - 120px)",
+            overflow: "hidden",
+          }),
+        }}
+      >
+        {/* Tab bar - selalu di atas, konsisten untuk semua tab */}
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            marginBottom: 24,
+            flexShrink: 0,
+          }}
+        >
+          {MONITORING_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setSelectedTable(tab.key)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: "1px solid rgba(255,255,255,0.3)",
+                background:
+                  selectedTable === tab.key
+                    ? "#ea580c"
+                    : "rgba(255,255,255,0.1)",
+                color: "#ffffff",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: selectedTable === tab.key ? 600 : 400,
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter - hanya untuk tab statistik, di bawah tab */}
+        {showFilter && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #181c2f 0%, #232946 100%)",
+              padding: "16px 20px",
+              borderRadius: 12,
+              marginBottom: 24,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "flex-end",
+                justifyContent: "space-between",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  gap: "16px",
+                  flexWrap: "wrap",
+                  alignItems: "flex-end",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    Dari:
+                  </label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      height: 38,
+                      boxSizing: "border-box",
+                      borderRadius: "6px",
+                      border: "1px solid #ddd",
+                      fontSize: "14px",
+                      minWidth: "180px",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    Sampai:
+                  </label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      height: 38,
+                      boxSizing: "border-box",
+                      borderRadius: "6px",
+                      border: "1px solid #ddd",
+                      fontSize: "14px",
+                      minWidth: "180px",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    Site:
+                  </label>
+                  <select
+                    value={site}
+                    onChange={(e) => setSite(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      height: 38,
+                      boxSizing: "border-box",
+                      borderRadius: "6px",
+                      border: "1px solid #ddd",
+                      fontSize: "14px",
+                      minWidth: "150px",
+                    }}
+                  >
+                    <option value="">Semua Site</option>
+                    {CUSTOM_INPUT_SITES.map((siteOption) => (
+                      <option key={siteOption} value={siteOption}>
+                        {siteOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div
+                style={{ display: "flex", gap: "8px", alignItems: "center" }}
+              >
+                <button
+                  onClick={() => {
+                    setDateFrom("");
+                    setDateTo("");
+                    setSite("");
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #ddd",
+                    background: "#f8f9fa",
+                    color: "#374151",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
+                >
+                  Reset Filter
+                </button>
+                <button
+                  onClick={getExcelHandler()}
+                  disabled={isExcelDisabled()}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#10b981",
+                    color: "#fff",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  📊 Excel
+                </button>
+                <button
+                  onClick={getPdfHandler()}
+                  disabled={isPdfDisabled()}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#ef4444",
+                    color: "#fff",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  📄 PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Konten tab */}
+        {selectedTable === "fit_to_work_stats" && renderFitToWorkStats()}
+        {selectedTable === "take_5_stats" && renderTake5Stats()}
+        {selectedTable === "hazard_stats" && renderHazardStats()}
+        {selectedTable === "pto_stats" && renderPtoStats()}
+        {selectedTable === "target_monthly" && renderTargetMonthlyStats()}
+        {selectedTable === "target_settings" && (
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <TargetSettings user={user} embedded darkTheme onBack={() => {}} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@
   @page {
     size: A4 portrait;
     margin: 10mm;
-    /* Kurangi ruang header/footer browser - user bisa uncheck "Headers and footers" di dialog print */
   }
 
   body {
@@ -22,8 +21,39 @@
     page-break-inside: avoid;
   }
 
+  /* Lampiran - foto utuh termasuk watermark di bawah, tidak terpotong */
+  .lampiran-section img {
+    object-fit: contain !important;
+    max-height: none !important;
+  }
+
+  /* Halaman lampiran: overflow visible agar bagian bawah foto/watermark tidak terpotong */
+  .print-page-lampiran {
+    overflow: visible !important;
+  }
+
+  .lampiran-img-wrapper {
+    overflow: visible !important;
+    min-height: 380px !important;
+  }
+
+  .print-page-lampiran .lampiran-img-wrapper {
+    min-height: 550px !important;
+  }
+
   .daily-attendance-print-container {
     width: 210mm;
+  }
+
+  /* Agenda/Tema: pastikan text tidak terpotong saat print/save PDF */
+  .info-row-agenda .info-value {
+    overflow: visible !important;
+  }
+
+  /* Checkbox terchecklist saat print/PDF */
+  .checkbox-box.checked::after {
+    content: "✓" !important;
+    visibility: visible !important;
   }
 }
 
@@ -57,6 +87,11 @@
   box-sizing: border-box;
   background: white;
   overflow: hidden;
+}
+
+/* Halaman lampiran: overflow visible agar foto + watermark tidak terpotong */
+.print-page-lampiran {
+  overflow: visible !important;
 }
 
 /* Pemutus halaman - di layar ada jarak, saat cetak pindah halaman */
@@ -153,32 +188,30 @@
   display: contents;
 }
 
-/* Agenda/Tema baris terpisah di bawah Jenis Pertemuan - hindari benturan */
-.info-row-agenda {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: auto 1fr;
-  gap: 0 15px;
-  margin-top: 6px;
-  align-items: start;
-}
-
-/* Agenda/Tema row - full width, di bawah Jenis Pertemuan, tanpa benturan */
+/* Agenda/Tema baris terpisah di bawah Jenis Pertemuan - hindari benturan, text tidak tertutup saat save/PDF */
 .info-row-agenda {
   display: grid !important;
   grid-column: 1 / -1;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 80px 1fr;
   gap: 0 15px;
-  margin-top: 8px;
+  margin-top: 10px;
+  margin-bottom: 8px;
   align-items: start;
+  min-height: 28px;
 }
 
 .info-row-agenda .info-label {
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .info-row-agenda .info-value {
   grid-column: 2;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow: visible !important;
+  white-space: pre-wrap;
 }
 
 .info-label {
@@ -213,9 +246,13 @@
 .checkbox-box.checked::after {
   content: "✓";
   font-size: 10px;
+  font-weight: bold;
   position: absolute;
   top: -2px;
   left: 1px;
+  color: #000;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 /* TABEL DAFTAR HADIR - tidak overflow, tepi rapi */

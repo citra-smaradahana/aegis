@@ -401,22 +401,26 @@ const DailyAttendancePrint = React.forwardRef(
                 className="checkbox-group"
                 style={{ flexDirection: "column", gap: 5 }}
               >
-                <Checkbox checked={meetingType === "P5M"} label="P5M" />
+                <Checkbox checked={meetingType === "Rapat"} label="Rapat" />
                 <Checkbox
-                  checked={meetingType === "Safety Talk"}
-                  label="Safety Talk"
+                  checked={meetingType === "Pelatihan"}
+                  label="Pelatihan"
                 />
                 <Checkbox
-                  checked={meetingType === "Safety Committee"}
-                  label="Safety Committee"
+                  checked={meetingType === "Briefing"}
+                  label="Briefing"
+                />
+                <Checkbox
+                  checked={meetingType === "Sosialisasi"}
+                  label="Sosialisasi"
                 />
                 <Checkbox
                   checked={
-                    !["P5M", "Safety Talk", "Safety Committee"].includes(
+                    !["Rapat", "Pelatihan", "Briefing", "Sosialisasi"].includes(
                       meetingType,
                     )
                   }
-                  label="Other"
+                  label="Lain-lain"
                 />
               </div>
             </div>
@@ -624,15 +628,14 @@ const DailyAttendancePrint = React.forwardRef(
             </div>
           </div>
 
-          {/* LAMPIRAN - Di bawah tanda tangan atau di halaman berikutnya */}
-          {images && images.length > 0 && (
+          {/* LAMPIRAN - Di bawah tanda tangan (dalam halaman yang sama) */}
+          {images && images.length > 0 && !lampiranDiHalamanBerikutnya && (
             <div
               className="lampiran-section"
               style={{
                 marginTop: 24,
                 width: "100%",
-                pageBreakInside: "auto",
-                ...(lampiranDiHalamanBerikutnya ? { pageBreakBefore: "always" } : {}),
+                pageBreakInside: "avoid",
               }}
             >
               <div
@@ -653,7 +656,7 @@ const DailyAttendancePrint = React.forwardRef(
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: lampiranDiHalamanBerikutnya ? "1fr" : "repeat(2, 1fr)",
+                  gridTemplateColumns: "repeat(2, 1fr)",
                   gap: 12,
                   width: "100%",
                 }}
@@ -661,22 +664,31 @@ const DailyAttendancePrint = React.forwardRef(
                 {images.map((url, idx) => (
                   <div
                     key={idx}
+                    className="lampiran-img-wrapper"
                     style={{
                       width: "100%",
                       border: "1px solid #e5e7eb",
                       borderRadius: 4,
-                      overflow: "hidden",
+                      overflow: "visible",
                       pageBreakInside: "avoid",
+                      minHeight: 380,
+                      background: "#f9fafb",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 8,
                     }}
                   >
                     <img
                       src={url}
                       alt={`Lampiran ${idx + 1}`}
                       style={{
-                        width: "100%",
-                        height: lampiranDiHalamanBerikutnya ? 250 : 140,
-                        objectFit: "cover",
+                        maxWidth: "100%",
+                        width: "auto",
+                        height: "auto",
+                        objectFit: "contain",
                         display: "block",
+                        verticalAlign: "bottom",
                       }}
                     />
                   </div>
@@ -685,6 +697,69 @@ const DailyAttendancePrint = React.forwardRef(
             </div>
           )}
         </div>
+
+        {/* LAMPIRAN Halaman Terpisah - tiap foto dapat halaman penuh agar tidak terpotong */}
+        {images && images.length > 0 && lampiranDiHalamanBerikutnya && images.map((url, idx) => (
+          <React.Fragment key={idx}>
+            <div className="print-page-break" />
+            <div className="print-page print-page-lampiran">
+              <div
+                className="lampiran-section"
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#1f2937",
+                    marginBottom: 12,
+                    borderBottom: "1px solid #d1d5db",
+                    paddingBottom: 4,
+                    width: "100%",
+                  }}
+                >
+                  Lampiran {idx + 1} dari {images.length}
+                  <span className="th-blue" style={{ fontWeight: 400, color: "#6b7280", marginLeft: 4 }}>
+                    (Attachment)
+                  </span>
+                </div>
+                <div
+                  className="lampiran-img-wrapper"
+                  style={{
+                    width: "100%",
+                    minHeight: 550,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#f9fafb",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 4,
+                    padding: 16,
+                    overflow: "visible",
+                  }}
+                >
+                  <img
+                    src={url}
+                    alt={`Lampiran ${idx + 1}`}
+                    style={{
+                      maxWidth: "100%",
+                      width: "auto",
+                      height: "auto",
+                      objectFit: "contain",
+                      display: "block",
+                      verticalAlign: "bottom",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </React.Fragment>
+        ))}
       </div>
     );
   },

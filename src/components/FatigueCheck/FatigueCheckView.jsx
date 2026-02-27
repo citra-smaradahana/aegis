@@ -55,7 +55,16 @@ const FatigueCheckView = ({ reportId, user: userProp, onBack, embedded }) => {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Fatigue_Check_${report?.date}_${report?.site}`,
-    pageStyle: `@page { size: A4 landscape; margin: 5mm; }`,
+    pageStyle: `
+      @page {
+        size: A4 landscape;
+        margin: 5mm;
+      }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .fatigue-check-print-container { width: 100% !important; }
+      }
+    `,
   });
 
   const handleDownloadPdf = async () => {
@@ -258,7 +267,7 @@ const FatigueCheckView = ({ reportId, user: userProp, onBack, embedded }) => {
       </div>
 
       {/* Hidden print area */}
-      <div style={{ position: "absolute", left: -9999, top: 0 }}>
+      <div style={{ position: "absolute", left: -9999, top: 0, width: "297mm" }}>
         <FatigueCheckPrint ref={printRef} report={report} />
       </div>
 

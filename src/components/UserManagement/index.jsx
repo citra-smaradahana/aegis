@@ -136,6 +136,30 @@ function UserManagement() {
       setLoading(true);
       setError("");
 
+      // Cek duplikat sebelum insert (email, nrp, username)
+      const emailExists = users.some(
+        (u) => u.email && u.email.toLowerCase() === (userData.email || "").toLowerCase()
+      );
+      const nrpExists = users.some((u) => u.nrp && u.nrp === (userData.nrp || "").trim());
+      const userExists = users.some(
+        (u) => u.user && u.user.toLowerCase() === (userData.user || "").toLowerCase()
+      );
+      if (emailExists) {
+        const msg = "Email sudah digunakan oleh user lain. Gunakan email yang berbeda.";
+        setError(msg);
+        throw new Error(msg);
+      }
+      if (nrpExists) {
+        const msg = "NRP sudah digunakan oleh user lain. Gunakan NRP yang berbeda.";
+        setError(msg);
+        throw new Error(msg);
+      }
+      if (userExists) {
+        const msg = "Username sudah digunakan oleh user lain. Gunakan username yang berbeda.";
+        setError(msg);
+        throw new Error(msg);
+      }
+
       console.log("Adding user to Supabase:", userData);
 
       const { data, error } = await supabase
@@ -145,8 +169,22 @@ function UserManagement() {
 
       if (error) {
         console.error("Error adding user:", error);
-        setError("Gagal menambah user: " + error.message);
-        return;
+        // 409 = Conflict, 23505 = unique_violation (duplikat email/nrp/username)
+        let msg = error.message;
+        if (error.code === "23505" || String(error.message || "").includes("409")) {
+          const detail = (error.details || error.message || "").toLowerCase();
+          if (detail.includes("email")) {
+            msg = "Email sudah digunakan oleh user lain.";
+          } else if (detail.includes("nrp")) {
+            msg = "NRP sudah digunakan oleh user lain.";
+          } else if (detail.includes("user") || detail.includes("username")) {
+            msg = "Username sudah digunakan oleh user lain.";
+          } else {
+            msg = "Data duplikat: Email, NRP, atau Username mungkin sudah terdaftar.";
+          }
+        }
+        setError("Gagal menambah user: " + msg);
+        throw new Error(msg);
       }
 
       console.log("User added successfully:", data);

@@ -40,8 +40,6 @@ function App() {
   const [currentPage, setCurrentPage] = useState("login");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeMenu, setActiveMenu] = useState("dashboard");
-  const [isMonitoringOpen, setIsMonitoringOpen] = useState(false);
-  const [monitoringAnimationKey, setMonitoringAnimationKey] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const sessionAutoExtendSetup = useRef(false);
   const backHandlerRef = useRef(null);
@@ -139,18 +137,6 @@ function App() {
 
   const handleMenuChange = (menu) => {
     setActiveMenu(menu);
-    // Tutup sub menu monitoring jika menu yang dipilih bukan monitoring
-    if (!menu.startsWith("monitoring-") && menu !== "monitoring") {
-      setIsMonitoringOpen(false);
-    }
-  };
-
-  const toggleMonitoring = () => {
-    setIsMonitoringOpen(!isMonitoringOpen);
-    if (!isMonitoringOpen) {
-      // Reset animation key when opening
-      setMonitoringAnimationKey((prev) => prev + 1);
-    }
   };
 
   const handleBackToMain = () => {
@@ -501,57 +487,9 @@ function App() {
               tasklistTodoCount={tasklistTodoCount}
             />
           );
-        case "monitoring-fit-to-work":
+        case "monitoring":
           return canAccessMonitoring ? (
-            <MonitoringPage
-              user={user}
-              onLogout={handleLogout}
-              subMenu="Statistik Fit To Work"
-            />
-          ) : (
-            <Home
-              user={user}
-              onNavigate={handleMenuChange}
-              validationCount={validationCount}
-              ftwNeedsFill={ftwNeedsFill}
-              tasklistTodoCount={tasklistTodoCount}
-            />
-          );
-        case "monitoring-take-5":
-          return canAccessMonitoring ? (
-            <MonitoringPage
-              user={user}
-              onLogout={handleLogout}
-              subMenu="Take 5"
-            />
-          ) : (
-            <Home
-              user={user}
-              onNavigate={handleMenuChange}
-              validationCount={validationCount}
-              ftwNeedsFill={ftwNeedsFill}
-              tasklistTodoCount={tasklistTodoCount}
-            />
-          );
-        case "monitoring-hazard":
-          return canAccessMonitoring ? (
-            <MonitoringPage
-              user={user}
-              onLogout={handleLogout}
-              subMenu="Hazard"
-            />
-          ) : (
-            <Home
-              user={user}
-              onNavigate={handleMenuChange}
-              validationCount={validationCount}
-              ftwNeedsFill={ftwNeedsFill}
-              tasklistTodoCount={tasklistTodoCount}
-            />
-          );
-        case "monitoring-pto":
-          return canAccessMonitoring ? (
-            <MonitoringPage user={user} onLogout={handleLogout} subMenu="PTO" />
+            <MonitoringPage user={user} onLogout={handleLogout} />
           ) : (
             <Home
               user={user}
@@ -1038,181 +976,27 @@ function App() {
                   </button>
                 ))}
 
-                {/* Menu Monitoring hanya untuk role evaluator dan admin */}
+                {/* Menu Monitoring - untuk evaluator dan admin (dengan tab di dalam) */}
                 {(user?.role === "evaluator" || user?.role === "admin") && (
-                  <>
-                    <button
-                      onClick={() => {
-                        toggleMonitoring();
-                        // Set active menu ke monitoring jika dibuka
-                        if (!isMonitoringOpen) {
-                          setActiveMenu("monitoring");
-                        }
-                      }}
-                      style={{
-                        textAlign: "left",
-                        width: "100%",
-                        padding: "8px 10px",
-                        background: isMonitoringOpen
+                  <button
+                    onClick={() => handleMenuChange("monitoring")}
+                    style={{
+                      textAlign: "left",
+                      width: "100%",
+                      padding: "8px 10px",
+                      background:
+                        activeMenu === "monitoring"
                           ? "rgba(0,0,0,0.15)"
                           : "transparent",
-                        color: "#ffffff",
-                        border: "1px solid rgba(255,255,255,0.3)",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        fontSize: "14px",
-                      }}
-                    >
-                      Monitoring
-                    </button>
-
-                    <div
-                      key={monitoringAnimationKey}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                        marginLeft: 8,
-                        marginRight: 8,
-                        marginTop: 6,
-                        marginBottom: 10,
-                        overflow: "hidden",
-                        opacity: isMonitoringOpen ? 1 : 0,
-                        maxHeight: isMonitoringOpen ? "240px" : "0px",
-                        transition:
-                          "all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-                        transform: isMonitoringOpen ? "scaleY(1)" : "scaleY(0)",
-                        transformOrigin: "top",
-                        padding: 8,
-                        background: "rgba(255,255,255,0.06)",
-                        borderRadius: 8,
-                        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
-                      }}
-                    >
-                      <button
-                        onClick={() =>
-                          handleMenuChange("monitoring-fit-to-work")
-                        }
-                        style={{
-                          textAlign: "left",
-                          width: "100%",
-                          padding: "8px 12px",
-                          background:
-                            activeMenu === "monitoring-fit-to-work"
-                              ? "rgba(0,0,0,0.2)"
-                              : "transparent",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: 6,
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          opacity: isMonitoringOpen ? 1 : 0,
-                          transform: isMonitoringOpen
-                            ? "translateX(0)"
-                            : "translateX(-30px)",
-                          transition:
-                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.8s",
-                          boxShadow:
-                            activeMenu === "monitoring-fit-to-work"
-                              ? "0 2px 8px rgba(0,0,0,0.2)"
-                              : "none",
-                        }}
-                      >
-                        Fit To Work Monitoring
-                      </button>
-                      <button
-                        onClick={() => handleMenuChange("monitoring-take-5")}
-                        style={{
-                          textAlign: "left",
-                          width: "100%",
-                          padding: "8px 12px",
-                          background:
-                            activeMenu === "monitoring-take-5"
-                              ? "rgba(0,0,0,0.2)"
-                              : "transparent",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: 6,
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          opacity: isMonitoringOpen ? 1 : 0,
-                          transform: isMonitoringOpen
-                            ? "translateX(0)"
-                            : "translateX(-30px)",
-                          transition:
-                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.6s",
-                          boxShadow:
-                            activeMenu === "monitoring-take-5"
-                              ? "0 2px 8px rgba(0,0,0,0.2)"
-                              : "none",
-                        }}
-                      >
-                        Take 5 Monitoring
-                      </button>
-                      <button
-                        onClick={() => handleMenuChange("monitoring-hazard")}
-                        style={{
-                          textAlign: "left",
-                          width: "100%",
-                          padding: "8px 12px",
-                          background:
-                            activeMenu === "monitoring-hazard"
-                              ? "rgba(0,0,0,0.2)"
-                              : "transparent",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: 6,
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          opacity: isMonitoringOpen ? 1 : 0,
-                          transform: isMonitoringOpen
-                            ? "translateX(0)"
-                            : "translateX(-30px)",
-                          transition:
-                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 2.4s",
-                          boxShadow:
-                            activeMenu === "monitoring-hazard"
-                              ? "0 2px 8px rgba(0,0,0,0.2)"
-                              : "none",
-                        }}
-                      >
-                        Hazard Monitoring
-                      </button>
-                      <button
-                        onClick={() => handleMenuChange("monitoring-pto")}
-                        style={{
-                          textAlign: "left",
-                          width: "100%",
-                          padding: "8px 12px",
-                          background:
-                            activeMenu === "monitoring-pto"
-                              ? "rgba(0,0,0,0.2)"
-                              : "transparent",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: 6,
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          opacity: isMonitoringOpen ? 1 : 0,
-                          transform: isMonitoringOpen
-                            ? "translateX(0)"
-                            : "translateX(-30px)",
-                          transition:
-                            "all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3.2s",
-                          boxShadow:
-                            activeMenu === "monitoring-pto"
-                              ? "0 2px 8px rgba(0,0,0,0.2)"
-                              : "none",
-                        }}
-                      >
-                        PTO Monitoring
-                      </button>
-                    </div>
-                  </>
+                      color: "#ffffff",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Monitoring
+                  </button>
                 )}
 
                 {/* Menu Campaign dan Pengaturan hanya untuk Administrator */}

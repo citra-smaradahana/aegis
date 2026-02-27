@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useReactToPrint } from "react-to-print";
 import { supabase } from "../../supabaseClient";
 import { sessionManager } from "../../utils/sessionManager";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import { fetchUsersAttendanceForValidator } from "../../utils/fitToWorkAbsentHelpers";
-import { downloadPdfFromElement } from "../../utils/downloadPdfFromElement";
 import DailyAttendancePrint from "./DailyAttendancePrint";
 import SearchablePersonField from "./SearchablePersonField";
 import MobileHeader from "../MobileHeader";
@@ -13,10 +11,9 @@ import SelectModalWithSearch from "../SelectModalWithSearch";
 import "./DailyAttendance.css";
 
 const MEETING_TYPE_OPTIONS = [
-  { value: "P5M", label: "P5M (Pagi)" },
-  { value: "Safety Talk", label: "Safety Talk" },
-  { value: "Briefing", label: "Briefing Umum" },
-  { value: "Rapat", label: "Rapat / Meeting" },
+  { value: "Rapat", label: "Rapat" },
+  { value: "Pelatihan", label: "Pelatihan" },
+  { value: "Briefing", label: "Briefing" },
   { value: "Sosialisasi", label: "Sosialisasi" },
   { value: "Lain-lain", label: "Lain-lain" },
 ];
@@ -26,19 +23,21 @@ const MEETING_TYPE_OPTIONS = [
  * Sekaligus Preview sebelum cetak.
  * Mobile: MobileHeader, BottomNav, ukuran lebih compact.
  */
-const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoCount = 0 }) => {
+const DailyAttendanceForm = ({
+  user: userProp,
+  onBack,
+  onNavigate,
+  tasklistTodoCount = 0,
+}) => {
   // Fallback ke session jika userProp tidak diteruskan
   const sessionUser = userProp || sessionManager.getSession();
-  // Hapus useNavigate, pakai prop onBack dari App.jsx
-  const printComponentRef = useRef();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [user, setUser] = useState(null);
   const [showPreview, setShowPreview] = useState(false); // Modal Preview State
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" && window.innerWidth <= 768
+    typeof window !== "undefined" && window.innerWidth <= 768,
   );
 
   useEffect(() => {
@@ -77,7 +76,8 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
   // State Gambar Lampiran (untuk print)
   const [images, setImages] = useState([]); // Array of { file?, previewUrl, url? }
   const imageInputRef = useRef(null);
-  const [lampiranDiHalamanBerikutnya, setLampiranDiHalamanBerikutnya] = useState(false);
+  const [lampiranDiHalamanBerikutnya, setLampiranDiHalamanBerikutnya] =
+    useState(false);
 
   // Daftar PJO / Asst PJO untuk dropdown Approval
   const [approverList, setApproverList] = useState([]);
@@ -187,17 +187,21 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
         }));
         // Urutan berdasarkan jam pengisian FTW: yang pertama mengisi di atas
         mapped.sort((a, b) => {
-          const timeA = a.ftw_created_at ? new Date(a.ftw_created_at).getTime() : Infinity;
-          const timeB = b.ftw_created_at ? new Date(b.ftw_created_at).getTime() : Infinity;
+          const timeA = a.ftw_created_at
+            ? new Date(a.ftw_created_at).getTime()
+            : Infinity;
+          const timeB = b.ftw_created_at
+            ? new Date(b.ftw_created_at).getTime()
+            : Infinity;
           if (timeA !== timeB) return timeA - timeB;
           return (a.nama || "").localeCompare(b.nama || "", "id");
         });
         setAttendanceList(mapped);
       } else {
-        const attendanceData = await fetchUsersAttendanceForValidator(
-          u,
-          ["Field Leading Hand", "Plant Leading Hand"],
-        );
+        const attendanceData = await fetchUsersAttendanceForValidator(u, [
+          "Field Leading Hand",
+          "Plant Leading Hand",
+        ]);
         if (attendanceData && Array.isArray(attendanceData)) {
           const presentUsers = attendanceData.filter(
             (u) => u.attendance_last_ftw_date === tanggal,
@@ -306,36 +310,6 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
       setErrorMsg(error.message || "Gagal memuat data. Silakan coba lagi.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Format tanggal untuk nama file: YYYYMMDD (contoh: 20260225)
-  const dateForFilename = formData.date ? formData.date.replace(/-/g, "") : "";
-
-  // Handle Print (desktop - buka dialog print)
-  const handlePrint = useReactToPrint({
-    contentRef: printComponentRef,
-    documentTitle: dateForFilename ? `Daily Meeting - ${dateForFilename}` : "Daily Meeting",
-    pageStyle: `
-      @page { margin: 10mm; size: A4 portrait; }
-      @media print {
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      }
-    `,
-  });
-
-  // Handle Download PDF (mobile - auto download)
-  const handleDownloadPdf = async () => {
-    if (!printComponentRef?.current) return;
-    try {
-      setIsDownloadingPdf(true);
-      const filename = dateForFilename ? `Daily Meeting - ${dateForFilename}` : "Daily Meeting";
-      await downloadPdfFromElement(printComponentRef, filename);
-    } catch (err) {
-      console.error("Gagal download PDF:", err);
-      alert("Gagal mengunduh PDF. Silakan coba lagi.");
-    } finally {
-      setIsDownloadingPdf(false);
     }
   };
 
@@ -452,9 +426,13 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
       if (!img.file) continue;
       const fileExt = img.file.name.split(".").pop() || "jpg";
       const fileName = `safety-meeting/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-      const { error } = await supabase.storage.from("safety_meeting_bucket").upload(fileName, img.file);
+      const { error } = await supabase.storage
+        .from("safety_meeting_bucket")
+        .upload(fileName, img.file);
       if (error) throw new Error("Gagal upload gambar");
-      const { data } = supabase.storage.from("safety_meeting_bucket").getPublicUrl(fileName);
+      const { data } = supabase.storage
+        .from("safety_meeting_bucket")
+        .getPublicUrl(fileName);
       urls.push(data.publicUrl);
     }
     return urls;
@@ -524,9 +502,11 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
     if (!formData.place?.trim()) errors.push("Tempat / Lokasi");
     if (!formData.timeStart?.trim()) errors.push("Jam Mulai");
     topics.forEach((t, idx) => {
-      if (!t.content?.trim()) errors.push(`Topik ${idx + 1}: Isi Topik wajib diisi`);
+      if (!t.content?.trim())
+        errors.push(`Topik ${idx + 1}: Isi Topik wajib diisi`);
     });
-    if (topics.length === 0) errors.push("Minimal satu topik harus ditambahkan dan diisi");
+    if (topics.length === 0)
+      errors.push("Minimal satu topik harus ditambahkan dan diisi");
     return errors;
   };
 
@@ -556,7 +536,9 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
         justifyContent: "flex-start",
         padding: isMobile ? 0 : "0 24px",
         overflow: "hidden",
-        paddingBottom: isMobile ? "calc(70px + env(safe-area-inset-bottom))" : 0,
+        paddingBottom: isMobile
+          ? "calc(70px + env(safe-area-inset-bottom))"
+          : 0,
       }}
     >
       {isMobile && (
@@ -617,21 +599,30 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "#f9fafb";
                   e.currentTarget.style.borderColor = "#d1d5db";
-                  e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.12)";
+                  e.currentTarget.style.boxShadow =
+                    "0 6px 16px rgba(0,0,0,0.12)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "#fff";
                   e.currentTarget.style.borderColor = "#e5e7eb";
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 12px rgba(0,0,0,0.08)";
                 }}
               >
                 <span style={{ fontSize: 18 }}>&larr;</span> Kembali
               </button>
-              <h1 style={{ margin: 0, color: "#1e293b", fontWeight: 800, fontSize: 24 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  color: "#1e293b",
+                  fontWeight: 800,
+                  fontSize: 24,
+                }}
+              >
                 Buat Laporan Harian
               </h1>
             </div>
-            <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button
                 onClick={() => setShowPreview(true)}
                 style={btnOutline}
@@ -646,39 +637,10 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               >
                 👁️ Lihat Preview
               </button>
-              <button
-                onClick={handlePrint}
-                style={btnPrimary}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(59, 130, 246, 0.5)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "0 4px 14px rgba(59, 130, 246, 0.4)";
-                }}
-              >
-                🖨️ Cetak PDF
-              </button>
             </div>
           </div>
         )}
 
-        {isMobile && (
-          <div style={{ marginBottom: 16 }}>
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isDownloadingPdf}
-              style={{
-                ...btnPrimary,
-                width: "100%",
-                padding: "10px 16px",
-                fontSize: 14,
-                opacity: isDownloadingPdf ? 0.7 : 1,
-              }}
-            >
-              {isDownloadingPdf ? "⏳ Mengunduh..." : "📥 Download PDF"}
-            </button>
-          </div>
-        )}
 
         {/* Main Content - Scrollable */}
         <div
@@ -692,7 +654,13 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
           }}
           className="custom-scrollbar"
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 12 : 24 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: isMobile ? 12 : 24,
+            }}
+          >
             {/* Section 1: Info Pertemuan */}
             <div
               className="daily-attendance-section bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
@@ -704,7 +672,11 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               >
                 <span
                   className="bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm"
-                  style={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32, fontSize: isMobile ? 11 : 14 }}
+                  style={{
+                    width: isMobile ? 24 : 32,
+                    height: isMobile ? 24 : 32,
+                    fontSize: isMobile ? 11 : 14,
+                  }}
                 >
                   1
                 </span>
@@ -780,9 +752,15 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                         justifyContent: "space-between",
                       }}
                     >
-                      <span style={{ color: formData.meetingType ? "#1f2937" : "#6b7280" }}>
+                      <span
+                        style={{
+                          color: formData.meetingType ? "#1f2937" : "#6b7280",
+                        }}
+                      >
                         {formData.meetingType
-                          ? MEETING_TYPE_OPTIONS.find((o) => o.value === formData.meetingType)?.label || formData.meetingType
+                          ? MEETING_TYPE_OPTIONS.find(
+                              (o) => o.value === formData.meetingType,
+                            )?.label || formData.meetingType
                           : "-- Pilih Jenis Pertemuan --"}
                       </span>
                       <span style={{ color: "#9ca3af", fontSize: 12 }}>▼</span>
@@ -796,7 +774,9 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     >
                       <option value="">-- Pilih Jenis Pertemuan --</option>
                       {MEETING_TYPE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
                       ))}
                     </select>
                   )}
@@ -944,7 +924,11 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 <div className="flex items-center gap-3">
                   <span
                     className="bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm"
-                    style={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32, fontSize: isMobile ? 11 : 14 }}
+                    style={{
+                      width: isMobile ? 24 : 32,
+                      height: isMobile ? 24 : 32,
+                      fontSize: isMobile ? 11 : 14,
+                    }}
                   >
                     2
                   </span>
@@ -997,12 +981,17 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                           <SearchablePersonField
                             label="Dibawakan Oleh"
                             value={topic.presenter}
-                            onChange={(v) => handleTopicChange(idx, "presenter", v)}
+                            onChange={(v) =>
+                              handleTopicChange(idx, "presenter", v)
+                            }
                             userList={siteUserList}
                             placeholder="Nama Pembicara"
                             isMobile={isMobile}
                             onOpenModal={() => {
-                              setPersonSelectContext({ type: "presenter", index: idx });
+                              setPersonSelectContext({
+                                type: "presenter",
+                                index: idx,
+                              });
                               setPersonSelectSearchQuery(topic.presenter || "");
                               setShowPersonSelectModal(true);
                             }}
@@ -1071,22 +1060,36 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 <div className="flex items-center gap-3">
                   <span
                     className="bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm"
-                    style={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32, fontSize: isMobile ? 11 : 14 }}
+                    style={{
+                      width: isMobile ? 24 : 32,
+                      height: isMobile ? 24 : 32,
+                      fontSize: isMobile ? 11 : 14,
+                    }}
                   >
                     3
                   </span>
-                  <h2 className="font-bold text-gray-800" style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}>
+                  <h2
+                    className="font-bold text-gray-800"
+                    style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}
+                  >
                     Masalah Karyawan
                   </h2>
                 </div>
                 <button
                   onClick={addIssue}
-                  style={{ ...btnPrimary, padding: isMobile ? "6px 12px" : "8px 16px", fontSize: isMobile ? 12 : 14 }}
+                  style={{
+                    ...btnPrimary,
+                    padding: isMobile ? "6px 12px" : "8px 16px",
+                    fontSize: isMobile ? 12 : 14,
+                  }}
                 >
                   <span className="leading-none">+</span> Tambah Masalah
                 </button>
               </div>
-              <div className="space-y-4" style={{ padding: isMobile ? "12px 14px" : "24px" }}>
+              <div
+                className="space-y-4"
+                style={{ padding: isMobile ? "12px 14px" : "24px" }}
+              >
                 {issues.map((issue, idx) => (
                   <div
                     key={idx}
@@ -1124,13 +1127,20 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                           <SearchablePersonField
                             label="Disampaikan Oleh"
                             value={issue.submittedBy}
-                            onChange={(v) => handleIssueChange(idx, "submittedBy", v)}
+                            onChange={(v) =>
+                              handleIssueChange(idx, "submittedBy", v)
+                            }
                             userList={siteUserList}
                             placeholder="Nama Penyampai"
                             isMobile={isMobile}
                             onOpenModal={() => {
-                              setPersonSelectContext({ type: "submittedBy", index: idx });
-                              setPersonSelectSearchQuery(issue.submittedBy || "");
+                              setPersonSelectContext({
+                                type: "submittedBy",
+                                index: idx,
+                              });
+                              setPersonSelectSearchQuery(
+                                issue.submittedBy || "",
+                              );
                               setShowPersonSelectModal(true);
                             }}
                           />
@@ -1159,22 +1169,36 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 <div className="flex items-center gap-3">
                   <span
                     className="bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm"
-                    style={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32, fontSize: isMobile ? 11 : 14 }}
+                    style={{
+                      width: isMobile ? 24 : 32,
+                      height: isMobile ? 24 : 32,
+                      fontSize: isMobile ? 11 : 14,
+                    }}
                   >
                     4
                   </span>
-                  <h2 className="font-bold text-gray-800" style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}>
+                  <h2
+                    className="font-bold text-gray-800"
+                    style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}
+                  >
                     Tindakan Perbaikan
                   </h2>
                 </div>
                 <button
                   onClick={addAction}
-                  style={{ ...btnPrimary, padding: isMobile ? "6px 12px" : "8px 16px", fontSize: isMobile ? 12 : 14 }}
+                  style={{
+                    ...btnPrimary,
+                    padding: isMobile ? "6px 12px" : "8px 16px",
+                    fontSize: isMobile ? 12 : 14,
+                  }}
                 >
                   <span className="leading-none">+</span> Tambah Tindakan
                 </button>
               </div>
-              <div className="space-y-4" style={{ padding: isMobile ? "12px 14px" : "24px" }}>
+              <div
+                className="space-y-4"
+                style={{ padding: isMobile ? "12px 14px" : "24px" }}
+              >
                 {actions.map((action, idx) => (
                   <div
                     key={idx}
@@ -1217,7 +1241,10 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                             placeholder="Nama PIC"
                             isMobile={isMobile}
                             onOpenModal={() => {
-                              setPersonSelectContext({ type: "pic", index: idx });
+                              setPersonSelectContext({
+                                type: "pic",
+                                index: idx,
+                              });
                               setPersonSelectSearchQuery(action.pic || "");
                               setShowPersonSelectModal(true);
                             }}
@@ -1276,11 +1303,18 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 <div className="flex items-center gap-3">
                   <span
                     className="bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm"
-                    style={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32, fontSize: isMobile ? 11 : 14 }}
+                    style={{
+                      width: isMobile ? 24 : 32,
+                      height: isMobile ? 24 : 32,
+                      fontSize: isMobile ? 11 : 14,
+                    }}
                   >
                     5
                   </span>
-                  <h2 className="font-bold text-gray-800" style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}>
+                  <h2
+                    className="font-bold text-gray-800"
+                    style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}
+                  >
                     Data Absensi
                   </h2>
                 </div>
@@ -1288,10 +1322,9 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               <div style={{ padding: isMobile ? "12px 14px" : "24px" }}>
                 <div className="mb-4 bg-blue-50 text-blue-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
                   <span>ℹ️</span>
-                  Data dari user yang mengisi Fit To Work pada tanggal yang dipilih. <strong>
-                    {attendanceList.length}
-                  </strong>{" "}
-                  peserta hadir. (Read only)
+                  Data dari user yang mengisi Fit To Work pada tanggal yang
+                  dipilih. <strong>{attendanceList.length}</strong> peserta
+                  hadir. (Read only)
                 </div>
 
                 <div className="overflow-x-auto border rounded-xl shadow-sm">
@@ -1340,12 +1373,16 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                             {row.hari_masuk ?? "-"}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
-                            {row.sleep_today !== undefined && row.sleep_today !== null && row.sleep_today !== ""
+                            {row.sleep_today !== undefined &&
+                            row.sleep_today !== null &&
+                            row.sleep_today !== ""
                               ? parseFloat(row.sleep_today).toFixed(1)
                               : "-"}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
-                            {row.sleep_48h !== undefined && row.sleep_48h !== null && row.sleep_48h !== ""
+                            {row.sleep_48h !== undefined &&
+                            row.sleep_48h !== null &&
+                            row.sleep_48h !== ""
                               ? parseFloat(row.sleep_48h).toFixed(1)
                               : "-"}
                           </td>
@@ -1357,7 +1394,8 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                             colSpan="7"
                             className="px-6 py-8 text-center text-sm text-gray-500 bg-gray-50 italic"
                           >
-                            Tidak ada data. Ubah tanggal atau pastikan ada user yang mengisi Fit To Work.
+                            Tidak ada data. Ubah tanggal atau pastikan ada user
+                            yang mengisi Fit To Work.
                           </td>
                         </tr>
                       )}
@@ -1379,15 +1417,25 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 <div className="flex items-center gap-3">
                   <span
                     className="bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm"
-                    style={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32, fontSize: isMobile ? 11 : 14 }}
+                    style={{
+                      width: isMobile ? 24 : 32,
+                      height: isMobile ? 24 : 32,
+                      fontSize: isMobile ? 11 : 14,
+                    }}
                   >
                     6
                   </span>
-                  <h2 className="font-bold text-gray-800" style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}>
+                  <h2
+                    className="font-bold text-gray-800"
+                    style={{ margin: 0, fontSize: isMobile ? 14 : 18 }}
+                  >
                     Lampiran (Opsional)
                   </h2>
                 </div>
-                <p className="text-sm text-gray-500 mt-1" style={{ marginTop: 4, marginBottom: 0 }}>
+                <p
+                  className="text-sm text-gray-500 mt-1"
+                  style={{ marginTop: 4, marginBottom: 0 }}
+                >
                   Tambah gambar untuk dicetak di bagian bawah PDF
                 </p>
                 {images.length > 0 && (
@@ -1398,7 +1446,9 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     <input
                       type="checkbox"
                       checked={lampiranDiHalamanBerikutnya}
-                      onChange={(e) => setLampiranDiHalamanBerikutnya(e.target.checked)}
+                      onChange={(e) =>
+                        setLampiranDiHalamanBerikutnya(e.target.checked)
+                      }
                       style={{ width: 18, height: 18, cursor: "pointer" }}
                     />
                     <span className="text-sm font-medium text-gray-700">
@@ -1430,7 +1480,8 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(100px, 1fr))",
                       gap: 12,
                     }}
                   >
@@ -1486,7 +1537,11 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
             <div className="flex justify-end pt-4 pb-8">
               <button
                 onClick={handleSave}
-                style={{ ...btnPrimary, fontSize: "16px", padding: "12px 32px" }}
+                style={{
+                  ...btnPrimary,
+                  fontSize: "16px",
+                  padding: "12px 32px",
+                }}
               >
                 <span>💾</span> Simpan Laporan
               </button>
@@ -1494,39 +1549,6 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
           </div>
         </div>
       </div>
-
-      {/* Hidden print content untuk mobile - selalu di DOM agar bisa di-capture untuk PDF */}
-      {isMobile && (
-        <div
-          ref={printComponentRef}
-          style={{
-            position: "absolute",
-            left: -9999,
-            top: 0,
-            width: "210mm",
-            background: "#fff",
-          }}
-        >
-          <DailyAttendancePrint
-            data={{
-              ...formData,
-              area: formData.area || formData.site || "",
-              topics,
-              issues,
-              actions,
-              images: images.map((img) => img.previewUrl || img.url).filter(Boolean),
-              lampiranDiHalamanBerikutnya,
-              creatorName: user?.nama,
-              creatorJabatan: user?.jabatan || "",
-              approverName: formData.approver_name || "(Menunggu Ttd)",
-              approverJabatan:
-                approverList.find((a) => a.id === formData.approver_id)?.jabatan || "",
-              status: "Pending",
-            }}
-            attendanceData={attendanceList}
-          />
-        </div>
-      )}
 
       {/* Modal Preview (desktop only) */}
       {showPreview && !isMobile && (
@@ -1560,10 +1582,10 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                   width: "210mm",
                   maxWidth: "210mm",
                   margin: "0 auto",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)",
+                  boxShadow:
+                    "0 2px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)",
                   borderRadius: 2,
                 }}
-                ref={printComponentRef}
               >
                 <DailyAttendancePrint
                   data={{
@@ -1572,7 +1594,9 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                     topics,
                     issues,
                     actions,
-                    images: images.map((img) => img.previewUrl || img.url).filter(Boolean),
+                    images: images
+                      .map((img) => img.previewUrl || img.url)
+                      .filter(Boolean),
                     lampiranDiHalamanBerikutnya,
                     creatorName: user?.nama,
                     creatorJabatan: user?.jabatan || "",
@@ -1586,15 +1610,9 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 />
               </div>
             </div>
-            <div className="p-4 border-t bg-white flex justify-end gap-3 shrink-0">
-              <button
-                onClick={() => setShowPreview(false)}
-                style={btnOutline}
-              >
+            <div className="p-4 border-t bg-white flex justify-end shrink-0">
+              <button onClick={() => setShowPreview(false)} style={btnOutline}>
                 Tutup
-              </button>
-              <button onClick={handlePrint} style={btnPrimary}>
-                Cetak Sekarang
               </button>
             </div>
           </div>
@@ -1657,7 +1675,13 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+            <div
+              style={{
+                padding: 16,
+                borderBottom: "1px solid #e5e7eb",
+                flexShrink: 0,
+              }}
+            >
               <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
                 Pilih PJO / Asst PJO
               </div>
@@ -1707,9 +1731,11 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                       .includes((approverSearchQuery || "").toLowerCase()) ||
                     (a.jabatan || "")
                       .toLowerCase()
-                      .includes((approverSearchQuery || "").toLowerCase())
+                      .includes((approverSearchQuery || "").toLowerCase()),
                 )
-                .sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"))
+                .sort((a, b) =>
+                  (a.nama || "").localeCompare(b.nama || "", "id"),
+                )
                 .map((a) => (
                   <div
                     key={a.id}
@@ -1746,8 +1772,12 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 </div>
               ) : approverList.filter(
                   (a) =>
-                    (a.nama || "").toLowerCase().includes((approverSearchQuery || "").toLowerCase()) ||
-                    (a.jabatan || "").toLowerCase().includes((approverSearchQuery || "").toLowerCase())
+                    (a.nama || "")
+                      .toLowerCase()
+                      .includes((approverSearchQuery || "").toLowerCase()) ||
+                    (a.jabatan || "")
+                      .toLowerCase()
+                      .includes((approverSearchQuery || "").toLowerCase()),
                 ).length === 0 ? (
                 <div
                   style={{
@@ -1798,10 +1828,17 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: 16, borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+            <div
+              style={{
+                padding: 16,
+                borderBottom: "1px solid #e5e7eb",
+                flexShrink: 0,
+              }}
+            >
               <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
                 {personSelectContext.type === "presenter" && "Dibawakan Oleh"}
-                {personSelectContext.type === "submittedBy" && "Disampaikan Oleh"}
+                {personSelectContext.type === "submittedBy" &&
+                  "Disampaikan Oleh"}
                 {personSelectContext.type === "pic" && "PIC"}
               </div>
               <input
@@ -1827,9 +1864,24 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 <div
                   onClick={() => {
                     const { type, index } = personSelectContext;
-                    if (type === "presenter") handleTopicChange(index, "presenter", personSelectSearchQuery.trim());
-                    if (type === "submittedBy") handleIssueChange(index, "submittedBy", personSelectSearchQuery.trim());
-                    if (type === "pic") handleActionChange(index, "pic", personSelectSearchQuery.trim());
+                    if (type === "presenter")
+                      handleTopicChange(
+                        index,
+                        "presenter",
+                        personSelectSearchQuery.trim(),
+                      );
+                    if (type === "submittedBy")
+                      handleIssueChange(
+                        index,
+                        "submittedBy",
+                        personSelectSearchQuery.trim(),
+                      );
+                    if (type === "pic")
+                      handleActionChange(
+                        index,
+                        "pic",
+                        personSelectSearchQuery.trim(),
+                      );
                     setShowPersonSelectModal(false);
                     setPersonSelectContext(null);
                     setPersonSelectSearchQuery("");
@@ -1851,8 +1903,10 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               <div
                 onClick={() => {
                   const { type, index } = personSelectContext;
-                  if (type === "presenter") handleTopicChange(index, "presenter", "");
-                  if (type === "submittedBy") handleIssueChange(index, "submittedBy", "");
+                  if (type === "presenter")
+                    handleTopicChange(index, "presenter", "");
+                  if (type === "submittedBy")
+                    handleIssueChange(index, "submittedBy", "");
                   if (type === "pic") handleActionChange(index, "pic", "");
                   setShowPersonSelectModal(false);
                   setPersonSelectContext(null);
@@ -1872,19 +1926,30 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
               {siteUserList
                 .filter(
                   (u) =>
-                    (u.nama || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase()) ||
-                    (u.jabatan || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase())
+                    (u.nama || "")
+                      .toLowerCase()
+                      .includes(
+                        (personSelectSearchQuery || "").toLowerCase(),
+                      ) ||
+                    (u.jabatan || "")
+                      .toLowerCase()
+                      .includes((personSelectSearchQuery || "").toLowerCase()),
                 )
-                .sort((a, b) => (a.nama || "").localeCompare(b.nama || "", "id"))
+                .sort((a, b) =>
+                  (a.nama || "").localeCompare(b.nama || "", "id"),
+                )
                 .map((u) => (
                   <div
                     key={u.id}
                     onClick={() => {
                       const { type, index } = personSelectContext;
                       const nama = u.nama || "";
-                      if (type === "presenter") handleTopicChange(index, "presenter", nama);
-                      if (type === "submittedBy") handleIssueChange(index, "submittedBy", nama);
-                      if (type === "pic") handleActionChange(index, "pic", nama);
+                      if (type === "presenter")
+                        handleTopicChange(index, "presenter", nama);
+                      if (type === "submittedBy")
+                        handleIssueChange(index, "submittedBy", nama);
+                      if (type === "pic")
+                        handleActionChange(index, "pic", nama);
                       setShowPersonSelectModal(false);
                       setPersonSelectContext(null);
                       setPersonSelectSearchQuery("");
@@ -1903,8 +1968,12 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                 ))}
               {siteUserList.filter(
                 (u) =>
-                  (u.nama || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase()) ||
-                  (u.jabatan || "").toLowerCase().includes((personSelectSearchQuery || "").toLowerCase())
+                  (u.nama || "")
+                    .toLowerCase()
+                    .includes((personSelectSearchQuery || "").toLowerCase()) ||
+                  (u.jabatan || "")
+                    .toLowerCase()
+                    .includes((personSelectSearchQuery || "").toLowerCase()),
               ).length === 0 &&
                 !personSelectSearchQuery.trim() && (
                   <div
@@ -1915,7 +1984,8 @@ const DailyAttendanceForm = ({ user: userProp, onBack, onNavigate, tasklistTodoC
                       fontSize: 14,
                     }}
                   >
-                    Tidak ada user di site ini. Ketik nama di atas untuk orang di luar sistem.
+                    Tidak ada user di site ini. Ketik nama di atas untuk orang
+                    di luar sistem.
                   </div>
                 )}
             </div>

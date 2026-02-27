@@ -43,6 +43,8 @@
 
     <!-- Kamera dan akses gambar (Hazard, Tasklist, Take 5, PTO, dll.) -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Akses folder / storage: baca & tulis untuk simpan PDF, dll. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 </manifest>

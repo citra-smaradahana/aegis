@@ -37,7 +37,7 @@ const DailyAttendanceListMobile = ({ user: userProp, onNavigate, tasklistTodoCou
         )
         .eq("site", userSite)
         .order("date", { ascending: false })
-        .limit(50);
+        .limit(20);
 
       if (error) {
         console.warn("Gagal fetch safety_meetings:", error);
