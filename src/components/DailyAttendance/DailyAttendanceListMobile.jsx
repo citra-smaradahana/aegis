@@ -33,7 +33,7 @@ const DailyAttendanceListMobile = ({ user: userProp, onNavigate, tasklistTodoCou
       const { data: meetingsData, error } = await supabase
         .from("safety_meetings")
         .select(
-          "id, date, meeting_type, topic, location, created_at, agenda_items, site, status, approver_name"
+          "id, date, meeting_type, topic, agenda, location, created_at, agenda_items, site, status, approver_name"
         )
         .eq("site", userSite)
         .order("date", { ascending: false })
@@ -47,7 +47,7 @@ const DailyAttendanceListMobile = ({ user: userProp, onNavigate, tasklistTodoCou
           id: m.id,
           date: m.date,
           meeting_type: m.meeting_type,
-          topic: m.topic || "-",
+          topic: (m.topic && m.topic.trim()) || (m.agenda && m.agenda.trim()) || "-",
           presenter: Array.isArray(m.agenda_items) && m.agenda_items[0]
             ? m.agenda_items[0].presenter || "-"
             : "-",
