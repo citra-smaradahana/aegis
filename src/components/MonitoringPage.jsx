@@ -272,6 +272,13 @@ function MonitoringPage({ user }) {
     }
   };
 
+  const toWitaDateStrFromISO = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const shifted = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+    return shifted.toISOString().slice(0, 10);
+  };
+
   // Dummy data untuk dropdown site/nama/status (nanti diganti fetch dari supabase)
   const siteOptions = [
     "Head Office",
@@ -576,8 +583,8 @@ function MonitoringPage({ user }) {
         let query = supabase
           .from("take_5")
           .select("*")
-          .gte("created_at", rangeFromStr)
-          .lte("created_at", rangeToStr);
+          .gte("tanggal", rangeFromStr)
+          .lte("tanggal", rangeToStr);
         if (site) query = query.eq("site", site);
         query = query.limit(50000);
         const { data, error } = await query;
@@ -589,9 +596,13 @@ function MonitoringPage({ user }) {
         const endD = new Date(rangeToStr + "T12:00:00+08:00");
         while (cur <= endD) {
           const dateStr = cur.toISOString().slice(0, 10);
-          const dayData = list.filter(
-            (item) => (item.created_at || "").slice(0, 10) === dateStr,
-          );
+          const dayData = list.filter((item) => {
+            const d =
+              (item.tanggal && String(item.tanggal).slice(0, 10)) ||
+              (item.created_at && String(item.created_at).slice(0, 10)) ||
+              "";
+            return d === dateStr;
+          });
           daily.push({
             date: dateStr,
             total: dayData.length,
@@ -698,25 +709,50 @@ function MonitoringPage({ user }) {
       } else return;
 
       try {
-        let query = supabase
+        // Utama: berdasarkan 'tanggal'
+        let qTanggal = supabase
           .from("planned_task_observation")
           .select("*")
           .gte("tanggal", rangeFromStr)
           .lte("tanggal", rangeToStr);
-        if (site) query = query.eq("site", site);
-        query = query.limit(50000);
-        const { data, error } = await query;
-        if (error) throw error;
-        const list = data || [];
+        if (site) qTanggal = qTanggal.eq("site", site);
+        qTanggal = qTanggal.limit(50000);
+
+        // Fallback: berdasarkan created_at WITA
+        let qCreatedAt = supabase
+          .from("planned_task_observation")
+          .select("*")
+          .gte("created_at", `${rangeFromStr}T00:00:00+08:00`)
+          .lte("created_at", `${rangeToStr}T23:59:59+08:00`);
+        if (site) qCreatedAt = qCreatedAt.eq("site", site);
+        qCreatedAt = qCreatedAt.limit(50000);
+
+        const [{ data: d1, error: e1 }, { data: d2, error: e2 }] =
+          await Promise.all([qTanggal, qCreatedAt]);
+        if (e1) throw e1;
+        if (e2) throw e2;
+        const map = new Map();
+        (d1 || []).forEach((r) =>
+          map.set(r.id || `${r.created_at}-${r.site}`, r),
+        );
+        (d2 || []).forEach((r) => {
+          const key = r.id || `${r.created_at}-${r.site}`;
+          if (!map.has(key)) map.set(key, r);
+        });
+        const list = Array.from(map.values());
 
         const daily = [];
         let cur = new Date(rangeFromStr + "T12:00:00+08:00");
         const endD = new Date(rangeToStr + "T12:00:00+08:00");
         while (cur <= endD) {
           const dateStr = cur.toISOString().slice(0, 10);
-          const dayData = list.filter(
-            (item) => (item.tanggal || "") === dateStr,
-          );
+          const dayData = list.filter((item) => {
+            const d =
+              (item.tanggal && String(item.tanggal).slice(0, 10)) ||
+              toWitaDateStrFromISO(item.created_at) ||
+              "";
+            return d === dateStr;
+          });
           daily.push({
             date: dateStr,
             total: dayData.length,
@@ -790,10 +826,10 @@ function MonitoringPage({ user }) {
     setLoading(true);
     try {
       let query = supabase.from("take_5").select("*");
-      if (dateFrom) query = query.gte("created_at", dateFrom);
-      if (dateTo) query = query.lte("created_at", dateTo);
+      if (dateFrom) query = query.gte("tanggal", dateFrom);
+      if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
-      query = query.order("created_at", { ascending: true });
+      query = query.order("tanggal", { ascending: true });
 
       console.log("=== TAKE 5 QUERY DEBUG ===");
       console.log("Site filter:", site);
@@ -855,14 +891,9 @@ function MonitoringPage({ user }) {
   const fetchHazardStats = async () => {
     setLoading(true);
     try {
-      // Fetch dari tabel tasklist (Hazard)
-      let query = supabase.from("tasklist").select("*");
-      if (dateFrom) query = query.gte("created_at", dateFrom);
-      if (dateTo) query = query.lte("created_at", dateTo);
-      if (site) query = query.eq("lokasi", site);
-      query = query.order("created_at", { ascending: true });
-
-      const { data: tasklistData, error: tasklistError } = await query;
+      // Abaikan tabel tasklist, gunakan hazard_report saja
+      const tasklistData = [];
+      const tasklistError = null;
 
       if (tasklistError) {
         console.error("Error fetching tasklist data:", tasklistError);
@@ -884,8 +915,13 @@ function MonitoringPage({ user }) {
 
       // Fetch dari tabel hazard_report (bukan hazard)
       let hazardQuery = supabase.from("hazard_report").select("*");
-      if (dateFrom) hazardQuery = hazardQuery.gte("created_at", dateFrom);
-      if (dateTo) hazardQuery = hazardQuery.lte("created_at", dateTo);
+      if (dateFrom)
+        hazardQuery = hazardQuery.gte(
+          "created_at",
+          `${dateFrom}T00:00:00+08:00`,
+        );
+      if (dateTo)
+        hazardQuery = hazardQuery.lte("created_at", `${dateTo}T23:59:59+08:00`);
       if (site) hazardQuery = hazardQuery.eq("lokasi", site);
       hazardQuery = hazardQuery.order("created_at", { ascending: true });
 
@@ -975,19 +1011,50 @@ function MonitoringPage({ user }) {
   const fetchPtoStats = async () => {
     setLoading(true);
     try {
-      let query = supabase.from("planned_task_observation").select("*");
-      if (dateFrom) query = query.gte("tanggal", dateFrom);
-      if (dateTo) query = query.lte("tanggal", dateTo);
-      if (site) query = query.eq("site", site);
-      query = query.order("tanggal", { ascending: true });
+      // Ambil data PTO berdasarkan 'tanggal' (sumber utama)
+      let tanggalQuery = supabase.from("planned_task_observation").select("*");
+      if (dateFrom) tanggalQuery = tanggalQuery.gte("tanggal", dateFrom);
+      if (dateTo) tanggalQuery = tanggalQuery.lte("tanggal", dateTo);
+      if (site) tanggalQuery = tanggalQuery.eq("site", site);
+      tanggalQuery = tanggalQuery.order("tanggal", { ascending: true });
 
-      const { data: ptoData, error } = await query;
+      // Fallback: ambil berdasarkan created_at dengan batas hari WITA untuk menangkap data yang belum mengisi 'tanggal'
+      let createdAtQuery = supabase
+        .from("planned_task_observation")
+        .select("*");
+      if (dateFrom)
+        createdAtQuery = createdAtQuery.gte(
+          "created_at",
+          `${dateFrom}T00:00:00+08:00`,
+        );
+      if (dateTo)
+        createdAtQuery = createdAtQuery.lte(
+          "created_at",
+          `${dateTo}T23:59:59+08:00`,
+        );
+      if (site) createdAtQuery = createdAtQuery.eq("site", site);
+      createdAtQuery = createdAtQuery.order("created_at", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching PTO data:", error);
-        setLoading(false);
-        return;
-      }
+      const [
+        { data: byTanggal, error: errTanggal },
+        { data: byCreatedAt, error: errCreatedAt },
+      ] = await Promise.all([tanggalQuery, createdAtQuery]);
+
+      if (errTanggal)
+        console.error("Error fetching PTO by tanggal:", errTanggal);
+      if (errCreatedAt)
+        console.error("Error fetching PTO by created_at WITA:", errCreatedAt);
+
+      // Gabungkan hasil, unik berdasarkan id
+      const map = new Map();
+      (byTanggal || []).forEach((r) =>
+        map.set(r.id || `${r.created_at}-${r.site}`, r),
+      );
+      (byCreatedAt || []).forEach((r) => {
+        const key = r.id || `${r.created_at}-${r.site}`;
+        if (!map.has(key)) map.set(key, r);
+      });
+      const ptoData = Array.from(map.values());
 
       const stats = calculatePtoStats(ptoData || []);
       setPtoStats(stats);
@@ -1004,6 +1071,12 @@ function MonitoringPage({ user }) {
   const fetchTargetMonthlyStats = async () => {
     setTargetMonthlyLoading(true);
     try {
+      // Helper to clean NRP (remove non-alphanumeric)
+      const cleanNrp = (val) => {
+        if (!val) return "";
+        return String(val).replace(/[^a-zA-Z0-9]/g, "");
+      };
+
       // 1. Fetch Targets
       let targetQuery = supabase.from("target_per_jabatan_site").select("*");
       if (site) targetQuery = targetQuery.eq("site", site);
@@ -1019,11 +1092,17 @@ function MonitoringPage({ user }) {
       // 2. Fetch Users
       let userQuery = supabase
         .from("users")
-        .select("id, nama, jabatan, site")
+        .select("id, nama, jabatan, site, nrp")
         .not("site", "is", null);
       if (site) userQuery = userQuery.eq("site", site);
       const { data: users, error: userError } = await userQuery;
       if (userError) throw userError;
+
+      // Create User Lookup Map
+      const userIdToData = {};
+      (users || []).forEach((u) => {
+        userIdToData[u.id] = u;
+      });
 
       // 3. Map Users to Targets
       const targetedUsers = (users || [])
@@ -1077,22 +1156,34 @@ function MonitoringPage({ user }) {
 
       // Fetch Hazard Reports (by pelapor_nama or pic_nama? Assuming pelapor_nama)
       // Note: Hazard reports might use name instead of ID. We'll match by name.
+      // Fetch from hazard_report
       let hazardQuery = supabase
         .from("hazard_report")
-        .select("pelapor_nama, lokasi, created_at")
-        .gte("created_at", startStr)
-        .lte("created_at", endStr);
+        .select("pelapor_nama, pelapor_nrp, lokasi, created_at, pic")
+        .gte("created_at", `${startStr}T00:00:00+08:00`)
+        .lte("created_at", `${endStr}T23:59:59+08:00`);
       if (site) hazardQuery = hazardQuery.eq("lokasi", site);
-      const { data: hazards } = await hazardQuery;
+      const hazardRes = await hazardQuery;
+      const hazards = hazardRes.data || [];
+      if (hazardRes.error)
+        console.error("DEBUG: Hazard Error", hazardRes.error);
+      const filteredHazards = hazards || [];
 
-      // Fetch Take 5 (by user_id or pic?)
+      console.log("DEBUG: Date Range", startStr, endStr);
+      console.log("DEBUG: Site Filter", site);
+      console.log("DEBUG: Total Hazards", filteredHazards.length);
+
+      // Fetch Take 5 (by user_id, nrp, or name)
       let take5Query = supabase
         .from("take_5")
-        .select("user_id, site, created_at")
-        .gte("created_at", startStr)
-        .lte("created_at", endStr);
+        .select("user_id, site, tanggal, created_at, nrp, pelapor_nama")
+        .gte("tanggal", startStr)
+        .lte("tanggal", endStr);
       if (site) take5Query = take5Query.eq("site", site);
-      const { data: take5s } = await take5Query;
+
+      const { data: take5s, error: take5Error } = await take5Query;
+      if (take5Error) console.error("DEBUG: Take5 Error", take5Error);
+      console.log("DEBUG: Total Take 5", (take5s || []).length);
 
       // Fetch PTO (by observer_id or nama?)
       let ptoQuery = supabase
@@ -1104,50 +1195,89 @@ function MonitoringPage({ user }) {
       const { data: ptos } = await ptoQuery;
 
       // 5. Aggregate Actuals
-      const nameMap = new Map(); // name -> count
-      const idMap = new Map(); // id -> count
+      const hazardNameMap = new Map();
+      const hazardNrpMap = new Map();
+      const take5IdMap = new Map();
+      const take5NrpMap = new Map();
+      const take5NameMap = new Map();
+      const ptoIdMap = new Map();
 
-      // Count Hazards (by Name)
-      (hazards || []).forEach((h) => {
-        const name = (h.pelapor_nama || "").trim();
-        if (name)
-          nameMap.set(
-            `hazard_${name}`,
-            (nameMap.get(`hazard_${name}`) || 0) + 1,
+      // Count Hazards (by Name and NRP)
+      filteredHazards.forEach((h) => {
+        const reporterName = (h.pelapor_nama || "").trim().toLowerCase();
+        if (reporterName)
+          hazardNameMap.set(
+            `hazard_${reporterName}`,
+            (hazardNameMap.get(`hazard_${reporterName}`) || 0) + 1,
+          );
+
+        const reporterNrp = cleanNrp(h.pelapor_nrp);
+        if (reporterNrp)
+          hazardNrpMap.set(
+            `hazard_${reporterNrp}`,
+            (hazardNrpMap.get(`hazard_${reporterNrp}`) || 0) + 1,
           );
       });
 
-      // Count Take 5 (by User ID)
+      // Count Take 5 (by ID, NRP, Name)
       (take5s || []).forEach((t) => {
         if (t.user_id) {
-          idMap.set(
+          take5IdMap.set(
             `take5_${t.user_id}`,
-            (idMap.get(`take5_${t.user_id}`) || 0) + 1,
+            (take5IdMap.get(`take5_${t.user_id}`) || 0) + 1,
+          );
+        }
+
+        const nrp = cleanNrp(t.nrp);
+        if (nrp) {
+          take5NrpMap.set(
+            `take5_${nrp}`,
+            (take5NrpMap.get(`take5_${nrp}`) || 0) + 1,
+          );
+        }
+
+        const name = (t.pelapor_nama || "").trim().toLowerCase();
+        if (name) {
+          take5NameMap.set(
+            `take5_${name}`,
+            (take5NameMap.get(`take5_${name}`) || 0) + 1,
           );
         }
       });
 
       // Count PTO (Try by user_id or created_by or observer_id)
-      // I'll check if `user_id` exists in `ptos[0]`. If not, try `created_by`.
-      // For now, let's assume `user_id` is used.
-      // If PTO doesn't have user_id, this count will be 0.
       (ptos || []).forEach((p) => {
         const uid = p.user_id || p.observer_id || p.created_by;
         if (uid) {
-          idMap.set(`pto_${uid}`, (idMap.get(`pto_${uid}`) || 0) + 1);
+          ptoIdMap.set(`pto_${uid}`, (ptoIdMap.get(`pto_${uid}`) || 0) + 1);
         }
       });
 
       // 6. Assign Actuals to Targeted Users
       const finalStats = targetedUsers.map((u) => {
-        // Hazard: Match by Name
-        const hazardCount = nameMap.get(`hazard_${u.nama.trim()}`) || 0;
+        // Hazard: Match by NRP first, then Name
+        let hazardCount = 0;
+        const userNrp = cleanNrp(u.nrp);
+        if (userNrp && hazardNrpMap.has(`hazard_${userNrp}`)) {
+          hazardCount = hazardNrpMap.get(`hazard_${userNrp}`);
+        } else {
+          hazardCount =
+            hazardNameMap.get(`hazard_${u.nama.trim().toLowerCase()}`) || 0;
+        }
 
-        // Take 5: Match by ID
-        const take5Count = idMap.get(`take5_${u.id}`) || 0;
+        // Take 5: Match by ID first, then NRP, then Name
+        let take5Count = 0;
+        if (u.id && take5IdMap.has(`take5_${u.id}`)) {
+          take5Count = take5IdMap.get(`take5_${u.id}`);
+        } else if (userNrp && take5NrpMap.has(`take5_${userNrp}`)) {
+          take5Count = take5NrpMap.get(`take5_${userNrp}`);
+        } else {
+          take5Count =
+            take5NameMap.get(`take5_${u.nama.trim().toLowerCase()}`) || 0;
+        }
 
         // PTO: Match by ID
-        const ptoCount = idMap.get(`pto_${u.id}`) || 0;
+        const ptoCount = ptoIdMap.get(`pto_${u.id}`) || 0;
 
         return {
           ...u,
@@ -1427,13 +1557,19 @@ function MonitoringPage({ user }) {
 
     if (dateFrom) {
       filteredData = filteredData.filter((item) => {
-        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
+        const itemDate =
+          (item.tanggal && String(item.tanggal).slice(0, 10)) ||
+          (item.created_at && String(item.created_at).slice(0, 10)) ||
+          "";
         return itemDate >= dateFrom;
       });
     }
     if (dateTo) {
       filteredData = filteredData.filter((item) => {
-        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
+        const itemDate =
+          (item.tanggal && String(item.tanggal).slice(0, 10)) ||
+          (item.created_at && String(item.created_at).slice(0, 10)) ||
+          "";
         return itemDate <= dateTo;
       });
     }
@@ -1503,9 +1639,10 @@ function MonitoringPage({ user }) {
         const dateStr = getDateWITARelative(-i);
 
         const dayData = filteredData.filter((item) => {
-          const itemDate = new Date(item.created_at)
-            .toISOString()
-            .split("T")[0];
+          const itemDate =
+            (item.tanggal && String(item.tanggal).slice(0, 10)) ||
+            (item.created_at && String(item.created_at).slice(0, 10)) ||
+            "";
           return itemDate === dateStr;
         });
         dailyStats.push({
@@ -1540,9 +1677,10 @@ function MonitoringPage({ user }) {
         const dateStr = currentDate.toISOString().slice(0, 10);
 
         const dayData = filteredData.filter((item) => {
-          const itemDate = new Date(item.created_at)
-            .toISOString()
-            .split("T")[0];
+          const itemDate =
+            (item.tanggal && String(item.tanggal).slice(0, 10)) ||
+            (item.created_at && String(item.created_at).slice(0, 10)) ||
+            "";
           return itemDate === dateStr;
         });
         dailyStats.push({
@@ -1575,12 +1713,34 @@ function MonitoringPage({ user }) {
 
     // Recent reports (last 10)
     const recentReports = filteredData
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .sort(
+        (a, b) =>
+          new Date(
+            (b.tanggal && String(b.tanggal).slice(0, 10)) ||
+              (b.created_at && String(b.created_at).slice(0, 10)) ||
+              "1970-01-01",
+          ) -
+          new Date(
+            (a.tanggal && String(a.tanggal).slice(0, 10)) ||
+              (a.created_at && String(a.created_at).slice(0, 10)) ||
+              "1970-01-01",
+          ),
+      )
       .slice(0, 10);
 
     // Semua data (untuk download/analisa lengkap)
     const listData = [...filteredData].sort(
-      (a, b) => new Date(a.created_at) - new Date(b.created_at),
+      (a, b) =>
+        new Date(
+          (a.tanggal && String(a.tanggal).slice(0, 10)) ||
+            (a.created_at && String(a.created_at).slice(0, 10)) ||
+            "1970-01-01",
+        ) -
+        new Date(
+          (b.tanggal && String(b.tanggal).slice(0, 10)) ||
+            (b.created_at && String(b.created_at).slice(0, 10)) ||
+            "1970-01-01",
+        ),
     );
 
     return {
@@ -1604,13 +1764,13 @@ function MonitoringPage({ user }) {
 
     if (dateFrom) {
       filteredData = filteredData.filter((item) => {
-        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
+        const itemDate = toWitaDateStrFromISO(item.created_at);
         return itemDate >= dateFrom;
       });
     }
     if (dateTo) {
       filteredData = filteredData.filter((item) => {
-        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
+        const itemDate = toWitaDateStrFromISO(item.created_at);
         return itemDate <= dateTo;
       });
     }
@@ -1746,12 +1906,9 @@ function MonitoringPage({ user }) {
       for (let i = 6; i >= 0; i--) {
         const dateStr = getDateWITARelative(-i);
 
-        const dayData = filteredData.filter((item) => {
-          const itemDate = new Date(item.created_at)
-            .toISOString()
-            .split("T")[0];
-          return itemDate === dateStr;
-        });
+        const dayData = filteredData.filter(
+          (item) => toWitaDateStrFromISO(item.created_at) === dateStr,
+        );
         dailyStats.push({
           date: dateStr,
           total: dayData.length,
@@ -1783,12 +1940,9 @@ function MonitoringPage({ user }) {
       while (currentDate <= endDate) {
         const dateStr = currentDate.toISOString().slice(0, 10);
 
-        const dayData = filteredData.filter((item) => {
-          const itemDate = new Date(item.created_at)
-            .toISOString()
-            .split("T")[0];
-          return itemDate === dateStr;
-        });
+        const dayData = filteredData.filter(
+          (item) => toWitaDateStrFromISO(item.created_at) === dateStr,
+        );
         dailyStats.push({
           date: dateStr,
           total: dayData.length,
@@ -1858,11 +2012,23 @@ function MonitoringPage({ user }) {
   const calculatePtoStats = (data) => {
     let filteredData = [...data];
 
+    const getPtoDateStr = (item) => {
+      return (
+        (item.tanggal && String(item.tanggal).slice(0, 10)) ||
+        toWitaDateStrFromISO(item.created_at) ||
+        ""
+      );
+    };
+
     if (dateFrom) {
-      filteredData = filteredData.filter((item) => item.tanggal >= dateFrom);
+      filteredData = filteredData.filter(
+        (item) => getPtoDateStr(item) >= dateFrom,
+      );
     }
     if (dateTo) {
-      filteredData = filteredData.filter((item) => item.tanggal <= dateTo);
+      filteredData = filteredData.filter(
+        (item) => getPtoDateStr(item) <= dateTo,
+      );
     }
     if (site) {
       filteredData = filteredData.filter((item) => item.site === site);
@@ -1900,7 +2066,9 @@ function MonitoringPage({ user }) {
     if (!dateFrom && !dateTo) {
       for (let i = 6; i >= 0; i--) {
         const dateStr = getDateWITARelative(-i);
-        const dayData = filteredData.filter((item) => item.tanggal === dateStr);
+        const dayData = filteredData.filter(
+          (item) => getPtoDateStr(item) === dateStr,
+        );
         dailyStats.push({
           date: dateStr,
           total: dayData.length,
@@ -1917,7 +2085,9 @@ function MonitoringPage({ user }) {
       const endDate = new Date(endDateStr + "T12:00:00+08:00");
       while (currentDate <= endDate) {
         const dateStr = currentDate.toISOString().slice(0, 10);
-        const dayData = filteredData.filter((item) => item.tanggal === dateStr);
+        const dayData = filteredData.filter(
+          (item) => getPtoDateStr(item) === dateStr,
+        );
         dailyStats.push({
           date: dateStr,
           total: dayData.length,
@@ -1933,11 +2103,11 @@ function MonitoringPage({ user }) {
     }
 
     const recentReports = filteredData
-      .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+      .sort((a, b) => new Date(getPtoDateStr(b)) - new Date(getPtoDateStr(a)))
       .slice(0, 10);
 
     const listData = [...filteredData].sort(
-      (a, b) => new Date(a.tanggal) - new Date(b.tanggal),
+      (a, b) => new Date(getPtoDateStr(a)) - new Date(getPtoDateStr(b)),
     );
 
     return {
@@ -3394,108 +3564,111 @@ function MonitoringPage({ user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {fitToWorkStats.dailyStats.map((day, index) => (
-                    <tr
-                      key={day.date}
-                      style={{ borderBottom: "1px solid #e5e7eb" }}
-                    >
-                      <td style={{ padding: "12px", color: "#1a1a1a" }}>
-                        {new Date(day.date).toLocaleDateString("id-ID", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#1a1a1a",
-                          fontWeight: "bold",
-                        }}
+                  {fitToWorkStats.dailyStats
+                    .slice()
+                    .reverse()
+                    .map((day, index) => (
+                      <tr
+                        key={day.date}
+                        style={{ borderBottom: "1px solid #e5e7eb" }}
                       >
-                        {day.kewajiban ?? "-"}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#3b82f6",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.pengisian ?? day.total ?? 0}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#0ea5e9",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.persentasePengisian != null
-                          ? `${day.persentasePengisian}%`
-                          : "-"}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#22c55e",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.fitToWork}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#ef4444",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.notFitToWork}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#f59e0b",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.initialNotFit ?? 0}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#06b6d4",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.improvedToFit ?? 0}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#8b5cf6",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {(day.pengisian ?? day.total) > 0
-                          ? (
-                              (day.fitToWork / (day.pengisian ?? day.total)) *
-                              100
-                            ).toFixed(1)
-                          : 0}
-                        %
-                      </td>
-                    </tr>
-                  ))}
+                        <td style={{ padding: "12px", color: "#1a1a1a" }}>
+                          {new Date(day.date).toLocaleDateString("id-ID", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#1a1a1a",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.kewajiban ?? "-"}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#3b82f6",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.pengisian ?? day.total ?? 0}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#0ea5e9",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.persentasePengisian != null
+                            ? `${day.persentasePengisian}%`
+                            : "-"}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#22c55e",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.fitToWork}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#ef4444",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.notFitToWork}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#f59e0b",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.initialNotFit ?? 0}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#06b6d4",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.improvedToFit ?? 0}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#8b5cf6",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {(day.pengisian ?? day.total) > 0
+                            ? (
+                                (day.fitToWork / (day.pengisian ?? day.total)) *
+                                100
+                              ).toFixed(1)
+                            : 0}
+                          %
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
 
@@ -4405,60 +4578,63 @@ function MonitoringPage({ user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {take5Stats.dailyStats.map((day, index) => (
-                    <tr
-                      key={day.date}
-                      style={{ borderBottom: "1px solid #e5e7eb" }}
-                    >
-                      <td style={{ padding: "12px", color: "#232946" }}>
-                        {new Date(day.date).toLocaleDateString("id-ID", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#232946",
-                          fontWeight: "bold",
-                        }}
+                  {take5Stats.dailyStats
+                    .slice()
+                    .reverse()
+                    .map((day, index) => (
+                      <tr
+                        key={day.date}
+                        style={{ borderBottom: "1px solid #e5e7eb" }}
                       >
-                        {day.total}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#f59e0b",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.open}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#10b981",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.done}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#6b7280",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.closed}
-                      </td>
-                    </tr>
-                  ))}
+                        <td style={{ padding: "12px", color: "#232946" }}>
+                          {new Date(day.date).toLocaleDateString("id-ID", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#232946",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.total}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#f59e0b",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.open}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#10b981",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.done}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#6b7280",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.closed}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -5243,90 +5419,93 @@ function MonitoringPage({ user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {hazardStats.dailyStats.map((day, index) => (
-                    <tr
-                      key={day.date}
-                      style={{ borderBottom: "1px solid #e5e7eb" }}
-                    >
-                      <td style={{ padding: "12px", color: "#232946" }}>
-                        {new Date(day.date).toLocaleDateString("id-ID", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#232946",
-                          fontWeight: "bold",
-                        }}
+                  {hazardStats.dailyStats
+                    .slice()
+                    .reverse()
+                    .map((day, index) => (
+                      <tr
+                        key={day.date}
+                        style={{ borderBottom: "1px solid #e5e7eb" }}
                       >
-                        {day.total}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#6b7280",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.submit}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#f59e0b",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.open}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#8b5cf6",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.progress}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#10b981",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.done}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#ef4444",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.rejectOpen + day.rejectDone}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#6b7280",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.closed}
-                      </td>
-                    </tr>
-                  ))}
+                        <td style={{ padding: "12px", color: "#232946" }}>
+                          {new Date(day.date).toLocaleDateString("id-ID", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#232946",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.total}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#6b7280",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.submit}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#f59e0b",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.open}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#8b5cf6",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.progress}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#10b981",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.done}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#ef4444",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.rejectOpen + day.rejectDone}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#6b7280",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.closed}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -5785,50 +5964,53 @@ function MonitoringPage({ user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(ptoStats.dailyStats || []).map((day) => (
-                    <tr
-                      key={day.date}
-                      style={{ borderBottom: "1px solid #e5e7eb" }}
-                    >
-                      <td style={{ padding: "12px", color: "#232946" }}>
-                        {new Date(day.date).toLocaleDateString("id-ID", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#232946",
-                          fontWeight: "bold",
-                        }}
+                  {(ptoStats.dailyStats || [])
+                    .slice()
+                    .reverse()
+                    .map((day) => (
+                      <tr
+                        key={day.date}
+                        style={{ borderBottom: "1px solid #e5e7eb" }}
                       >
-                        {day.total}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#f59e0b",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.pending}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          padding: "12px",
-                          color: "#10b981",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {day.closed}
-                      </td>
-                    </tr>
-                  ))}
+                        <td style={{ padding: "12px", color: "#232946" }}>
+                          {new Date(day.date).toLocaleDateString("id-ID", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#232946",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.total}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#f59e0b",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.pending}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            padding: "12px",
+                            color: "#10b981",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {day.closed}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -6111,7 +6293,8 @@ function MonitoringPage({ user }) {
           actual = user.actuals?.pto || 0;
         }
 
-        const percentage = target > 0 ? Math.round((actual / target) * 100) : 0;
+        const percentage =
+          target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : 0;
 
         data.push([user.nama, user.jabatan, target, actual, `${percentage}%`]);
       });
@@ -6173,7 +6356,8 @@ function MonitoringPage({ user }) {
         actual = user.actuals?.pto || 0;
       }
 
-      const percentage = target > 0 ? Math.round((actual / target) * 100) : 0;
+      const percentage =
+        target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : 0;
 
       tableRows.push([
         user.nama,
@@ -6237,7 +6421,8 @@ function MonitoringPage({ user }) {
         actual = user.actuals?.pto || 0;
       }
 
-      const percentage = target > 0 ? Math.round((actual / target) * 100) : 0;
+      const percentage =
+        target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : 0;
 
       return {
         ...user,
@@ -6799,57 +6984,356 @@ function MonitoringPage({ user }) {
               </table>
             </div>
 
-            {/* Global Chart */}
-            <div style={{ height: "400px" }}>
-              <h3
-                style={{
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  marginBottom: "16px",
-                  color: "#111827",
-                }}
-              >
-                Grafik Target vs Aktual (Aggregated)
-              </h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            {/* Global Chart + Persentase (2 kolom: 50% grafik, 50% ringkasan) */}
+            {(() => {
+              const percentSummary = (chartData || []).map((it) => {
+                const target = Number(it.Target || 0);
+                const actual = Number(it.Actual || 0);
+                const pct =
+                  target > 0 ? Math.round((actual / target) * 1000) / 10 : 0;
+                return { name: it.name, target, actual, pct };
+              });
+              const totalTarget = percentSummary.reduce(
+                (s, x) => s + x.target,
+                0,
+              );
+              const totalActual = percentSummary.reduce(
+                (s, x) => s + x.actual,
+                0,
+              );
+              const totalPct =
+                totalTarget > 0
+                  ? Math.round((totalActual / totalTarget) * 1000) / 10
+                  : 0;
+              const themeFor = (name, pct) => {
+                if (name === "Hazard Report")
+                  return {
+                    bg: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)",
+                    border: "#fdba74",
+                    dim: "#9a3412",
+                    accent:
+                      pct >= 100
+                        ? "#166534"
+                        : pct >= 50
+                          ? "#854d0e"
+                          : "#991b1b",
+                  };
+                if (name === "Take 5")
+                  return {
+                    bg: "linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)",
+                    border: "#a5b4fc",
+                    dim: "#3730a3",
+                    accent:
+                      pct >= 100
+                        ? "#166534"
+                        : pct >= 50
+                          ? "#854d0e"
+                          : "#991b1b",
+                  };
+                if (name === "PTO")
+                  return {
+                    bg: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
+                    border: "#86efac",
+                    dim: "#065f46",
+                    accent:
+                      pct >= 100
+                        ? "#166534"
+                        : pct >= 50
+                          ? "#854d0e"
+                          : "#991b1b",
+                  };
+                return {
+                  bg: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
+                  border: "#cbd5e1",
+                  dim: "#334155",
+                  accent:
+                    pct >= 100 ? "#166534" : pct >= 50 ? "#854d0e" : "#991b1b",
+                };
+              };
+              const totalTheme = themeFor("Total", totalPct);
+              return (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "16px",
+                    alignItems: "stretch",
+                  }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 12 }}
-                    interval={0}
-                    height={30}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip
-                    cursor={{ fill: "transparent" }}
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "none",
-                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  <div
+                    style={{
+                      flex: "1 1 520px",
+                      minWidth: "300px",
+                      height: "360px",
                     }}
-                  />
-                  <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                  <Bar
-                    dataKey="Target"
-                    name="Target"
-                    fill="#9ca3af"
-                    radius={[4, 4, 0, 0]}
-                    barSize={40}
-                  />
-                  <Bar
-                    dataKey="Actual"
-                    name="Aktual"
-                    fill="#3b82f6"
-                    radius={[4, 4, 0, 0]}
-                    barSize={40}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                  >
+                    <h3
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        marginBottom: "16px",
+                        color: "#111827",
+                      }}
+                    >
+                      Grafik Target vs Aktual (Aggregated)
+                    </h3>
+                    <ResponsiveContainer width="100%" height="100%">
+                      {(() => {
+                        const slug = (s) =>
+                          String(s)
+                            .toLowerCase()
+                            .replace(/[^a-z0-9]+/g, "-");
+                        const palette = {
+                          "Hazard Report": {
+                            af: "#f59e0b",
+                            at: "#f97316",
+                            t: "#fed7aa",
+                          },
+                          "Take 5": {
+                            af: "#6366f1",
+                            at: "#3b82f6",
+                            t: "#c7d2fe",
+                          },
+                          PTO: { af: "#10b981", at: "#059669", t: "#bbf7d0" },
+                        };
+                        const CustomTooltip = ({ active, payload, label }) => {
+                          if (!active || !payload || !payload.length)
+                            return null;
+                          const actual =
+                            payload.find((p) => p.name === "Aktual")?.value ||
+                            0;
+                          const target =
+                            payload.find((p) => p.name === "Target")?.value ||
+                            0;
+                          const pct =
+                            target > 0
+                              ? Math.round((actual / target) * 1000) / 10
+                              : 0;
+                          const pal = palette[label] || {
+                            af: "#3b82f6",
+                            at: "#2563eb",
+                            t: "#e5e7eb",
+                          };
+                          return (
+                            <div
+                              style={{
+                                background: "white",
+                                borderRadius: 10,
+                                padding: "10px 12px",
+                                boxShadow: "0 10px 30px rgba(0,0,0,.12)",
+                                border: `1px solid ${pal.t}`,
+                                minWidth: 160,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  marginBottom: 6,
+                                  color: "#111827",
+                                }}
+                              >
+                                {label}
+                              </div>
+                              <div style={{ fontSize: 12, color: "#374151" }}>
+                                Aktual: <b>{actual}</b>
+                              </div>
+                              <div style={{ fontSize: 12, color: "#374151" }}>
+                                Target: <b>{target}</b>
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#111827",
+                                  marginTop: 4,
+                                }}
+                              >
+                                Pencapaian: <b>{pct}%</b>
+                              </div>
+                            </div>
+                          );
+                        };
+                        return (
+                          <BarChart
+                            data={chartData}
+                            margin={{ top: 10, right: 20, left: 6, bottom: 8 }}
+                            barCategoryGap="28%"
+                            barGap={8}
+                          >
+                            <defs>
+                              {chartData.map((d) => {
+                                const pal = palette[d.name] || {
+                                  af: "#60a5fa",
+                                  at: "#3b82f6",
+                                };
+                                const id = `grad-${slug(d.name)}`;
+                                return (
+                                  <linearGradient
+                                    key={id}
+                                    id={id}
+                                    x1="0"
+                                    y1="0"
+                                    x2="0"
+                                    y2="1"
+                                  >
+                                    <stop offset="0%" stopColor={pal.af} />
+                                    <stop offset="100%" stopColor={pal.at} />
+                                  </linearGradient>
+                                );
+                              })}
+                            </defs>
+                            <CartesianGrid
+                              stroke="#e5e7eb"
+                              strokeDasharray="4 4"
+                              vertical={false}
+                            />
+                            <XAxis
+                              dataKey="name"
+                              tick={{ fontSize: 12, fill: "#6b7280" }}
+                              interval={0}
+                              height={30}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 12, fill: "#6b7280" }}
+                              allowDecimals={false}
+                            />
+                            <Tooltip
+                              cursor={{ fill: "transparent" }}
+                              content={<CustomTooltip />}
+                            />
+                            <Legend
+                              wrapperStyle={{ paddingTop: "10px" }}
+                              formatter={(value) => (
+                                <span
+                                  style={{ color: "#374151", fontSize: 12 }}
+                                >
+                                  {value}
+                                </span>
+                              )}
+                            />
+                            <Bar
+                              dataKey="Target"
+                              name="Target"
+                              radius={[8, 8, 0, 0]}
+                              barSize={38}
+                            >
+                              {chartData.map((entry, index) => {
+                                const pal = palette[entry.name] || {
+                                  t: "#e5e7eb",
+                                };
+                                return <Cell key={`t-${index}`} fill={pal.t} />;
+                              })}
+                            </Bar>
+                            <Bar
+                              dataKey="Actual"
+                              name="Aktual"
+                              radius={[8, 8, 0, 0]}
+                              barSize={38}
+                            >
+                              {chartData.map((entry, index) => {
+                                const id = `grad-${slug(entry.name)}`;
+                                return (
+                                  <Cell
+                                    key={`a-${index}`}
+                                    fill={`url(#${id})`}
+                                  />
+                                );
+                              })}
+                            </Bar>
+                          </BarChart>
+                        );
+                      })()}
+                    </ResponsiveContainer>
+                  </div>
+                  <div
+                    style={{
+                      flex: "1 1 420px",
+                      minWidth: "280px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        marginBottom: "4px",
+                        color: "#111827",
+                      }}
+                    >
+                      Persentase Pencapaian
+                    </h3>
+                    {/* Total card */}
+                    <div
+                      style={{
+                        padding: "16px",
+                        border: `1px solid ${totalTheme.border}`,
+                        borderRadius: "12px",
+                        background: totalTheme.bg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        boxShadow: "0 6px 16px rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 13, color: totalTheme.dim }}>
+                          Total (Semua Modul)
+                        </div>
+                        <div style={{ fontSize: 13, color: "#111827" }}>
+                          Aktual {totalActual} / Target {totalTarget}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 28,
+                          fontWeight: 700,
+                          color: totalTheme.accent,
+                        }}
+                      >
+                        {totalPct}%
+                      </div>
+                    </div>
+                    {/* Per-modul cards */}
+                    {percentSummary.map((it) =>
+                      ((t) => (
+                        <div
+                          key={it.name}
+                          style={{
+                            padding: "16px",
+                            border: `1px solid ${t.border}`,
+                            borderRadius: "12px",
+                            background: t.bg,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            boxShadow: "0 6px 16px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: 13, color: t.dim }}>
+                              {it.name}
+                            </div>
+                            <div style={{ fontSize: 13, color: "#111827" }}>
+                              Aktual {it.actual} / Target {it.target}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 24,
+                              fontWeight: 700,
+                              color: t.accent,
+                            }}
+                          >
+                            {it.pct}%
+                          </div>
+                        </div>
+                      ))(themeFor(it.name, it.pct)),
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -7297,6 +7781,14 @@ function MonitoringPage({ user }) {
             flexWrap: "wrap",
             marginBottom: 24,
             flexShrink: 0,
+            position: "sticky",
+            top: 0,
+            zIndex: 50,
+            padding: "12px 12px 8px 12px",
+            background: "linear-gradient(135deg, #0f172a 0%, #111827 100%)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+            borderRadius: 12,
           }}
         >
           {MONITORING_TABS.map((tab) => (
@@ -7309,12 +7801,16 @@ function MonitoringPage({ user }) {
                 border: "1px solid rgba(255,255,255,0.3)",
                 background:
                   selectedTable === tab.key
-                    ? "#ea580c"
-                    : "rgba(255,255,255,0.1)",
+                    ? "linear-gradient(135deg, #ea580c 0%, #dc2626 100%)"
+                    : "rgba(255,255,255,0.06)",
                 color: "#ffffff",
                 cursor: "pointer",
                 fontSize: 14,
                 fontWeight: selectedTable === tab.key ? 600 : 400,
+                boxShadow:
+                  selectedTable === tab.key
+                    ? "0 4px 10px rgba(234,88,12,0.35)"
+                    : "none",
               }}
             >
               {tab.label}

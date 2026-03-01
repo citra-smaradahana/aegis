@@ -18,6 +18,26 @@ import Take5History from "./Take5History";
 
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
+const JUDUL_PEKERJAAN_OPTIONS = [
+  "Pengoperasian Kendaraan/Unit",
+  "Loading Aksesoris Blasting",
+  "Pengawalan Bahan Peledak",
+  "Pembagian Aksesoris",
+  "Charging",
+  "Priming",
+  "Stemming",
+  "Tie Up",
+  "Firing",
+  "Post Blast",
+  "Pembuatan Emulsion",
+  "Transfer Emulsion ke BIN",
+  "Loading AN ke BIN",
+  "Preventive Maintenance",
+  "Perbaikan Unit & Peralatan",
+  "Stock Opname Gudang",
+  "Administrasi Office",
+  "Lainnya",
+];
 const Take5FormMobile = ({
   user,
   onRedirectHazard,
@@ -54,6 +74,10 @@ const Take5FormMobile = ({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [activeTab, setActiveTab] = useState("input");
+  const [judulPekerjaan, setJudulPekerjaan] = useState("");
+  const [judulPekerjaanCustom, setJudulPekerjaanCustom] = useState("");
+  const [showJudulModal, setShowJudulModal] = useState(false);
+  const [judulSearchQuery, setJudulSearchQuery] = useState("");
   const buktiCameraRef = useRef();
   const buktiGalleryRef = useRef();
 
@@ -82,6 +106,8 @@ const Take5FormMobile = ({
   const isFormValid =
     site &&
     detailLokasi.trim() &&
+    judulPekerjaan.trim() &&
+    (judulPekerjaan !== "Lainnya" ? true : !!judulPekerjaanCustom.trim()) &&
     potensiBahaya.trim() &&
     q1 !== null &&
     q2 !== null &&
@@ -247,12 +273,16 @@ const Take5FormMobile = ({
       const status = aman === "stop" ? "pending" : "closed";
 
       // Log data yang akan dikirim untuk debugging
+      const selectedJudul =
+        judulPekerjaan === "Lainnya"
+          ? judulPekerjaanCustom.trim()
+          : judulPekerjaan;
       const take5Data = {
         user_id: user.id,
         tanggal: getTodayWITA(),
         site: site,
         detail_lokasi: detailLokasi,
-        judul_pekerjaan: "Take 5 Assessment", // Field required di database
+        judul_pekerjaan: selectedJudul,
         potensi_bahaya: potensiBahaya,
         q1: q1,
         q2: q2,
@@ -317,6 +347,8 @@ const Take5FormMobile = ({
           setSuccess(false);
           setSite(user.site || "");
           setDetailLokasi("");
+          setJudulPekerjaan("");
+          setJudulPekerjaanCustom("");
           setPotensiBahaya("");
           setQ1(null);
           setQ2(null);
@@ -797,6 +829,67 @@ const Take5FormMobile = ({
                     required
                     placeholder="Ketik detail lokasi..."
                     style={inputStyle}
+                  />
+                )}
+              </div>
+
+              {/* Judul Pekerjaan */}
+              <div style={fieldMargin}>
+                <label style={labelStyle}>Judul Pekerjaan</label>
+                <div
+                  onClick={() => {
+                    setJudulSearchQuery("");
+                    setShowJudulModal(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    borderRadius: 8,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    border: "1px solid #d1d5db",
+                    backgroundColor: "#fff",
+                    color: "#000",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>{judulPekerjaan || "Pilih Judul Pekerjaan"}</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    style={{ flexShrink: 0 }}
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </div>
+                <SelectModalWithSearch
+                  title="Pilih Judul Pekerjaan"
+                  options={JUDUL_PEKERJAAN_OPTIONS}
+                  onSelect={(val) => {
+                    setJudulPekerjaan(val);
+                    setShowJudulModal(false);
+                    setJudulSearchQuery("");
+                  }}
+                  searchQuery={judulSearchQuery}
+                  onSearchChange={setJudulSearchQuery}
+                  show={showJudulModal}
+                  onClose={() => setShowJudulModal(false)}
+                />
+                {judulPekerjaan === "Lainnya" && (
+                  <input
+                    type="text"
+                    value={judulPekerjaanCustom}
+                    onChange={(e) => setJudulPekerjaanCustom(e.target.value)}
+                    required
+                    placeholder="Tulis judul pekerjaan..."
+                    style={{ ...inputStyle, marginTop: 8 }}
                   />
                 )}
               </div>

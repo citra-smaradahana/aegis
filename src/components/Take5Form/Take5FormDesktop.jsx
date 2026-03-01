@@ -30,6 +30,27 @@ const SITE_OPTIONS_FALLBACK = [
   "PMTU",
 ];
 
+const JUDUL_PEKERJAAN_OPTIONS = [
+  "Pengoperasian Kendaraan/Unit",
+  "Loading Aksesoris Blasting",
+  "Pengawalan Bahan Peledak",
+  "Pembagian Aksesoris",
+  "Charging",
+  "Priming",
+  "Stemming",
+  "Tie Up",
+  "Firing",
+  "Post Blast",
+  "Pembuatan Emulsion",
+  "Transfer Emulsion ke BIN",
+  "Loading AN ke BIN",
+  "Preventive Maintenance",
+  "Perbaikan Unit & Peralatan",
+  "Stock Opname Gudang",
+  "Administrasi Office",
+  "Lainnya",
+];
+
 const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const [site, setSite] = useState(user.site || "");
   const [detailLokasi, setDetailLokasi] = useState("");
@@ -54,11 +75,15 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [activeTab, setActiveTab] = useState("input");
+  const [judulPekerjaan, setJudulPekerjaan] = useState("");
+  const [judulPekerjaanCustom, setJudulPekerjaanCustom] = useState("");
 
   // Validasi form
   const isFormValid =
     site &&
     detailLokasi.trim() &&
+    judulPekerjaan.trim() &&
+    (judulPekerjaan !== "Lainnya" ? true : !!judulPekerjaanCustom.trim()) &&
     potensiBahaya.trim() &&
     q1 !== null &&
     q2 !== null &&
@@ -211,12 +236,16 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
       const status = kondisiKerja === "stop" ? "pending" : "closed";
 
       // Log data yang akan dikirim untuk debugging
+      const selectedJudul =
+        judulPekerjaan === "Lainnya"
+          ? judulPekerjaanCustom.trim()
+          : judulPekerjaan;
       const take5Data = {
         user_id: user.id,
         tanggal: getTodayWITA(),
         site: site,
         detail_lokasi: detailLokasi,
-        judul_pekerjaan: "Take 5 Assessment", // Field required di database
+        judul_pekerjaan: selectedJudul,
         potensi_bahaya: potensiBahaya,
         q1: q1,
         q2: q2,
@@ -264,6 +293,8 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
           setSuccess(false);
           setSite(user.site || "");
           setDetailLokasi("");
+          setJudulPekerjaan("");
+          setJudulPekerjaanCustom("");
           setPotensiBahaya("");
           setQ1(null);
           setQ2(null);
@@ -635,6 +666,33 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                   style={inputStyle}
                   required
                 />
+              </div>
+
+              <div style={fieldMargin}>
+                <label style={labelStyle}>Judul Pekerjaan</label>
+                <select
+                  value={judulPekerjaan}
+                  onChange={(e) => setJudulPekerjaan(e.target.value)}
+                  required
+                  style={inputStyle}
+                >
+                  <option value="">Pilih Judul Pekerjaan</option>
+                  {JUDUL_PEKERJAAN_OPTIONS.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                {judulPekerjaan === "Lainnya" && (
+                  <input
+                    type="text"
+                    value={judulPekerjaanCustom}
+                    onChange={(e) => setJudulPekerjaanCustom(e.target.value)}
+                    required
+                    placeholder="Tulis judul pekerjaan..."
+                    style={{ ...inputStyle, marginTop: 8 }}
+                  />
+                )}
               </div>
 
               <div style={fieldMargin}>

@@ -344,6 +344,53 @@ export async function deleteAlasanObservasi(id) {
   invalidateMasterDataCache();
 }
 
+/** Judul Pekerjaan */
+export async function fetchJudulPekerjaan() {
+  const key = "judul_pekerjaan_public";
+  const c = getCached(key);
+  if (c) return c;
+  const { data } = await supabase
+    .from("master_judul_pekerjaan")
+    .select("id, name, sort_order")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  const arr = (data || []).map((r) => ({ id: r.id, name: r.name }));
+  setCached(key, arr);
+  return arr;
+}
+
+export async function fetchJudulPekerjaanForAdmin() {
+  const { data } = await supabase
+    .from("master_judul_pekerjaan")
+    .select("id, name, sort_order")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  return data || [];
+}
+
+export async function insertJudulPekerjaan(name) {
+  const { data } = await supabase
+    .from("master_judul_pekerjaan")
+    .insert({ name: name.trim() })
+    .select("id")
+    .single();
+  invalidateMasterDataCache();
+  return data;
+}
+
+export async function updateJudulPekerjaan(id, name) {
+  await supabase
+    .from("master_judul_pekerjaan")
+    .update({ name: name.trim() })
+    .eq("id", id);
+  invalidateMasterDataCache();
+}
+
+export async function deleteJudulPekerjaan(id) {
+  await supabase.from("master_judul_pekerjaan").delete().eq("id", id);
+  invalidateMasterDataCache();
+}
+
 /** Import data awal dari config (untuk tabel kosong) */
 const SITES_DEFAULT = [
   "Head Office",

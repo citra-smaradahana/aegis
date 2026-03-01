@@ -33,6 +33,7 @@ import FatigueCheckForm from "./components/FatigueCheck/FatigueCheckForm";
 import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
 import PTOForm from "./components/PTOForm";
 import VersionCheck from "./components/VersionCheck";
+import DebugNrp from "./components/DebugNrp"; // Temporary Debug Component
 import aegisLogo from "./assets/aegis.png";
 import kmbLogo from "./assets/kmb.png";
 
@@ -1185,6 +1186,15 @@ function App() {
       </>
     );
   };
+
+  if (currentPage === "monitoring") {
+    return (
+      <div className="app-container">
+        {/* <DebugNrp /> */}
+        <MonitoringPage user={user} onBack={() => setCurrentPage("main-app")} />
+      </div>
+    );
+  }
 
   return (
     <div
