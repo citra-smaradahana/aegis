@@ -15,7 +15,10 @@ import {
   shouldUseLocationSelector,
   CUSTOM_INPUT_SITES,
 } from "../../config/siteLocations";
-import { SUB_OPTIONS, matchPotensiBahayaToKetidaksesuaian } from "../../config/hazardKetidaksesuaianOptions";
+import {
+  SUB_OPTIONS,
+  matchPotensiBahayaToKetidaksesuaian,
+} from "../../config/hazardKetidaksesuaianOptions";
 import { fetchKetidaksesuaianSubOptions } from "../../utils/masterDataHelpers";
 import PendingReportsList from "./PendingReportsList";
 import { getNowWITAISO } from "../../utils/dateTimeHelpers";
@@ -59,10 +62,14 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [siteSearchQuery, setSiteSearchQuery] = useState("");
   const [showDetailLokasiModal, setShowDetailLokasiModal] = useState(false);
   const [detailLokasiSearchQuery, setDetailLokasiSearchQuery] = useState("");
-  const [showKetidaksesuaianModal, setShowKetidaksesuaianModal] = useState(false);
-  const [ketidaksesuaianSearchQuery, setKetidaksesuaianSearchQuery] = useState("");
-  const [showSubKetidaksesuaianModal, setShowSubKetidaksesuaianModal] = useState(false);
-  const [subKetidaksesuaianSearchQuery, setSubKetidaksesuaianSearchQuery] = useState("");
+  const [showKetidaksesuaianModal, setShowKetidaksesuaianModal] =
+    useState(false);
+  const [ketidaksesuaianSearchQuery, setKetidaksesuaianSearchQuery] =
+    useState("");
+  const [showSubKetidaksesuaianModal, setShowSubKetidaksesuaianModal] =
+    useState(false);
+  const [subKetidaksesuaianSearchQuery, setSubKetidaksesuaianSearchQuery] =
+    useState("");
   const [showQuickActionModal, setShowQuickActionModal] = useState(false);
   const [quickActionSearchQuery, setQuickActionSearchQuery] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -101,9 +108,15 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
 
       let ketidaksesuaian = "";
       let subKetidaksesuaian = "";
-      if (selectedReport.sumber_laporan === "Take5" && selectedReport.potensi_bahaya) {
+      if (
+        selectedReport.sumber_laporan === "Take5" &&
+        selectedReport.potensi_bahaya
+      ) {
         const opts = subOptionsMap || SUB_OPTIONS;
-        const matched = matchPotensiBahayaToKetidaksesuaian(selectedReport.potensi_bahaya, opts);
+        const matched = matchPotensiBahayaToKetidaksesuaian(
+          selectedReport.potensi_bahaya,
+          opts,
+        );
         ketidaksesuaian = matched.ketidaksesuaian || "";
         subKetidaksesuaian = matched.subKetidaksesuaian || "";
       }
@@ -123,7 +136,10 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           selectedReport.sumber_laporan === "Take5"
             ? "STOP pekerjaan sesuai Take 5"
             : "Tindak lanjut PTO",
-        deskripsiTemuan: selectedReport.deskripsi || selectedReport.deskripsi_kondisi || "Temuan dari observasi",
+        deskripsiTemuan:
+          selectedReport.deskripsi ||
+          selectedReport.deskripsi_kondisi ||
+          "Temuan dari observasi",
       }));
 
       // Auto-fill evidence preview jika ada foto temuan dari sumber (Take 5 atau PTO)
@@ -142,7 +158,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   useEffect(() => {
     if (user?.site && !selectedReport) {
       setForm((prev) =>
-        prev.lokasi === "" ? { ...prev, lokasi: user.site } : prev
+        prev.lokasi === "" ? { ...prev, lokasi: user.site } : prev,
       );
     }
   }, [user?.site, selectedReport]);
@@ -176,9 +192,12 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   useEffect(() => {
     let cancelled = false;
     fetchKetidaksesuaianSubOptions().then((opts) => {
-      if (!cancelled && opts && Object.keys(opts).length > 0) setSubOptionsMap(opts);
+      if (!cancelled && opts && Object.keys(opts).length > 0)
+        setSubOptionsMap(opts);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -190,9 +209,12 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
     }
     let cancelled = false;
     getLocationOptionsAsync(form.lokasi).then((opts) => {
-      if (!cancelled) setDetailLokasiOptions(opts || getLocationOptions(form.lokasi) || []);
+      if (!cancelled)
+        setDetailLokasiOptions(opts || getLocationOptions(form.lokasi) || []);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [form.lokasi]);
 
   // Handle detail lokasi change
@@ -352,6 +374,33 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // Validasi form wajib isi
+    const missingFields = [];
+    if (!form.lokasi) missingFields.push("Lokasi");
+    if (!form.detailLokasi) missingFields.push("Detail Lokasi");
+    if (!form.keteranganLokasi) missingFields.push("Keterangan Lokasi");
+    if (!form.pic) missingFields.push("PIC");
+    if (!form.ketidaksesuaian) missingFields.push("Ketidaksesuaian");
+
+    // Sub Ketidaksesuaian wajib jika ada opsi
+    if (
+      getSubOptions(form.ketidaksesuaian).length > 0 &&
+      !form.subKetidaksesuaian
+    ) {
+      missingFields.push("Sub Ketidaksesuaian");
+    }
+
+    if (!form.quickAction) missingFields.push("Quick Action");
+    if (!form.deskripsiTemuan) missingFields.push("Deskripsi Temuan");
+    if (!evidence && !selectedReport?.foto_temuan)
+      missingFields.push("Foto Evidence");
+
+    if (missingFields.length > 0) {
+      setSubmitError(`Mohon lengkapi kolom wajib: ${missingFields.join(", ")}`);
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
 
@@ -395,7 +444,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                 : null,
             sumber_laporan: selectedReport?.sumber_laporan || null,
             id_sumber_laporan: selectedReport?.id || null, // Keep for backward compatibility
-          })
+          }),
         );
 
         const results = await Promise.all(hazardPromises);
@@ -407,7 +456,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
 
         console.log(
           `Berhasil membuat ${evaluatorOptions.length} hazard report untuk evaluator:`,
-          evaluatorOptions
+          evaluatorOptions,
         );
         setSubmittedToMultipleEvaluators(true);
       } else {
@@ -466,7 +515,9 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
         const take5Update = {
           status: "done",
           potensi_bahaya: form.ketidaksesuaian
-            ? [form.ketidaksesuaian, form.subKetidaksesuaian].filter(Boolean).join(" - ")
+            ? [form.ketidaksesuaian, form.subKetidaksesuaian]
+                .filter(Boolean)
+                .join(" - ")
             : null,
           deskripsi_kondisi: form.deskripsiTemuan || null,
         };
@@ -726,7 +777,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Lokasi (Site)
+                  Lokasi (Site) *
                 </label>
                 <div
                   onClick={() => {
@@ -743,7 +794,11 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                     border: "1px solid #d1d5db",
                     backgroundColor: selectedReport ? "#f3f4f6" : "#fff",
-                    color: selectedReport ? "#9ca3af" : form.lokasi ? "#000" : "#6b7280",
+                    color: selectedReport
+                      ? "#9ca3af"
+                      : form.lokasi
+                        ? "#000"
+                        : "#6b7280",
                     cursor: selectedReport ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -753,7 +808,15 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                 >
                   <span>{form.lokasi || "Pilih Lokasi"}</span>
                   {!selectedReport && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      style={{ flexShrink: 0 }}
+                    >
                       <path d="m6 9 6 6 6-6" />
                     </svg>
                   )}
@@ -803,7 +866,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Detail Lokasi
+                  Detail Lokasi *
                 </label>
                 {shouldUseLocationSelector(form.lokasi) ? (
                   <>
@@ -821,9 +884,14 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                         padding: "12px 16px",
                         fontSize: 14,
                         border: "1px solid #d1d5db",
-                        backgroundColor: !!selectedReport || !form.lokasi ? "#f3f4f6" : "#fff",
-                        color: !!selectedReport || !form.lokasi ? "#9ca3af" : "#000",
-                        cursor: !!selectedReport || !form.lokasi ? "not-allowed" : "pointer",
+                        backgroundColor:
+                          !!selectedReport || !form.lokasi ? "#f3f4f6" : "#fff",
+                        color:
+                          !!selectedReport || !form.lokasi ? "#9ca3af" : "#000",
+                        cursor:
+                          !!selectedReport || !form.lokasi
+                            ? "not-allowed"
+                            : "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
@@ -839,7 +907,15 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                               : "Pilih Detail Lokasi")}
                       </span>
                       {form.lokasi && !selectedReport && (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          style={{ flexShrink: 0 }}
+                        >
                           <path d="m6 9 6 6 6-6" />
                         </svg>
                       )}
@@ -938,7 +1014,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Keterangan Lokasi
+                  Keterangan Lokasi *
                 </label>
                 <textarea
                   name="keteranganLokasi"
@@ -989,7 +1065,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  PIC (Person In Charge)
+                  PIC (Person In Charge) *
                   {selectedReport?.sumber_laporan === "PTO" && (
                     <span
                       style={{
@@ -1038,10 +1114,21 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                   }}
                 >
                   <span>
-                    {form.pic || (!form.lokasi ? "Pilih lokasi terlebih dahulu" : "Pilih PIC")}
+                    {form.pic ||
+                      (!form.lokasi
+                        ? "Pilih lokasi terlebih dahulu"
+                        : "Pilih PIC")}
                   </span>
                   {form.lokasi && selectedReport?.sumber_laporan !== "PTO" && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      style={{ flexShrink: 0 }}
+                    >
                       <path d="m6 9 6 6 6-6" />
                     </svg>
                   )}
@@ -1081,7 +1168,14 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                           flexShrink: 0,
                         }}
                       >
-                        <div className="mobile-popup-title" style={{ fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+                        <div
+                          className="mobile-popup-title"
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 16,
+                            marginBottom: 12,
+                          }}
+                        >
                           Pilih PIC
                         </div>
                         <input
@@ -1113,7 +1207,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                           .filter((opt) =>
                             opt
                               .toLowerCase()
-                              .includes(picSearchQuery.toLowerCase())
+                              .includes(picSearchQuery.toLowerCase()),
                           )
                           .map((opt) => (
                             <div
@@ -1135,7 +1229,9 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                             </div>
                           ))}
                         {picOptions.filter((opt) =>
-                          opt.toLowerCase().includes(picSearchQuery.toLowerCase())
+                          opt
+                            .toLowerCase()
+                            .includes(picSearchQuery.toLowerCase()),
                         ).length === 0 && (
                           <div
                             style={{
@@ -1227,7 +1323,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Ketidaksesuaian
+                  Ketidaksesuaian *
                 </label>
                 <div
                   onClick={() => {
@@ -1251,16 +1347,33 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                   }}
                 >
                   <span>{form.ketidaksesuaian || "Pilih Ketidaksesuaian"}</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    style={{ flexShrink: 0 }}
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </div>
                 <SelectModalWithSearch
                   title="Pilih Ketidaksesuaian"
-                  options={[...new Set([...(Object.keys(subOptionsMap || SUB_OPTIONS)), ...Object.keys(SUB_OPTIONS)])].sort((a, b) => a.localeCompare(b, "id"))}
+                  options={[
+                    ...new Set([
+                      ...Object.keys(subOptionsMap || SUB_OPTIONS),
+                      ...Object.keys(SUB_OPTIONS),
+                    ]),
+                  ].sort((a, b) => a.localeCompare(b, "id"))}
                   value={form.ketidaksesuaian}
                   onSelect={(val) => {
-                    setForm((prev) => ({ ...prev, ketidaksesuaian: val, subKetidaksesuaian: "" }));
+                    setForm((prev) => ({
+                      ...prev,
+                      ketidaksesuaian: val,
+                      subKetidaksesuaian: "",
+                    }));
                     setShowKetidaksesuaianModal(false);
                     setKetidaksesuaianSearchQuery("");
                   }}
@@ -1301,7 +1414,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Sub Ketidaksesuaian
+                  Sub Ketidaksesuaian *
                 </label>
                 {/* Sub Ketidaksesuaian Dinamis */}
                 {getSubOptions(form.ketidaksesuaian).length > 0 ? (
@@ -1327,8 +1440,18 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                         ...getFieldBorderStyle("subKetidaksesuaian"),
                       }}
                     >
-                      <span>{form.subKetidaksesuaian || "Pilih Sub Ketidaksesuaian"}</span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <span>
+                        {form.subKetidaksesuaian || "Pilih Sub Ketidaksesuaian"}
+                      </span>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        style={{ flexShrink: 0 }}
+                      >
                         <path d="m6 9 6 6 6-6" />
                       </svg>
                     </div>
@@ -1337,7 +1460,10 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                       options={getSubOptions(form.ketidaksesuaian)}
                       value={form.subKetidaksesuaian}
                       onSelect={(val) => {
-                        setForm((prev) => ({ ...prev, subKetidaksesuaian: val }));
+                        setForm((prev) => ({
+                          ...prev,
+                          subKetidaksesuaian: val,
+                        }));
                         setShowSubKetidaksesuaianModal(false);
                         setSubKetidaksesuaianSearchQuery("");
                       }}
@@ -1397,7 +1523,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Quick Action
+                  Quick Action *
                 </label>
                 <div
                   onClick={() => {
@@ -1421,7 +1547,15 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                   }}
                 >
                   <span>{form.quickAction || "Pilih Quick Action"}</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    style={{ flexShrink: 0 }}
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </div>
@@ -1529,7 +1663,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Deskripsi Temuan
+                  Deskripsi Temuan *
                 </label>
                 <textarea
                   name="deskripsiTemuan"
@@ -1581,7 +1715,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                     fontSize: 14,
                   }}
                 >
-                  Foto Evidence
+                  Foto Evidence *
                 </label>
                 <input
                   ref={cameraInputRef}
@@ -1612,21 +1746,33 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                           color: "#166534",
                         }}
                       >
-                        📸 Foto dari sumber laporan ({selectedReport?.sumber_laporan}) - tidak dapat diganti
+                        📸 Foto dari sumber laporan (
+                        {selectedReport?.sumber_laporan}) - tidak dapat diganti
                       </div>
                     )}
                     <img
                       src={evidencePreview}
                       alt="Preview"
-                      onClick={selectedReport?.foto_temuan && !evidence ? undefined : handleClickPreview}
+                      onClick={
+                        selectedReport?.foto_temuan && !evidence
+                          ? undefined
+                          : handleClickPreview
+                      }
                       style={{
                         maxWidth: "100%",
                         maxHeight: 150,
                         borderRadius: 8,
                         border: "2px solid #e5e7eb",
-                        cursor: selectedReport?.foto_temuan && !evidence ? "default" : "pointer",
+                        cursor:
+                          selectedReport?.foto_temuan && !evidence
+                            ? "default"
+                            : "pointer",
                       }}
-                      title={selectedReport?.foto_temuan && !evidence ? "Foto dari sumber" : "Klik untuk ganti foto"}
+                      title={
+                        selectedReport?.foto_temuan && !evidence
+                          ? "Foto dari sumber"
+                          : "Klik untuk ganti foto"
+                      }
                     />
                   </div>
                 ) : (

@@ -32,6 +32,7 @@ import FatigueCheckList from "./components/FatigueCheck";
 import FatigueCheckForm from "./components/FatigueCheck/FatigueCheckForm";
 import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
 import PTOForm from "./components/PTOForm";
+import VersionCheck from "./components/VersionCheck";
 import aegisLogo from "./assets/aegis.png";
 import kmbLogo from "./assets/kmb.png";
 
@@ -73,7 +74,8 @@ function App() {
 
   // Hardware back button (Android) - berperilaku seperti tombol back di dalam app
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android")
+      return;
     const listener = CapacitorApp.addListener("backButton", () => {
       if (currentPage === "site-selection") {
         setCurrentPage("login");
@@ -177,25 +179,41 @@ function App() {
     const canAccessFitToWorkValidation = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("fit-to-work-validation");
-      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+      if (
+        user?.jabatan === "Administrator" ||
+        user?.jabatan === "Admin Site Project"
+      )
+        return true;
       return validatorJabatan.includes((user?.jabatan || "").trim());
     };
     const canAccessReport = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("daily-attendance");
-      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+      if (
+        user?.jabatan === "Administrator" ||
+        user?.jabatan === "Admin Site Project"
+      )
+        return true;
       return reportPtoJabatan.includes((user?.jabatan || "").trim());
     };
     const canAccessPTO = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("pto");
-      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+      if (
+        user?.jabatan === "Administrator" ||
+        user?.jabatan === "Admin Site Project"
+      )
+        return true;
       return reportPtoJabatan.includes((user?.jabatan || "").trim());
     };
     const canAccessFatigueCheck = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("fatigue-check");
-      if (user?.jabatan === "Administrator" || user?.jabatan === "Admin Site Project") return true;
+      if (
+        user?.jabatan === "Administrator" ||
+        user?.jabatan === "Admin Site Project"
+      )
+        return true;
       return reportPtoJabatan.includes((user?.jabatan || "").trim());
     };
 
@@ -208,7 +226,9 @@ function App() {
       fetchAllowedMenusForUser(user).then((menus) => {
         if (!cancelled) setAllowedMenus(menus);
       });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }, [user?.id, user?.jabatan, user?.site]);
 
     // Tutup panel notifikasi saat pindah menu
@@ -1173,6 +1193,7 @@ function App() {
         fontFamily: "Poppins, system-ui, Avenir, Helvetica, Arial, sans-serif",
       }}
     >
+      <VersionCheck />
       {/* Offline Status Indicator */}
       {!isOnline && <OfflineStatus />}
 
@@ -1187,7 +1208,9 @@ function App() {
         />
       )}
 
-      {currentPage === "main-app" && <MainApp setBackHandler={setBackHandler} />}
+      {currentPage === "main-app" && (
+        <MainApp setBackHandler={setBackHandler} />
+      )}
     </div>
   );
 }

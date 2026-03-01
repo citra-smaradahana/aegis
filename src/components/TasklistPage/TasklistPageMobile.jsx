@@ -870,6 +870,23 @@ function TasklistPageMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 })
                     marginBottom: 4,
                   }}
                 >
+                  Pelapor
+                </label>
+                <div style={{ color: "#1f2937", fontSize: 16 }}>
+                  {selectedTask.rawReport?.pelapor_nama || "-"}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "#6b7280",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    display: "block",
+                    marginBottom: 4,
+                  }}
+                >
                   Ditugaskan ke
                 </label>
                 <div style={{ color: "#1f2937", fontSize: 16 }}>
