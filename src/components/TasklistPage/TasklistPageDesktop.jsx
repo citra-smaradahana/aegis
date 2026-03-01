@@ -58,6 +58,7 @@ function Toolbar({ site, setSite, search, setSearch }) {
 function Table({ rows, onAction, role, onView, formatDateOnly, user }) {
   const headers = [
     "Tanggal Pelaporan",
+    "Pelapor",
     "PIC",
     "Site",
     "Due Date",
@@ -139,7 +140,7 @@ function Table({ rows, onAction, role, onView, formatDateOnly, user }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr",
+          gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 1fr 1fr",
           background: "#111827",
           color: "#9ca3af",
           padding: "10px 12px",
@@ -158,7 +159,7 @@ function Table({ rows, onAction, role, onView, formatDateOnly, user }) {
             key={r.id}
             style={{
               display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr",
+              gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 1fr 1fr",
               padding: "12px",
               borderTop: "1px solid #334155",
               alignItems: "center",
@@ -169,6 +170,7 @@ function Table({ rows, onAction, role, onView, formatDateOnly, user }) {
             <div style={{ fontWeight: 600 }}>
               {formatDateOnly(r.created_at)}
             </div>
+            <div>{r.pelapor_nama || "-"}</div>
             <div>{r.pic}</div>
             <div>{r.site}</div>
             <div>{r.due || "-"}</div>

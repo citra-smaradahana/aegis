@@ -479,9 +479,20 @@ function TasklistPageMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 })
                     alignItems: "center",
                     fontSize: 12,
                     color: "#9ca3af",
+                    marginBottom: 4,
                   }}
                 >
-                  <span>Ditugaskan ke: {task.assignee}</span>
+                  <span>Pelapor: {task?.rawReport?.pelapor_nama || "-"}</span>
+                  <span>PIC: {task.assignee || "-"}</span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    fontSize: 12,
+                    color: "#9ca3af",
+                  }}
+                >
                   <span>{formatDate(task.created_at)}</span>
                 </div>
               </div>

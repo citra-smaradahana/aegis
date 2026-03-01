@@ -171,6 +171,29 @@ function TasklistFormSubmitMobile({ hazard, onClose, onSuccess, readOnly, embedd
           </div>
         </div>
 
+        {/* Pelapor & PIC */}
+        <div
+          style={{
+            background: '#fff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 4px #0001',
+            padding: '16px',
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 15, color: '#0ea5e9' }}>
+            👥 Pelapor & PIC
+          </h3>
+          <div style={{ fontSize: 15, color: '#374151', marginTop: 8 }}>
+            <div>
+              <strong>Pelapor:</strong> {hazard?.pelapor_nama || '-'}
+            </div>
+            <div>
+              <strong>PIC:</strong> {hazard?.pic || '-'}
+            </div>
+          </div>
+        </div>
+
         {/* Ketidaksesuaian */}
         <div
           style={{
