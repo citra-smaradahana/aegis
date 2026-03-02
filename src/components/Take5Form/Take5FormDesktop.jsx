@@ -80,26 +80,18 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
   // Validasi form
   const isFormValid =
-    site &&
-    detailLokasi.trim() &&
-    judulPekerjaan.trim() &&
-    (judulPekerjaan !== "Lainnya" ? true : !!judulPekerjaanCustom.trim()) &&
-    potensiBahaya.trim() &&
+    !!site &&
+    !!detailLokasi.trim() &&
+    !!judulPekerjaan.trim() &&
+    (judulPekerjaan !== "Lainnya" || !!judulPekerjaanCustom.trim()) &&
+    !!potensiBahaya.trim() &&
     q1 !== null &&
     q2 !== null &&
     q3 !== null &&
     q4 !== null &&
-    kondisiKerja &&
-    !(
-      kondisiKerja === "perbaikan" &&
-      (!buktiPerbaikan || !deskripsiPerbaikan.trim())
-    ) &&
-    !(
-      kondisiKerja === "stop" &&
-      (!buktiPerbaikan || !deskripsiKondisi.trim())
-    ) &&
-    !(kondisiKerja === "aman" && !deskripsiKondisi.trim()) &&
-    !(kondisiKerja === "aman" && !buktiPerbaikan);
+    !!kondisiKerja &&
+    !(kondisiKerja === "perbaikan" && !deskripsiPerbaikan.trim()) &&
+    !(kondisiKerja === "stop" && !deskripsiKondisi.trim());
 
   // Debug validasi form
   console.log("Form validation debug:", {
@@ -338,6 +330,31 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     height: "auto",
   };
 
+  const scrollAreaStyle = {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    paddingRight: 4,
+    paddingBottom: 120,
+    maxHeight: "calc(100vh - 200px)",
+    scrollBehavior: "smooth",
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "thin",
+    scrollbarColor: "#334155 #0b1220",
+  };
+
+  const footerBarStyle = {
+    borderTop: "1px solid transparent",
+    paddingTop: 16,
+    paddingBottom: 16,
+    display: "flex",
+    justifyContent: "center",
+    background: "transparent",
+    borderRadius: 12,
+    position: "sticky",
+    bottom: 40,
+  };
+
   const headerStyle = {
     textAlign: "center",
     marginBottom: 16,
@@ -428,8 +445,8 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     flexDirection: "column",
     gap: 12,
     marginTop: 8,
-    width: "calc(50% - 12px)", // batasi selebar tombol submit
-    alignSelf: "flex-start",
+    width: "100%",
+    alignSelf: "stretch",
   };
 
   const kondisiKerjaBtnStyle = (active, color) => ({
@@ -618,460 +635,465 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
         </div>
 
         {activeTab === "input" ? (
-          <form onSubmit={handleSubmit} style={formStyle}>
-            {/* SISI KIRI ATAS: Tanggal, Lokasi Kerja, Detail Lokasi, Potensi Bahaya */}
-            <div style={leftTopSection}>
-              <div style={fieldMargin}>
-                <label style={labelStyle}>Tanggal</label>
-                <input
-                  value={getTodayWITA()}
-                  readOnly
-                  style={{
-                    ...inputStyle,
-                    background: "#0b1220",
-                    border: "1px solid #334155",
-                    color: "#e5e7eb",
-                  }}
-                />
-              </div>
+          <>
+            <div style={scrollAreaStyle}>
+              <form id="take5-form" onSubmit={handleSubmit} style={formStyle}>
+                {/* SISI KIRI ATAS: Tanggal, Lokasi Kerja, Detail Lokasi, Potensi Bahaya */}
+                <div style={leftTopSection}>
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>Tanggal</label>
+                    <input
+                      value={getTodayWITA()}
+                      readOnly
+                      style={{
+                        ...inputStyle,
+                        background: "#0b1220",
+                        border: "1px solid #334155",
+                        color: "#e5e7eb",
+                      }}
+                    />
+                  </div>
 
-              <div style={fieldMargin}>
-                <label style={labelStyle}>Lokasi Kerja</label>
-                <select
-                  value={site}
-                  onChange={(e) => setSite(e.target.value)}
-                  required
-                  style={inputStyle}
-                >
-                  <option value="">Pilih Lokasi</option>
-                  {(siteOptions.length > 0
-                    ? siteOptions
-                    : SITE_OPTIONS_FALLBACK
-                  ).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>Lokasi Kerja</label>
+                    <select
+                      value={site}
+                      onChange={(e) => setSite(e.target.value)}
+                      required
+                      style={inputStyle}
+                    >
+                      <option value="">Pilih Lokasi</option>
+                      {(siteOptions.length > 0
+                        ? siteOptions
+                        : SITE_OPTIONS_FALLBACK
+                      ).map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div style={fieldMargin}>
-                <label style={labelStyle}>Detail Lokasi</label>
-                {/* Hanya dropdown pada desktop; tanpa input bebas */}
-                <LocationDetailSelector
-                  site={site}
-                  value={detailLokasi}
-                  onChange={handleDetailLokasiChange}
-                  placeholder="Pilih Detail Lokasi"
-                  style={inputStyle}
-                  required
-                />
-              </div>
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>Detail Lokasi</label>
+                    {/* Hanya dropdown pada desktop; tanpa input bebas */}
+                    <LocationDetailSelector
+                      site={site}
+                      value={detailLokasi}
+                      onChange={handleDetailLokasiChange}
+                      placeholder="Pilih Detail Lokasi"
+                      style={inputStyle}
+                      required
+                    />
+                  </div>
 
-              <div style={fieldMargin}>
-                <label style={labelStyle}>Judul Pekerjaan</label>
-                <select
-                  value={judulPekerjaan}
-                  onChange={(e) => setJudulPekerjaan(e.target.value)}
-                  required
-                  style={inputStyle}
-                >
-                  <option value="">Pilih Judul Pekerjaan</option>
-                  {JUDUL_PEKERJAAN_OPTIONS.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                {judulPekerjaan === "Lainnya" && (
-                  <input
-                    type="text"
-                    value={judulPekerjaanCustom}
-                    onChange={(e) => setJudulPekerjaanCustom(e.target.value)}
-                    required
-                    placeholder="Tulis judul pekerjaan..."
-                    style={{ ...inputStyle, marginTop: 8 }}
-                  />
-                )}
-              </div>
-
-              <div style={fieldMargin}>
-                <label style={labelStyle}>Potensi Bahaya</label>
-                <input
-                  type="text"
-                  value={potensiBahaya}
-                  onChange={(e) => setPotensiBahaya(e.target.value)}
-                  required
-                  placeholder="Contoh: Listrik, Ketinggian, dll"
-                  style={inputStyle}
-                />
-              </div>
-            </div>
-
-            {/* SISI KANAN ATAS: 4 Pertanyaan */}
-            <div style={rightTopSection}>
-              <div style={fieldMargin}>
-                <label style={labelStyle}>
-                  Apakah Saya mengerti pekerjaan yang akan saya lakukan?
-                </label>
-                <div style={questionBtnGroupStyle}>
-                  <button
-                    type="button"
-                    onClick={() => setQ1(true)}
-                    style={radioBtnStyle(q1 === true, "#22c55e", false)}
-                  >
-                    Ya
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQ1(false)}
-                    style={{
-                      ...radioBtnStyle(q1 === false, "#ef4444", false),
-                      borderWidth: q1 === false ? "3px" : "2px",
-                      boxShadow: q1 === false ? "0 0 0 2px #fef3c7" : "none",
-                    }}
-                  >
-                    Tidak
-                  </button>
-                </div>
-              </div>
-
-              <div style={fieldMargin}>
-                <label style={labelStyle}>
-                  Apakah Saya memiliki kompetensi untuk melakukan pekerjaan ini?
-                </label>
-                <div style={questionBtnGroupStyle}>
-                  <button
-                    type="button"
-                    onClick={() => setQ2(true)}
-                    style={radioBtnStyle(q2 === true, "#22c55e", false)}
-                  >
-                    Ya
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQ2(false)}
-                    style={{
-                      ...radioBtnStyle(q2 === false, "#ef4444", false),
-                      borderWidth: q2 === false ? "3px" : "2px",
-                      boxShadow: q2 === false ? "0 0 0 2px #fef3c7" : "none",
-                    }}
-                  >
-                    Tidak
-                  </button>
-                </div>
-              </div>
-
-              <div style={fieldMargin}>
-                <label style={labelStyle}>
-                  Apakah Saya memiliki izin untuk melakukan pekerjaan ini?
-                </label>
-                <div style={questionBtnGroupStyle}>
-                  <button
-                    type="button"
-                    onClick={() => setQ3(true)}
-                    style={radioBtnStyle(q3 === true, "#22c55e", false)}
-                  >
-                    Ya
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQ3(false)}
-                    style={{
-                      ...radioBtnStyle(q3 === false, "#ef4444", false),
-                      borderWidth: q3 === false ? "3px" : "2px",
-                      boxShadow: q3 === false ? "0 0 0 2px #fef3c7" : "none",
-                    }}
-                  >
-                    Tidak
-                  </button>
-                </div>
-              </div>
-
-              <div style={fieldMargin}>
-                <label style={labelStyle}>
-                  Apakah Saya memiliki peralatan yang tepat untuk pekerjaan ini?
-                </label>
-                <div style={questionBtnGroupStyle}>
-                  <button
-                    type="button"
-                    onClick={() => setQ4(true)}
-                    style={radioBtnStyle(q4 === true, "#22c55e", false)}
-                  >
-                    Ya
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQ4(false)}
-                    style={{
-                      ...radioBtnStyle(q4 === false, "#ef4444", false),
-                      borderWidth: q4 === false ? "3px" : "2px",
-                      boxShadow: q4 === false ? "0 0 0 2px #fef3c7" : "none",
-                    }}
-                  >
-                    Tidak
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Aman atau Perbaikan */}
-            {/* SISI KIRI BAWAH: Kondisi Kerja */}
-            <div
-              style={{
-                ...leftBottomSection,
-                gridColumn: "1 / -1",
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}
-            >
-              <div style={fieldMargin}>
-                <label style={labelStyle}>
-                  Apakah kondisi kerja aman untuk melanjutkan pekerjaan?
-                </label>
-
-                <div style={kondisiKerjaBtnGroupStyle}>
-                  <button
-                    type="button"
-                    onClick={() => setKondisiKerja("aman")}
-                    disabled={isAmanButtonDisabled}
-                    style={{
-                      ...kondisiKerjaBtnStyle(
-                        kondisiKerja === "aman",
-                        "#22c55e",
-                      ),
-                      opacity: isAmanButtonDisabled ? 0.5 : 1,
-                      cursor: isAmanButtonDisabled ? "not-allowed" : "pointer",
-                      background: isAmanButtonDisabled
-                        ? "#f3f4f6"
-                        : kondisiKerja === "aman"
-                          ? "#22c55e"
-                          : "transparent",
-                      color: isAmanButtonDisabled
-                        ? "#9ca3af"
-                        : kondisiKerja === "aman"
-                          ? "#fff"
-                          : "#22c55e",
-                      borderColor: isAmanButtonDisabled ? "#d1d5db" : "#22c55e",
-                    }}
-                  >
-                    Ya
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setKondisiKerja("perbaikan")}
-                    style={kondisiKerjaBtnStyle(
-                      kondisiKerja === "perbaikan",
-                      "#f59e0b",
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>Judul Pekerjaan</label>
+                    <select
+                      value={judulPekerjaan}
+                      onChange={(e) => setJudulPekerjaan(e.target.value)}
+                      required
+                      style={inputStyle}
+                    >
+                      <option value="">Pilih Judul Pekerjaan</option>
+                      {JUDUL_PEKERJAAN_OPTIONS.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    {judulPekerjaan === "Lainnya" && (
+                      <input
+                        type="text"
+                        value={judulPekerjaanCustom}
+                        onChange={(e) =>
+                          setJudulPekerjaanCustom(e.target.value)
+                        }
+                        required
+                        placeholder="Tulis judul pekerjaan..."
+                        style={{ ...inputStyle, marginTop: 8 }}
+                      />
                     )}
-                  >
-                    Saya perlu melakukan perbaikan terlebih dahulu, untuk
-                    melanjutkan pekerjaan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setKondisiKerja("stop")}
-                    style={kondisiKerjaBtnStyle(
-                      kondisiKerja === "stop",
-                      "#ef4444",
-                    )}
-                  >
-                    STOP pekerjaan, lalu minta bantuan untuk perbaikan
-                  </button>
+                  </div>
+
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>Potensi Bahaya</label>
+                    <input
+                      type="text"
+                      value={potensiBahaya}
+                      onChange={(e) => setPotensiBahaya(e.target.value)}
+                      required
+                      placeholder="Contoh: Listrik, Ketinggian, dll"
+                      style={inputStyle}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Submit Button */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  width: "100%",
-                }}
-              >
-                <button
-                  type="submit"
-                  disabled={!isFormValid || loading}
-                  style={{
-                    ...submitButtonStyle,
-                    background: !isFormValid || loading ? "#9ca3af" : "#2563eb",
-                    cursor: !isFormValid || loading ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {loading ? "Menyimpan..." : "Simpan Take 5"}
-                </button>
-              </div>
-            </div>
+                {/* SISI KANAN ATAS: 4 Pertanyaan */}
+                <div style={rightTopSection}>
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>
+                      Apakah Saya mengerti pekerjaan yang akan saya lakukan?
+                    </label>
+                    <div style={questionBtnGroupStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setQ1(true)}
+                        style={radioBtnStyle(q1 === true, "#22c55e", false)}
+                      >
+                        Ya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQ1(false)}
+                        style={{
+                          ...radioBtnStyle(q1 === false, "#ef4444", false),
+                          borderWidth: q1 === false ? "3px" : "2px",
+                          boxShadow:
+                            q1 === false ? "0 0 0 2px #fef3c7" : "none",
+                        }}
+                      >
+                        Tidak
+                      </button>
+                    </div>
+                  </div>
 
-            {/* SISI KANAN BAWAH: Bukti Perbaikan + Deskripsi (sejajar kiri-kanan) */}
-            <div style={rightBottomSection}>
-              {kondisiKerja && (
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>
+                      Apakah Saya memiliki kompetensi untuk melakukan pekerjaan
+                      ini?
+                    </label>
+                    <div style={questionBtnGroupStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setQ2(true)}
+                        style={radioBtnStyle(q2 === true, "#22c55e", false)}
+                      >
+                        Ya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQ2(false)}
+                        style={{
+                          ...radioBtnStyle(q2 === false, "#ef4444", false),
+                          borderWidth: q2 === false ? "3px" : "2px",
+                          boxShadow:
+                            q2 === false ? "0 0 0 2px #fef3c7" : "none",
+                        }}
+                      >
+                        Tidak
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>
+                      Apakah Saya memiliki izin untuk melakukan pekerjaan ini?
+                    </label>
+                    <div style={questionBtnGroupStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setQ3(true)}
+                        style={radioBtnStyle(q3 === true, "#22c55e", false)}
+                      >
+                        Ya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQ3(false)}
+                        style={{
+                          ...radioBtnStyle(q3 === false, "#ef4444", false),
+                          borderWidth: q3 === false ? "3px" : "2px",
+                          boxShadow:
+                            q3 === false ? "0 0 0 2px #fef3c7" : "none",
+                        }}
+                      >
+                        Tidak
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>
+                      Apakah Saya memiliki peralatan yang tepat untuk pekerjaan
+                      ini?
+                    </label>
+                    <div style={questionBtnGroupStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setQ4(true)}
+                        style={radioBtnStyle(q4 === true, "#22c55e", false)}
+                      >
+                        Ya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQ4(false)}
+                        style={{
+                          ...radioBtnStyle(q4 === false, "#ef4444", false),
+                          borderWidth: q4 === false ? "3px" : "2px",
+                          boxShadow:
+                            q4 === false ? "0 0 0 2px #fef3c7" : "none",
+                        }}
+                      >
+                        Tidak
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SISI KIRI BAWAH: Kondisi Kerja */}
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
+                    ...leftBottomSection,
+                    display: "flex",
+                    flexDirection: "column",
                     gap: 16,
                   }}
                 >
                   <div style={fieldMargin}>
                     <label style={labelStyle}>
-                      {kondisiKerja === "stop"
-                        ? "Bukti Kondisi (Foto)"
-                        : kondisiKerja === "perbaikan"
-                          ? "Bukti Perbaikan (Foto)"
-                          : "Bukti Kondisi (Foto)"}
+                      Apakah kondisi kerja aman untuk melanjutkan pekerjaan?
                     </label>
-                    {buktiPreview ? (
-                      <div style={{ textAlign: "center" }}>
-                        <img
-                          src={buktiPreview}
-                          alt="Preview"
-                          onClick={handleBuktiClick}
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: 200,
-                            borderRadius: 8,
-                            border: "2px solid #e5e7eb",
-                            cursor: "pointer",
-                          }}
-                          title="Klik untuk ganti foto"
-                        />
-                        {/* Hint removed as requested */}
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          type="button"
-                          onClick={() => buktiCameraRef.current?.click()}
-                          style={{
-                            flex: 1,
-                            padding: "12px",
-                            background: "#f3f4f6",
-                            border: "2px dashed #d1d5db",
-                            borderRadius: 8,
-                            color: "#6b7280",
-                            cursor: "pointer",
-                            fontSize: 14,
-                          }}
-                        >
-                          📷 Kamera
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => buktiGalleryRef.current?.click()}
-                          style={{
-                            flex: 1,
-                            padding: "12px",
-                            background: "#f3f4f6",
-                            border: "2px dashed #d1d5db",
-                            borderRadius: 8,
-                            color: "#6b7280",
-                            cursor: "pointer",
-                            fontSize: 14,
-                          }}
-                        >
-                          🖼️ Galeri
-                        </button>
-                      </div>
-                    )}
-                    <input
-                      ref={buktiCameraRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleBuktiChange}
-                      style={{ display: "none" }}
-                    />
-                    <input
-                      ref={buktiGalleryRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleBuktiChange}
-                      style={{ display: "none" }}
-                    />
-                  </div>
-
-                  <div style={fieldMargin}>
-                    <label style={labelStyle}>
-                      {kondisiKerja === "stop"
-                        ? "Deskripsi Kondisi"
-                        : kondisiKerja === "perbaikan"
-                          ? "Deskripsi Perbaikan"
-                          : "Deskripsi Kondisi"}
-                    </label>
-                    <textarea
-                      value={
-                        kondisiKerja === "stop"
-                          ? deskripsiKondisi
-                          : kondisiKerja === "perbaikan"
-                            ? deskripsiPerbaikan
-                            : deskripsiKondisi
-                      }
-                      onChange={(e) =>
-                        kondisiKerja === "stop"
-                          ? setDeskripsiKondisi(e.target.value)
-                          : kondisiKerja === "perbaikan"
-                            ? setDeskripsiPerbaikan(e.target.value)
-                            : setDeskripsiKondisi(e.target.value)
-                      }
-                      required={
-                        kondisiKerja === "perbaikan" || kondisiKerja === "stop"
-                      }
-                      placeholder={
-                        kondisiKerja === "stop"
-                          ? "Jelaskan kondisi yang tidak aman dan mengapa perlu bantuan"
-                          : kondisiKerja === "perbaikan"
-                            ? "Jelaskan perbaikan yang telah dilakukan"
-                            : "Jelaskan kondisi kerja saat ini"
-                      }
-                      style={{
-                        ...inputStyle,
-                        minHeight: 200,
-                        resize: "vertical",
-                      }}
-                    />
+                    <div style={kondisiKerjaBtnGroupStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setKondisiKerja("aman")}
+                        disabled={isAmanButtonDisabled}
+                        style={{
+                          ...kondisiKerjaBtnStyle(
+                            kondisiKerja === "aman",
+                            "#22c55e",
+                          ),
+                          opacity: isAmanButtonDisabled ? 0.5 : 1,
+                          cursor: isAmanButtonDisabled
+                            ? "not-allowed"
+                            : "pointer",
+                          background: isAmanButtonDisabled
+                            ? "#f3f4f6"
+                            : kondisiKerja === "aman"
+                              ? "#22c55e"
+                              : "transparent",
+                          color: isAmanButtonDisabled
+                            ? "#9ca3af"
+                            : kondisiKerja === "aman"
+                              ? "#fff"
+                              : "#22c55e",
+                          borderColor: isAmanButtonDisabled
+                            ? "#d1d5db"
+                            : "#22c55e",
+                        }}
+                      >
+                        Ya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setKondisiKerja("perbaikan")}
+                        style={kondisiKerjaBtnStyle(
+                          kondisiKerja === "perbaikan",
+                          "#f59e0b",
+                        )}
+                      >
+                        Saya perlu melakukan perbaikan terlebih dahulu, untuk
+                        melanjutkan pekerjaan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setKondisiKerja("stop")}
+                        style={kondisiKerjaBtnStyle(
+                          kondisiKerja === "stop",
+                          "#ef4444",
+                        )}
+                      >
+                        STOP pekerjaan, lalu minta bantuan untuk perbaikan
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* SISI KANAN BAWAH: Bukti/Deskripsi */}
+                <div style={rightBottomSection}>
+                  {(kondisiKerja === "perbaikan" ||
+                    kondisiKerja === "stop") && (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 16,
+                      }}
+                    >
+                      <div style={fieldMargin}>
+                        <label style={labelStyle}>
+                          {kondisiKerja === "stop"
+                            ? "Bukti Kondisi (Foto)"
+                            : "Bukti Perbaikan (Foto)"}
+                        </label>
+                        {buktiPreview ? (
+                          <div style={{ textAlign: "center" }}>
+                            <img
+                              src={buktiPreview}
+                              alt="Preview"
+                              onClick={handleBuktiClick}
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: 200,
+                                borderRadius: 8,
+                                border: "2px solid #e5e7eb",
+                                cursor: "pointer",
+                              }}
+                              title="Klik untuk ganti foto"
+                            />
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => buktiCameraRef.current?.click()}
+                              style={{
+                                flex: 1,
+                                padding: "12px",
+                                background: "#f3f4f6",
+                                border: "2px dashed #d1d5db",
+                                borderRadius: 8,
+                                color: "#6b7280",
+                                cursor: "pointer",
+                                fontSize: 14,
+                              }}
+                            >
+                              📷 Kamera
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => buktiGalleryRef.current?.click()}
+                              style={{
+                                flex: 1,
+                                padding: "12px",
+                                background: "#f3f4f6",
+                                border: "2px dashed #d1d5db",
+                                borderRadius: 8,
+                                color: "#6b7280",
+                                cursor: "pointer",
+                                fontSize: 14,
+                              }}
+                            >
+                              🖼️ Galeri
+                            </button>
+                          </div>
+                        )}
+                        <input
+                          ref={buktiCameraRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleBuktiChange}
+                          style={{ display: "none" }}
+                        />
+                        <input
+                          ref={buktiGalleryRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleBuktiChange}
+                          style={{ display: "none" }}
+                        />
+                      </div>
+
+                      <div style={fieldMargin}>
+                        <label style={labelStyle}>
+                          {kondisiKerja === "stop"
+                            ? "Deskripsi Kondisi"
+                            : kondisiKerja === "perbaikan"
+                              ? "Deskripsi Perbaikan"
+                              : "Deskripsi Kondisi"}
+                        </label>
+                        <textarea
+                          value={
+                            kondisiKerja === "stop"
+                              ? deskripsiKondisi
+                              : kondisiKerja === "perbaikan"
+                                ? deskripsiPerbaikan
+                                : deskripsiKondisi
+                          }
+                          onChange={(e) =>
+                            kondisiKerja === "stop"
+                              ? setDeskripsiKondisi(e.target.value)
+                              : kondisiKerja === "perbaikan"
+                                ? setDeskripsiPerbaikan(e.target.value)
+                                : setDeskripsiKondisi(e.target.value)
+                          }
+                          required={
+                            kondisiKerja === "perbaikan" ||
+                            kondisiKerja === "stop"
+                          }
+                          placeholder={
+                            kondisiKerja === "stop"
+                              ? "Jelaskan kondisi yang tidak aman dan mengapa perlu bantuan"
+                              : kondisiKerja === "perbaikan"
+                                ? "Jelaskan perbaikan yang telah dilakukan"
+                                : "Jelaskan kondisi kerja saat ini"
+                          }
+                          style={{
+                            ...inputStyle,
+                            minHeight: 200,
+                            resize: "vertical",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div
+                    style={{
+                      color: "#b91c1c",
+                      fontWeight: 700,
+                      background: "#fee2e2",
+                      borderRadius: 8,
+                      padding: 12,
+                      border: "1.5px solid #b91c1c",
+                      fontSize: 16,
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
+                {/* Success Message */}
+                {success && (
+                  <div
+                    style={{
+                      color: "#16a34a",
+                      fontWeight: 700,
+                      background: "#dcfce7",
+                      borderRadius: 8,
+                      padding: 12,
+                      border: "1.5px solid #22c55e",
+                      fontSize: 16,
+                    }}
+                  >
+                    {kondisiKerja === "stop"
+                      ? "Data Take 5 berhasil disimpan! Akan dialihkan ke Hazard Report..."
+                      : "Data Take 5 berhasil disimpan! Status: Closed"}
+                  </div>
+                )}
+              </form>
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div
+            <div style={footerBarStyle}>
+              <button
+                form="take5-form"
+                type="submit"
+                disabled={!isFormValid || loading}
                 style={{
-                  color: "#b91c1c",
-                  fontWeight: 700,
-                  background: "#fee2e2",
-                  borderRadius: 8,
-                  padding: 12,
-                  border: "1.5px solid #b91c1c",
-                  fontSize: 16,
+                  ...submitButtonStyle,
+                  background: !isFormValid || loading ? "#9ca3af" : "#2563eb",
+                  cursor: !isFormValid || loading ? "not-allowed" : "pointer",
                 }}
               >
-                {error}
-              </div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <div
-                style={{
-                  color: "#16a34a",
-                  fontWeight: 700,
-                  background: "#dcfce7",
-                  borderRadius: 8,
-                  padding: 12,
-                  border: "1.5px solid #22c55e",
-                  fontSize: 16,
-                }}
-              >
-                {kondisiKerja === "stop"
-                  ? "Data Take 5 berhasil disimpan! Akan dialihkan ke Hazard Report..."
-                  : "Data Take 5 berhasil disimpan! Status: Closed"}
-              </div>
-            )}
-          </form>
+                {loading ? "Menyimpan..." : "Simpan Take 5"}
+              </button>
+            </div>
+          </>
         ) : (
           <Take5History user={user} />
         )}
