@@ -153,6 +153,20 @@ const Take5History = ({ user }) => {
                     fontSize: "12px",
                   }}
                 >
+                  Judul Pekerjaan:
+                </span>
+                <span style={{ color: "#d1d5db" }}>
+                  {item.judul_pekerjaan || "-"}
+                </span>
+              </div>
+              <div>
+                <span
+                  style={{
+                    color: "#6b7280",
+                    display: "block",
+                    fontSize: "12px",
+                  }}
+                >
                   Potensi Bahaya:
                 </span>
                 <span style={{ color: "#d1d5db" }}>
@@ -342,6 +356,22 @@ const Take5History = ({ user }) => {
                 </label>
                 <div style={{ fontWeight: "500", color: "#fff" }}>
                   {selectedReport.site} - {selectedReport.detail_lokasi}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "#9ca3af",
+                    fontSize: "12px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Judul Pekerjaan
+                </label>
+                <div style={{ fontWeight: "500", color: "#fff" }}>
+                  {selectedReport.judul_pekerjaan || "-"}
                 </div>
               </div>
 

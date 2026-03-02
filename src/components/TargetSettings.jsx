@@ -40,6 +40,7 @@ function TargetSettings({ user, onBack, embedded = false, darkTheme = false }) {
   useEffect(() => {
     if (isRestricted && userSite) {
       setFormSite(userSite);
+      setFilterSite(userSite);
     }
   }, [isRestricted, userSite]);
 
@@ -89,6 +90,7 @@ function TargetSettings({ user, onBack, embedded = false, darkTheme = false }) {
     setFormSite(newSite);
     setFormJabatan(""); // Reset jabatan saat site berubah
     fetchJabatanList(newSite);
+    setFilterSite(newSite); // Sinkronkan filter tabel dengan pilihan site pada form
   };
 
   useEffect(() => {
@@ -536,6 +538,35 @@ function TargetSettings({ user, onBack, embedded = false, darkTheme = false }) {
         >
           Target {moduleLabel}
         </h3>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            padding: "12px 16px",
+            borderBottom: "1px solid #e5e7eb",
+          }}
+        >
+          <label style={{ fontSize: 12, color: "#6b7280" }}>Filter Site</label>
+          <select
+            value={filterSite}
+            onChange={(e) => setFilterSite(e.target.value)}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 6,
+              border: "1px solid #d1d5db",
+              fontSize: 14,
+              color: "#111827",
+            }}
+          >
+            <option value="">Semua</option>
+            {CUSTOM_INPUT_SITES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
         {loading ? (
           <div
             style={{
