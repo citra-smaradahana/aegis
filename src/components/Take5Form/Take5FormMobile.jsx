@@ -1307,8 +1307,17 @@ const Take5FormMobile = ({
             </form>
           </div>
         ) : (
-          <div style={{ width: "100%", padding: "16px" }}>
+          <div
+            style={{
+              width: "100%",
+              paddingTop: 16,
+              paddingRight: 16,
+              paddingLeft: 16,
+              paddingBottom: 100,
+            }}
+          >
             <Take5History user={user} />
+            <div style={{ height: 80 }} />
           </div>
         )}
       </div>

@@ -48,7 +48,14 @@ const Take5History = ({ user }) => {
 
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          paddingBottom: 80,
+        }}
+      >
         {history.map((item) => (
           <div
             key={item.id}
@@ -105,6 +112,17 @@ const Take5History = ({ user }) => {
                 >
                   {item.site} - {item.detail_lokasi}
                 </h3>
+                {item.judul_pekerjaan ? (
+                  <div
+                    style={{
+                      color: "#d1d5db",
+                      fontSize: "14px",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {item.judul_pekerjaan}
+                  </div>
+                ) : null}
               </div>
               <span
                 style={{
