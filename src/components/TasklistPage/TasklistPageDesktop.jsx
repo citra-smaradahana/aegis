@@ -96,7 +96,7 @@ function Table({ rows, onAction, role, onView, formatDateOnly, user }) {
     if (currentUserName === rowPic) {
       if (
         ["Submit", "Progress", "Reject at Open", "Reject at Done"].includes(
-          status
+          status,
         )
       ) {
         console.log("User is PIC for this hazard");
@@ -285,14 +285,14 @@ function TasklistPageDesktop({ user }) {
       let qTodo = supabase
         .from("hazard_report")
         .select(
-          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done"
+          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done",
         )
         .not("status", "ilike", "closed")
         .order("created_at", { ascending: false });
       let qHistory = supabase
         .from("hazard_report")
         .select(
-          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done"
+          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done",
         )
         .ilike("status", "closed")
         .order("created_at", { ascending: false });
@@ -313,7 +313,7 @@ function TasklistPageDesktop({ user }) {
       console.log("Current user:", user?.nama || user?.user);
       console.log(
         "Todo statuses:",
-        todo?.map((t) => ({ id: t.id, status: t.status, pic: t.pic }))
+        todo?.map((t) => ({ id: t.id, status: t.status, pic: t.pic })),
       );
       const normalizeTodo = (o) => ({
         id: o.id,
@@ -367,9 +367,34 @@ function TasklistPageDesktop({ user }) {
       const normalizedTodo = (todo || []).map(normalizeTodo);
       console.log(
         "Normalized todo data:",
-        normalizedTodo.map((t) => ({ id: t.id, status: t.status, pic: t.pic }))
+        normalizedTodo.map((t) => ({ id: t.id, status: t.status, pic: t.pic })),
       );
-      setRowsTodo(normalizedTodo);
+      const currentNameTodo = (user?.nama || user?.user || "")
+        .toString()
+        .trim()
+        .toLowerCase();
+      const hasAction = (r) => {
+        const name = currentNameTodo;
+        const pic = (r.pic || "").toString().trim().toLowerCase();
+        const pelapor = (r.pelapor_nama || "").toString().trim().toLowerCase();
+        const evaluator = (r.evaluator_nama || "")
+          .toString()
+          .trim()
+          .toLowerCase();
+        const status = (r.status || "").trim();
+        if (
+          name === pic &&
+          ["Submit", "Progress", "Reject at Open", "Reject at Done"].includes(
+            status,
+          )
+        )
+          return true;
+        if (name === pelapor && status === "Open") return true;
+        if (name === evaluator && status === "Done") return true;
+        return false;
+      };
+      const todoFiltered = normalizedTodo.filter(hasAction);
+      setRowsTodo(todoFiltered);
 
       // Filter riwayat: hanya milik PIC/Submitter (berkaitan dengan user; case-insensitive)
       const currentName = (user?.nama || user?.user || "")
