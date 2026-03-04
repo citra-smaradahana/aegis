@@ -293,6 +293,18 @@ function App() {
     useEffect(() => {
       if (!setBackHandler) return;
       setBackHandler(() => {
+        // Tutup modal pilihan (select modal) jika terbuka
+        const selectOpen = document.querySelector('[data-modal="select-modal"][data-open="true"]');
+        if (selectOpen) {
+          window.dispatchEvent(new Event("close-select-modal"));
+          return;
+        }
+        // Tutup image viewer jika terbuka
+        const imageViewerOpen = document.querySelector('[data-modal="image-viewer"][data-open="true"]');
+        if (imageViewerOpen) {
+          window.dispatchEvent(new Event("close-image-viewer"));
+          return;
+        }
         if (activeMenu === "daily-attendance-view") {
           selectedMeetingIdRef.current = null;
           setSelectedMeetingId(null);

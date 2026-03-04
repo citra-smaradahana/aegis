@@ -307,7 +307,10 @@ function PTOFormMobile({
       "Technical Service",
       "SHERQ Officer",
       "Assisten Penanggung Jawab Operasional",
+      "Asst. Penanggung Jawab Operasional",
       "Penanggung Jawab Operasional",
+      "Field Leading Hand",
+      "Plant Leading Hand",
     ];
     const run = async () => {
       let q = supabase
@@ -317,7 +320,10 @@ function PTOFormMobile({
         .neq("id", user.id);
       if (formData.observee) q = q.neq("id", formData.observee);
       const { data } = await q.in("jabatan", jabatanObserver);
-      setObservers(data || []);
+      const sorted = (data || []).sort((a, b) =>
+        (a.nama || "").localeCompare(b.nama || "", "id"),
+      );
+      setObservers(sorted);
     };
     run();
   }, [formData.site, formData.observee, user?.id]);

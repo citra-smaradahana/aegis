@@ -1110,57 +1110,134 @@ function TasklistPageMobile({
               </div>
             </div>
 
-            {/* Popup Foto Temuan - tap untuk zoom */}
+            {/* Popup Foto Temuan - image viewer dengan zoom/pan, hardware back menutup viewer */}
             {showEvidencePopup && selectedTask?.rawReport?.evidence && (
-              <div
-                style={{
-                  position: "fixed",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: "rgba(0,0,0,0.9)",
-                  zIndex: 1200,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 20,
-                }}
-                onClick={() => setShowEvidencePopup(false)}
-              >
-                <button
-                  onClick={() => setShowEvidencePopup(false)}
-                  style={{
-                    position: "absolute",
-                    top: 20,
-                    right: 20,
-                    background: "none",
-                    border: "none",
-                    color: "#fff",
-                    fontSize: 28,
-                    cursor: "pointer",
-                    padding: 8,
-                    zIndex: 1,
-                  }}
-                >
-                  ×
-                </button>
-                <img
-                  src={selectedTask.rawReport.evidence}
-                  alt="Foto Temuan"
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "90vh",
-                    objectFit: "contain",
-                    borderRadius: 8,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
+              <ImageViewer
+                src={selectedTask.rawReport.evidence}
+                onClose={() => setShowEvidencePopup(false)}
+              />
             )}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Komponen ImageViewer sederhana dengan pinch/zoom & pan
+function ImageViewer({ src, onClose }) {
+  const [scale, setScale] = React.useState(1);
+  const [translate, setTranslate] = React.useState({ x: 0, y: 0 });
+  const startRef = React.useRef({
+    dist: 0,
+    midpoint: { x: 0, y: 0 },
+    isPinch: false,
+    last: { x: 0, y: 0 },
+  });
+  const containerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const closeHandler = () => onClose && onClose();
+    const el = containerRef.current;
+    if (el) {
+      el.setAttribute("data-modal", "image-viewer");
+      el.setAttribute("data-open", "true");
+    }
+    window.addEventListener("close-image-viewer", closeHandler);
+    return () => {
+      window.removeEventListener("close-image-viewer", closeHandler);
+      if (el) el.setAttribute("data-open", "false");
+    };
+  }, [onClose]);
+
+  const getDist = (t1, t2) =>
+    Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  const onTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const dist = getDist(e.touches[0], e.touches[1]);
+      startRef.current = { ...startRef.current, dist, isPinch: true };
+    } else if (e.touches.length === 1) {
+      startRef.current = {
+        ...startRef.current,
+        isPinch: false,
+        last: { x: e.touches[0].clientX, y: e.touches[0].clientY },
+      };
+    }
+  };
+  const onTouchMove = (e) => {
+    if (e.touches.length === 2) {
+      const dist = getDist(e.touches[0], e.touches[1]);
+      const ratio = dist / Math.max(1, startRef.current.dist || dist);
+      const nextScale = Math.min(4, Math.max(1, scale * ratio));
+      setScale(nextScale);
+      startRef.current.dist = dist;
+    } else if (e.touches.length === 1 && scale > 1) {
+      const dx = e.touches[0].clientX - startRef.current.last.x;
+      const dy = e.touches[0].clientY - startRef.current.last.y;
+      setTranslate((p) => ({ x: p.x + dx, y: p.y + dy }));
+      startRef.current.last = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  };
+  const onDoubleClick = () => {
+    setScale((s) => (s > 1 ? 1 : 2));
+    if (scale <= 1) setTranslate({ x: 0, y: 0 });
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0,0,0,0.9)",
+        zIndex: 1200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+        touchAction: "none",
+      }}
+      onClick={onClose}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+    >
+      <button
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          background: "none",
+          border: "none",
+          color: "#fff",
+          fontSize: 28,
+          cursor: "pointer",
+          padding: 8,
+          zIndex: 1,
+        }}
+      >
+        ×
+      </button>
+      <img
+        src={src}
+        alt="Preview"
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={onDoubleClick}
+        style={{
+          maxWidth: "100%",
+          maxHeight: "90vh",
+          objectFit: "contain",
+          borderRadius: 8,
+          transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+          transition: "transform 0.05s linear",
+        }}
+      />
     </div>
   );
 }

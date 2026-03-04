@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 /**
  * Modal dengan search untuk memilih satu opsi dari daftar.
@@ -21,6 +21,37 @@ const SelectModalWithSearch = ({
   onSelect,
   placeholder = "Ketik untuk mencari...",
 }) => {
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (!show) return;
+    const onCloseByBack = () => onClose && onClose();
+    const onCloseEvent = () => onClose && onClose();
+    // Tandai modal terbuka untuk handler back global
+    if (rootRef.current) {
+      rootRef.current.setAttribute("data-modal", "select-modal");
+      rootRef.current.setAttribute("data-open", "true");
+    }
+    window.addEventListener("close-select-modal", onCloseEvent);
+    // Push dummy history agar tombol back menutup modal lebih dulu (web)
+    try {
+      window.history.pushState({ modal: "select" }, "");
+      const popListener = () => onCloseByBack();
+      window.addEventListener("popstate", popListener, { once: true });
+      // Cleanup
+      return () => {
+        window.removeEventListener("popstate", popListener);
+        window.removeEventListener("close-select-modal", onCloseEvent);
+        if (rootRef.current) rootRef.current.setAttribute("data-open", "false");
+      };
+    } catch (_) {
+      return () => {
+        window.removeEventListener("close-select-modal", onCloseEvent);
+        if (rootRef.current) rootRef.current.setAttribute("data-open", "false");
+      };
+    }
+  }, [show, onClose]);
+
   if (!show) return null;
 
   const filtered = options.filter((opt) =>
@@ -29,6 +60,7 @@ const SelectModalWithSearch = ({
 
   return (
     <div
+      ref={rootRef}
       style={{
         position: "fixed",
         inset: 0,

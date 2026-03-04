@@ -19,7 +19,7 @@ function parseTextWithLinks(text) {
       </a>
     ) : (
       part
-    )
+    ),
   );
 }
 
@@ -68,6 +68,8 @@ function HomeDesktop({ user }) {
     };
     fetchCampaigns();
   }, []);
+
+  // (Desktop tidak menampilkan KPI bulanan)
 
   useEffect(() => {
     if (campaigns.length <= 1 || isPaused) return;
@@ -150,6 +152,8 @@ function HomeDesktop({ user }) {
           </div>
         </div>
 
+        {/* (Desktop: tidak ada KPI bulanan) */}
+
         {loading ? (
           <div
             style={{
@@ -180,16 +184,28 @@ function HomeDesktop({ user }) {
                 position: "relative",
                 borderRadius: 20,
                 border: "1px solid rgba(255,255,255,0.10)",
-                background: "linear-gradient(135deg, rgba(31,41,55,0.96), rgba(17,24,39,0.96))",
+                background:
+                  "linear-gradient(135deg, rgba(31,41,55,0.96), rgba(17,24,39,0.96))",
                 boxShadow: "0 24px 80px rgba(2, 6, 23, 0.45)",
                 overflow: "hidden",
               }}
               onMouseEnter={() => setIsPaused(true)}
               onMouseLeave={() => setIsPaused(false)}
             >
-              <div style={{ position: "relative", height: 420, perspective: 1400, transformStyle: "preserve-3d" }}>
+              <div
+                style={{
+                  position: "relative",
+                  height: 420,
+                  perspective: 1400,
+                  transformStyle: "preserve-3d",
+                }}
+              >
                 {campaigns.map((c, idx) => {
-                  const distance = getCircularDistance(idx, currentIndex, campaigns.length);
+                  const distance = getCircularDistance(
+                    idx,
+                    currentIndex,
+                    campaigns.length,
+                  );
                   const absDistance = Math.abs(distance);
                   const isActive = idx === currentIndex;
                   const isNear = absDistance === 1;
@@ -219,17 +235,30 @@ function HomeDesktop({ user }) {
                         pointerEvents: isActive ? "auto" : "none",
                       }}
                     >
-                      <div style={{ position: "relative", minHeight: 420, background: "#0f172a" }}>
+                      <div
+                        style={{
+                          position: "relative",
+                          minHeight: 420,
+                          background: "#0f172a",
+                        }}
+                      >
                         {c.image_url && !failedImages[c.id] ? (
                           <img
                             src={c.image_url}
                             alt={c.judul}
                             onLoad={(e) => {
-                              const ratio = e.currentTarget.naturalWidth / e.currentTarget.naturalHeight;
-                              setImageRatios((prev) => (prev[c.id] ? prev : { ...prev, [c.id]: ratio }));
+                              const ratio =
+                                e.currentTarget.naturalWidth /
+                                e.currentTarget.naturalHeight;
+                              setImageRatios((prev) =>
+                                prev[c.id] ? prev : { ...prev, [c.id]: ratio },
+                              );
                             }}
                             onError={(e) => {
-                              setFailedImages((prev) => ({ ...prev, [c.id]: true }));
+                              setFailedImages((prev) => ({
+                                ...prev,
+                                [c.id]: true,
+                              }));
                             }}
                             style={{
                               width: "100%",
@@ -237,7 +266,8 @@ function HomeDesktop({ user }) {
                               objectFit: getImageFit(c),
                               background: "#0f172a",
                               transform: isActive ? "scale(1.035)" : "scale(1)",
-                              transition: "transform 1300ms cubic-bezier(0.22, 1, 0.36, 1)",
+                              transition:
+                                "transform 1300ms cubic-bezier(0.22, 1, 0.36, 1)",
                             }}
                           />
                         ) : (
@@ -315,7 +345,8 @@ function HomeDesktop({ user }) {
                               marginTop: 8,
                               borderRadius: 999,
                               border: "1px solid rgba(147,197,253,0.65)",
-                              background: "linear-gradient(135deg, rgba(37,99,235,0.45), rgba(59,130,246,0.28))",
+                              background:
+                                "linear-gradient(135deg, rgba(37,99,235,0.45), rgba(59,130,246,0.28))",
                               color: "#eff6ff",
                               padding: "9px 15px",
                               fontSize: 12,
@@ -503,7 +534,9 @@ function HomeDesktop({ user }) {
               <img
                 src={readMoreCampaign.image_url}
                 alt={readMoreCampaign.judul}
-                onError={(e) => { e.target.style.display = "none"; }}
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
                 style={{
                   width: "100%",
                   maxHeight: "72vh",

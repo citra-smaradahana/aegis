@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 
 /**
  * MainActivity: notifikasi dengan suara (notification sound).
@@ -21,6 +23,18 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    try {
+      WebView webView = getBridge().getWebView();
+      if (webView != null) {
+        WebSettings ws = webView.getSettings();
+        ws.setSupportZoom(false);
+        ws.setBuiltInZoomControls(false);
+        ws.setDisplayZoomControls(false);
+        ws.setUseWideViewPort(false);
+      }
+    } catch (Throwable t) {
+      // ignore
+    }
     createNotificationChannelWithSound();
   }
 

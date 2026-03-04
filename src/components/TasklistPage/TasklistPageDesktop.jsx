@@ -270,6 +270,7 @@ function TasklistPageDesktop({ user }) {
 
   const [activeTab, setActiveTab] = useState("Submit");
   const [rowsTodo, setRowsTodo] = useState([]);
+  const [rowsMonitoring, setRowsMonitoring] = useState([]);
   const [rowsHistory, setRowsHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState("tasklist"); // 'tasklist', 'submit-form', 'closed-form', 'view-detail'
@@ -395,6 +396,20 @@ function TasklistPageDesktop({ user }) {
       };
       const todoFiltered = normalizedTodo.filter(hasAction);
       setRowsTodo(todoFiltered);
+      const involved = (r) => {
+        const name = currentNameTodo;
+        const pic = (r.pic || "").toString().trim().toLowerCase();
+        const pelapor = (r.pelapor_nama || "").toString().trim().toLowerCase();
+        const evaluator = (r.evaluator_nama || "")
+          .toString()
+          .trim()
+          .toLowerCase();
+        return name === pic || name === pelapor || name === evaluator;
+      };
+      const monitoringFiltered = normalizedTodo.filter(
+        (r) => involved(r) && !hasAction(r),
+      );
+      setRowsMonitoring(monitoringFiltered);
 
       // Filter riwayat: hanya milik PIC/Submitter (berkaitan dengan user; case-insensitive)
       const currentName = (user?.nama || user?.user || "")
@@ -612,6 +627,21 @@ function TasklistPageDesktop({ user }) {
                 formatDateOnly={formatDateOnly}
                 user={user}
               />
+              {role === "Evaluator" && (
+                <>
+                  <h3 style={{ color: "#e5e7eb", margin: "16px 0 8px" }}>
+                    Monitoring
+                  </h3>
+                  <Table
+                    rows={rowsMonitoring}
+                    onAction={handleAction}
+                    role={role}
+                    onView={handleView}
+                    formatDateOnly={formatDateOnly}
+                    user={user}
+                  />
+                </>
+              )}
               <h3 style={{ color: "#e5e7eb", margin: "16px 0 8px" }}>
                 Riwayat
               </h3>
