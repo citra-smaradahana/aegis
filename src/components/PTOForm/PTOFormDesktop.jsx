@@ -537,13 +537,24 @@ function PTOFormDesktop({ user, onBack }) {
         formData.picTindakLanjut
       ) {
         try {
-          // Panggil function untuk membuat hazard report otomatis
-          const { data: hazardData, error: hazardError } = await supabase.rpc(
-            "create_hazard_report_from_pto",
-            {
-              pto_id: data[0].id,
-            },
-          );
+          // Cegah duplikasi: cek hazard dari PTO ini sudah ada?
+          const ptoId = data[0].id;
+          const { data: existed } = await supabase
+            .from("hazard_report")
+            .select("id")
+            .eq("id_sumber_laporan", ptoId)
+            .eq("sumber_laporan", "PTO")
+            .limit(1);
+          let hazardData = null;
+          let hazardError = null;
+          if (!existed || existed.length === 0) {
+            // Panggil function untuk membuat hazard report otomatis
+            const res = await supabase.rpc("create_hazard_report_from_pto", {
+              pto_id: ptoId,
+            });
+            hazardData = res.data;
+            hazardError = res.error;
+          }
 
           if (hazardError) {
             console.error("Error creating hazard report:", hazardError);

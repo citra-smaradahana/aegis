@@ -261,6 +261,37 @@ function HazardFormDesktop({ user }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Cegah duplikasi hazard: cek dalam 10 menit terakhir atau berdasarkan sumber_laporan
+  const checkDuplicateHazard = useCallback(
+    async () => {
+      try {
+        if (selectedReport?.id && selectedReport?.sumber_laporan) {
+          const { data: bySource } = await supabase
+            .from("hazard_report")
+            .select("id")
+            .eq("id_sumber_laporan", selectedReport.id)
+            .eq("sumber_laporan", selectedReport.sumber_laporan)
+            .limit(1);
+          if ((bySource || []).length > 0) return true;
+        }
+        const sinceISO = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data: sameRows } = await supabase
+          .from("hazard_report")
+          .select("id")
+          .eq("pelapor_nrp", user?.nrp || null)
+          .eq("lokasi", form.lokasi || null)
+          .eq("detail_lokasi", form.detailLokasi || null)
+          .eq("deskripsi_temuan", form.deskripsiTemuan || null)
+          .gte("created_at", sinceISO)
+          .limit(1);
+        return (sameRows || []).length > 0;
+      } catch (_) {
+        return false;
+      }
+    },
+    [form.lokasi, form.detailLokasi, form.deskripsiTemuan, user?.nrp, selectedReport],
+  );
+
   // Handler
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -460,6 +491,14 @@ function HazardFormDesktop({ user }) {
             ? selectedReport?.id
             : null,
       });
+
+      // Cek duplikasi sebelum insert
+      const isDup = await checkDuplicateHazard();
+      if (isDup) {
+        setSubmitSuccess(true);
+        setSubmitting(false);
+        return;
+      }
 
       const { error } = await supabase.from("hazard_report").insert(hazardData);
 

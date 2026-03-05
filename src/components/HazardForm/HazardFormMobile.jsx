@@ -258,6 +258,44 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
     fetchEvaluator();
   }, [form.lokasi]);
 
+  // Cegah duplikasi: cek hazard serupa dalam 10 menit terakhir atau berdasarkan sumber_laporan
+  const checkDuplicateHazard = useCallback(
+    async ({ evaluatorNama }) => {
+      try {
+        if (selectedReport?.id && selectedReport?.sumber_laporan) {
+          const { data: bySource } = await supabase
+            .from("hazard_report")
+            .select("id")
+            .eq("id_sumber_laporan", selectedReport.id)
+            .eq("sumber_laporan", selectedReport.sumber_laporan)
+            .limit(1);
+          if ((bySource || []).length > 0) return true;
+        }
+        const sinceISO = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data: sameRows } = await supabase
+          .from("hazard_report")
+          .select("id")
+          .eq("pelapor_nrp", user?.nrp || null)
+          .eq("lokasi", form.lokasi || null)
+          .eq("detail_lokasi", form.detailLokasi || null)
+          .eq("deskripsi_temuan", form.deskripsiTemuan || null)
+          .eq("evaluator_nama", evaluatorNama || null)
+          .gte("created_at", sinceISO)
+          .limit(1);
+        return (sameRows || []).length > 0;
+      } catch (_) {
+        return false;
+      }
+    },
+    [
+      form.lokasi,
+      form.detailLokasi,
+      form.deskripsiTemuan,
+      user?.nrp,
+      selectedReport,
+    ],
+  );
+
   // Evidence preview
   useEffect(() => {
     if (evidence) {
@@ -412,9 +450,20 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
         evidenceUrl = selectedReport.foto_temuan;
       }
 
-      // Jika ada multiple evaluator, buat hazard report untuk setiap evaluator
+      // Jika ada multiple evaluator, buat hazard report untuk setiap evaluator (skip bila duplikat)
       if (evaluatorOptions.length > 1) {
-        const hazardPromises = evaluatorOptions.map((evaluatorNama) =>
+        const evaluatorsToInsert = [];
+        for (const ev of evaluatorOptions) {
+          // Cek duplikat per-evaluator
+          const dup = await checkDuplicateHazard({ evaluatorNama: ev });
+          if (!dup) evaluatorsToInsert.push(ev);
+        }
+        if (evaluatorsToInsert.length === 0) {
+          setSubmitSuccess(true);
+          setSubmittedToMultipleEvaluators(false);
+          return;
+        }
+        const hazardPromises = evaluatorsToInsert.map((evaluatorNama) =>
           supabase.from("hazard_report").insert({
             user_id: user.id,
             user_perusahaan: user.perusahaan,
@@ -455,8 +504,8 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
         }
 
         console.log(
-          `Berhasil membuat ${evaluatorOptions.length} hazard report untuk evaluator:`,
-          evaluatorOptions,
+          `Berhasil membuat ${evaluatorsToInsert.length} hazard report`,
+          evaluatorsToInsert,
         );
         setSubmittedToMultipleEvaluators(true);
       } else {
@@ -493,6 +542,14 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
         };
 
         console.log("Hazard data to insert:", hazardData);
+
+        // Cek duplikasi sebelum insert
+        const isDup = await checkDuplicateHazard({ evaluatorNama });
+        if (isDup) {
+          setSubmittedToMultipleEvaluators(false);
+          setSubmitSuccess(true);
+          return;
+        }
 
         const { data: hazardDataResult, error } = await supabase
           .from("hazard_report")

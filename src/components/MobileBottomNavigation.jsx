@@ -1,6 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 
 function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCount = 0 }) {
+  const [pressed, setPressed] = useState(null);
+  const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+  const handleClick = async (id) => {
+    setPressed(id);
+    setTimeout(() => setPressed(null), 140);
+    if (isAndroid) {
+      try {
+        const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+        await Haptics.impact({ style: ImpactStyle.Light });
+      } catch (_) {}
+    }
+    onNavigate && onNavigate(id);
+  };
   const navItems = [
     {
       id: "home",
@@ -45,7 +59,9 @@ function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCo
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => onNavigate && onNavigate(item.id)}
+            onClick={() => handleClick(item.id)}
+            onTouchStart={() => setPressed(item.id)}
+            onTouchEnd={() => setTimeout(() => setPressed(null), 120)}
             style={{
               background: "none",
               border: "none",
@@ -60,6 +76,8 @@ function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCo
               color: activeTab === item.id ? "#3b82f6" : "#6b7280",
               fontWeight: activeTab === item.id ? 600 : 500,
               position: "relative",
+              transform: pressed === item.id ? "scale(0.96)" : "scale(1)",
+              backgroundColor: pressed === item.id ? "rgba(59,130,246,0.08)" : "transparent",
             }}
           >
             <div style={{ position: "relative", display: "inline-flex" }}>
@@ -87,7 +105,6 @@ function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCo
 }
 
 export default MobileBottomNavigation;
-
 
 
 

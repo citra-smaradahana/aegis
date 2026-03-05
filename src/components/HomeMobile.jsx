@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import { fetchAllowedMenusForUser } from "../utils/menuAccessHelpers";
+import { Capacitor } from "@capacitor/core";
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
 function parseTextWithLinks(text) {
@@ -106,6 +107,23 @@ function HomeMobile({
   const [kpiData, setKpiData] = useState(null);
   const kpiMetrics = ["hazard", "take5", "pto"];
   const kpiTouchRef = useRef({ startX: 0, dx: 0, moved: false });
+  const [pressedMenu, setPressedMenu] = useState(null);
+  const isAndroid =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+  const handleMenuTap = async (key, placeholder) => {
+    if (placeholder) return;
+    setPressedMenu(key);
+    setTimeout(() => setPressedMenu(null), 140);
+    if (isAndroid) {
+      try {
+        const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+        await Haptics.selectionStart();
+        await Haptics.impact({ style: ImpactStyle.Light });
+        await Haptics.selectionEnd();
+      } catch (_) {}
+    }
+    onNavigate(key);
+  };
 
   const menuContentWidth = Math.max(220, viewportWidth - 54);
   const campaignCardWidth = Math.min(350, menuContentWidth);
@@ -726,7 +744,9 @@ function HomeMobile({
             {menuItems.map((item) => (
               <button
                 key={item.key}
-                onClick={() => !item.placeholder && onNavigate(item.key)}
+                onClick={() => handleMenuTap(item.key, item.placeholder)}
+                onTouchStart={() => setPressedMenu(item.key)}
+                onTouchEnd={() => setTimeout(() => setPressedMenu(null), 120)}
                 disabled={item.placeholder}
                 className="mobile-home-menu-item"
                 style={{
@@ -745,6 +765,14 @@ function HomeMobile({
                   alignItems: "center",
                   gap: useListLayout ? 14 : 6,
                   minHeight: useListLayout ? 56 : 72,
+                  transform:
+                    pressedMenu === item.key ? "scale(0.98)" : "scale(1)",
+                  backgroundColor:
+                    pressedMenu === item.key
+                      ? "rgba(59,130,246,0.08)"
+                      : item.placeholder
+                        ? "#f1f5f9"
+                        : "white",
                   opacity: item.placeholder ? 0.7 : 1,
                   position: "relative",
                 }}
