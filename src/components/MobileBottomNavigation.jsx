@@ -1,9 +1,36 @@
 import React, { useState } from "react";
 import { Capacitor } from "@capacitor/core";
 
-function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCount = 0 }) {
+function MobileBottomNavigation({
+  activeTab = "home",
+  onNavigate,
+  tasklistTodoCount = 0,
+}) {
   const [pressed, setPressed] = useState(null);
-  const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+  const [ripples, setRipples] = useState({});
+  const isAndroid =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+
+  const triggerRipple = (e, id) => {
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+    const t = e.touches?.[0] || e.changedTouches?.[0];
+    const x = t ? t.clientX - rect.left : rect.width / 2;
+    const y = t ? t.clientY - rect.top : rect.height / 2;
+    setPressed(id);
+    setRipples((prev) => ({ ...prev, [id]: { x, y, animate: false } }));
+    requestAnimationFrame(() => {
+      setRipples((prev) => ({ ...prev, [id]: { ...prev[id], animate: true } }));
+    });
+    setTimeout(() => {
+      setRipples((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+    }, 450);
+  };
+
   const handleClick = async (id) => {
     setPressed(id);
     setTimeout(() => setPressed(null), 140);
@@ -60,7 +87,7 @@ function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCo
           <button
             key={item.id}
             onClick={() => handleClick(item.id)}
-            onTouchStart={() => setPressed(item.id)}
+            onTouchStart={(e) => triggerRipple(e, item.id)}
             onTouchEnd={() => setTimeout(() => setPressed(null), 120)}
             style={{
               background: "none",
@@ -76,10 +103,31 @@ function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCo
               color: activeTab === item.id ? "#3b82f6" : "#6b7280",
               fontWeight: activeTab === item.id ? 600 : 500,
               position: "relative",
+              overflow: "hidden",
               transform: pressed === item.id ? "scale(0.96)" : "scale(1)",
-              backgroundColor: pressed === item.id ? "rgba(59,130,246,0.08)" : "transparent",
+              backgroundColor:
+                pressed === item.id ? "rgba(59,130,246,0.08)" : "transparent",
             }}
           >
+            {ripples[item.id] && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: (ripples[item.id].y || 0) - 12,
+                  left: (ripples[item.id].x || 0) - 12,
+                  width: 24,
+                  height: 24,
+                  borderRadius: 999,
+                  background: "rgba(59,130,246,0.35)",
+                  transform: ripples[item.id].animate
+                    ? "scale(12)"
+                    : "scale(0.5)",
+                  opacity: ripples[item.id].animate ? 0 : 0.6,
+                  transition: "transform 450ms ease, opacity 450ms ease",
+                  pointerEvents: "none",
+                }}
+              />
+            )}
             <div style={{ position: "relative", display: "inline-flex" }}>
               <span style={{ fontSize: 20 }}>{item.icon}</span>
               {item.id === "tasklist" && tasklistTodoCount > 0 && (
@@ -105,16 +153,3 @@ function MobileBottomNavigation({ activeTab = "home", onNavigate, tasklistTodoCo
 }
 
 export default MobileBottomNavigation;
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1953,6 +1953,22 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                 <button
                   type="submit"
                   disabled={submitting || !isPage3Valid()}
+                  onTouchStart={(e) => {
+                    if (!(submitting || !isPage3Valid()))
+                      e.currentTarget.style.background = "#1d4ed8";
+                  }}
+                  onTouchEnd={(e) => {
+                    if (!(submitting || !isPage3Valid()))
+                      e.currentTarget.style.background = "#2563eb";
+                  }}
+                  onMouseDown={(e) => {
+                    if (!(submitting || !isPage3Valid()))
+                      e.currentTarget.style.background = "#1d4ed8";
+                  }}
+                  onMouseUp={(e) => {
+                    if (!(submitting || !isPage3Valid()))
+                      e.currentTarget.style.background = "#2563eb";
+                  }}
                   style={{
                     background:
                       submitting || !isPage3Valid() ? "#9ca3af" : "#2563eb",

@@ -924,6 +924,18 @@ const FitToWorkFormMobile = ({
                 <button
                   type="submit"
                   disabled={loading || sudahIsiHariIni}
+                  onTouchStart={(e) => {
+                    if (isFormValid && !(loading || sudahIsiHariIni)) e.currentTarget.style.background = "#1d4ed8";
+                  }}
+                  onTouchEnd={(e) => {
+                    if (isFormValid && !(loading || sudahIsiHariIni)) e.currentTarget.style.background = "#2563eb";
+                  }}
+                  onMouseDown={(e) => {
+                    if (isFormValid && !(loading || sudahIsiHariIni)) e.currentTarget.style.background = "#1d4ed8";
+                  }}
+                  onMouseUp={(e) => {
+                    if (isFormValid && !(loading || sudahIsiHariIni)) e.currentTarget.style.background = "#2563eb";
+                  }}
                   style={{
                     background: isFormValid ? "#2563eb" : "#9ca3af",
                     color: "#fff",

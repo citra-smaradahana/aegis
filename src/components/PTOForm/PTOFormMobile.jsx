@@ -772,6 +772,10 @@ function PTOFormMobile({
       >
         <button
           onClick={() => {}}
+          onTouchStart={(e) => { e.currentTarget.style.background = "#1d4ed8"; }}
+          onTouchEnd={(e) => { e.currentTarget.style.background = "#2563eb"; }}
+          onMouseDown={(e) => { e.currentTarget.style.background = "#1d4ed8"; }}
+          onMouseUp={(e) => { e.currentTarget.style.background = "#2563eb"; }}
           style={{
             flex: 1,
             padding: 8,

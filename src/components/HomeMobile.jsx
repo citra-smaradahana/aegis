@@ -108,8 +108,31 @@ function HomeMobile({
   const kpiMetrics = ["hazard", "take5", "pto"];
   const kpiTouchRef = useRef({ startX: 0, dx: 0, moved: false });
   const [pressedMenu, setPressedMenu] = useState(null);
+  const [menuRipples, setMenuRipples] = useState({});
   const isAndroid =
     Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+  const triggerMenuRipple = (e, key) => {
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+    const t = e.touches?.[0] || e.changedTouches?.[0];
+    const x = t ? t.clientX - rect.left : rect.width / 2;
+    const y = t ? t.clientY - rect.top : rect.height / 2;
+    setPressedMenu(key);
+    setMenuRipples((prev) => ({ ...prev, [key]: { x, y, animate: false } }));
+    requestAnimationFrame(() => {
+      setMenuRipples((prev) => ({
+        ...prev,
+        [key]: { ...prev[key], animate: true },
+      }));
+    });
+    setTimeout(() => {
+      setMenuRipples((prev) => {
+        const copy = { ...prev };
+        delete copy[key];
+        return copy;
+      });
+    }, 480);
+  };
   const handleMenuTap = async (key, placeholder) => {
     if (placeholder) return;
     setPressedMenu(key);
@@ -745,7 +768,7 @@ function HomeMobile({
               <button
                 key={item.key}
                 onClick={() => handleMenuTap(item.key, item.placeholder)}
-                onTouchStart={() => setPressedMenu(item.key)}
+                onTouchStart={(e) => triggerMenuRipple(e, item.key)}
                 onTouchEnd={() => setTimeout(() => setPressedMenu(null), 120)}
                 disabled={item.placeholder}
                 className="mobile-home-menu-item"
@@ -769,12 +792,13 @@ function HomeMobile({
                     pressedMenu === item.key ? "scale(0.98)" : "scale(1)",
                   backgroundColor:
                     pressedMenu === item.key
-                      ? "rgba(59,130,246,0.08)"
+                      ? "#2563eb"
                       : item.placeholder
                         ? "#f1f5f9"
                         : "white",
                   opacity: item.placeholder ? 0.7 : 1,
                   position: "relative",
+                  overflow: "hidden",
                 }}
                 onMouseEnter={(e) => {
                   if (!item.placeholder) {
@@ -790,6 +814,25 @@ function HomeMobile({
                     : "0 4px 12px rgba(0,0,0,0.1)";
                 }}
               >
+                {menuRipples[item.key] && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: (menuRipples[item.key].y || 0) - 14,
+                      left: (menuRipples[item.key].x || 0) - 14,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      background: "rgba(59,130,246,0.35)",
+                      transform: menuRipples[item.key].animate
+                        ? "scale(16)"
+                        : "scale(0.6)",
+                      opacity: menuRipples[item.key].animate ? 0 : 0.6,
+                      transition: "transform 500ms ease, opacity 500ms ease",
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
                 <div
                   className="mobile-home-menu-icon"
                   style={{
@@ -810,7 +853,12 @@ function HomeMobile({
                   style={{
                     fontSize: useListLayout ? 15 : 11,
                     fontWeight: 600,
-                    color: item.placeholder ? "#94a3b8" : "#1f2937",
+                    color:
+                      pressedMenu === item.key
+                        ? "#ffffff"
+                        : item.placeholder
+                          ? "#94a3b8"
+                          : "#1f2937",
                     lineHeight: 1.2,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
