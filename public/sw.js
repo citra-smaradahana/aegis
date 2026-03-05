@@ -1,22 +1,23 @@
-const CACHE_NAME = 'aegis-kmb-v1.0.1';
+const CACHE_NAME = 'aegis-kmb-v1.1.0';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  // Add other static assets as needed
+  '/aegis.png',
 ];
 
 // Install event - cache resources and skip waiting
 self.addEventListener('install', event => {
   self.skipWaiting(); // Immediately activate new service worker
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
+  event.waitUntil((async () => {
+    try {
+      const cache = await caches.open(CACHE_NAME);
       console.log('Opened cache');
-      return cache.addAll(urlsToCache);
-    })
-  );
+      await Promise.allSettled(urlsToCache.map(u => cache.add(u)));
+    } catch (err) {
+      console.warn('SW install: precache skipped due to error', err);
+    }
+  })());
 });
 
 // Fetch event - network first for HTML and CSS, cache first for others
