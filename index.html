@@ -24,29 +24,25 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      // Service Worker: aktifkan hanya di production (bukan localhost/127.0.0.1)
+      // TEMP: Nonaktifkan Service Worker dan bersihkan cache untuk mengatasi layar kosong di produksi
+      // Setelah stabil, registrasi dapat diaktifkan kembali dengan uji menyeluruh.
       if ("serviceWorker" in navigator) {
-        const isLocalhost = /^(localhost|127\.0\.0\.1)$/i.test(
-          location.hostname
-        );
-        if (!isLocalhost) {
-          window.addEventListener("load", () => {
-            navigator.serviceWorker
-              .register("/sw.js")
-              .then((registration) => {
-                console.log("SW registered: ", registration);
-              })
-              .catch((registrationError) => {
-                console.log("SW registration failed: ", registrationError);
-              });
-          });
-        } else {
-          // Dev: pastikan tidak ada SW yang aktif
-          navigator.serviceWorker.getRegistrations().then((regs) => {
-            regs.forEach((reg) => reg.unregister());
-            console.log("SW unregistered in development");
-          });
-        }
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .getRegistrations()
+            .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+            .then(() =>
+              caches
+                ?.keys()
+                .then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
+            )
+            .then(() =>
+              console.log(
+                "All service workers unregistered and caches cleared",
+              ),
+            )
+            .catch((e) => console.warn("SW cleanup failed:", e));
+        });
       }
     </script>
   </body>
