@@ -413,6 +413,44 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   async function handleSubmit(e) {
     e.preventDefault();
 
+    const norm = (v) => (v || "").toString().trim().toLowerCase();
+    const makeFp = (evName) =>
+      [
+        norm(user?.nrp),
+        norm(form.lokasi),
+        norm(form.detailLokasi),
+        norm(form.deskripsiTemuan),
+        norm(evName || ""),
+      ].join("|");
+    const nowTs = Date.now();
+    const lockTtlMs = 10 * 60 * 1000;
+    const lockSet = (k) =>
+      localStorage.setItem(k, JSON.stringify({ ts: nowTs }));
+    const lockGet = (k) => {
+      try {
+        const raw = localStorage.getItem(k);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        return obj && typeof obj.ts === "number" ? obj : null;
+      } catch {
+        return null;
+      }
+    };
+    const getOrCreateNonce = (fp) => {
+      const key = `hazard_nonce_${fp}`;
+      let n = localStorage.getItem(key);
+      if (n && typeof n === "string" && n.length > 0) return n;
+      n = `${nowTs}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(key, n);
+      return n;
+    };
+    const clearGuards = (fp) => {
+      try {
+        localStorage.removeItem(`hazard_lock_${fp}`);
+        localStorage.removeItem(`hazard_nonce_${fp}`);
+      } catch {}
+    };
+
     // Validasi form wajib isi
     const missingFields = [];
     if (!form.lokasi) missingFields.push("Lokasi");
@@ -454,9 +492,17 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
       if (evaluatorOptions.length > 1) {
         const evaluatorsToInsert = [];
         for (const ev of evaluatorOptions) {
-          // Cek duplikat per-evaluator
-          const dup = await checkDuplicateHazard({ evaluatorNama: ev });
-          if (!dup) evaluatorsToInsert.push(ev);
+          const lk = `hazard_lock_${makeFp(ev)}`;
+          const exist = lockGet(lk);
+          let dup = false;
+          if (exist && nowTs - exist.ts < lockTtlMs) dup = true;
+          if (!dup) {
+            const onlineDup = await checkDuplicateHazard({ evaluatorNama: ev });
+            if (!onlineDup) {
+              evaluatorsToInsert.push(ev);
+              lockSet(lk);
+            }
+          }
         }
         if (evaluatorsToInsert.length === 0) {
           setSubmitSuccess(true);
@@ -483,6 +529,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
             action_plan: null,
             due_date: null,
             evaluator_nama: evaluatorNama,
+            client_nonce: getOrCreateNonce(makeFp(evaluatorNama)),
             take_5_id:
               selectedReport?.sumber_laporan === "Take5"
                 ? selectedReport?.id
@@ -507,9 +554,18 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           `Berhasil membuat ${evaluatorsToInsert.length} hazard report`,
           evaluatorsToInsert,
         );
+        evaluatorsToInsert.forEach((ev) => clearGuards(makeFp(ev)));
         setSubmittedToMultipleEvaluators(true);
       } else {
         // Jika hanya satu evaluator, buat hazard report seperti biasa
+        const lk = `hazard_lock_${makeFp(evaluatorNama)}`;
+        const exist = lockGet(lk);
+        if (exist && nowTs - exist.ts < lockTtlMs) {
+          setSubmittedToMultipleEvaluators(false);
+          setSubmitSuccess(true);
+          return;
+        }
+        lockSet(lk);
         const hazardData = {
           user_id: user.id,
           user_perusahaan: user.perusahaan || null,
@@ -529,6 +585,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           action_plan: null,
           due_date: null,
           evaluator_nama: evaluatorNama,
+          client_nonce: getOrCreateNonce(makeFp(evaluatorNama)),
           take_5_id:
             selectedReport?.sumber_laporan === "Take5"
               ? selectedReport?.id
@@ -565,6 +622,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           throw error;
         }
         setSubmittedToMultipleEvaluators(false);
+        clearGuards(makeFp(evaluatorNama));
       }
 
       // Jika ada report dari Take 5: update status, potensi_bahaya, deskripsi_kondisi (hazard_id diisi trigger)
