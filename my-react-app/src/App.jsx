@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { supabase } from "./supabaseClient";
@@ -12,30 +12,56 @@ import {
   unregisterPushNotifications,
 } from "./utils/pushNotificationHelpers";
 import Login from "./components/Login";
-import MonitoringPage from "./components/MonitoringPage";
-import SiteSelectionPage from "./components/SiteSelectionPage";
-import OfflineStatus from "./components/OfflineStatus";
-import FitToWorkForm from "./components/FitToWorkForm";
-import Take5Form from "./components/Take5Form";
-import HazardForm from "./components/HazardForm";
-import TasklistPage from "./components/TasklistPage";
-import UserManagement from "./components/UserManagement";
-import Campaign from "./components/Campaign";
-import AdminSettings from "./components/AdminSettings";
-import Profile from "./components/Profile";
 import Home from "./components/Home";
-import FitToWorkValidationNew from "./components/FitToWorkValidationNew";
-import DailyAttendanceList from "./components/DailyAttendance";
-import DailyAttendanceForm from "./components/DailyAttendance/DailyAttendanceForm";
-import DailyAttendanceView from "./components/DailyAttendance/DailyAttendanceView";
-import FatigueCheckList from "./components/FatigueCheck";
-import FatigueCheckForm from "./components/FatigueCheck/FatigueCheckForm";
-import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
-import PTOForm from "./components/PTOForm";
+import OfflineStatus from "./components/OfflineStatus";
 import VersionCheck from "./components/VersionCheck";
-import DebugNrp from "./components/DebugNrp"; // Temporary Debug Component
+import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
+// import DebugNrp from "./components/DebugNrp"; // Temporary Debug Component
 import aegisLogo from "./assets/aegis.png";
 import kmbLogo from "./assets/kmb.png";
+
+// Lazy load heavy components
+const MonitoringPage = lazy(() => import("./components/MonitoringPage"));
+const SiteSelectionPage = lazy(() => import("./components/SiteSelectionPage"));
+const FitToWorkForm = lazy(() => import("./components/FitToWorkForm"));
+const Take5Form = lazy(() => import("./components/Take5Form"));
+const HazardForm = lazy(() => import("./components/HazardForm"));
+const TasklistPage = lazy(() => import("./components/TasklistPage"));
+const UserManagement = lazy(() => import("./components/UserManagement"));
+const Campaign = lazy(() => import("./components/Campaign"));
+const AdminSettings = lazy(() => import("./components/AdminSettings"));
+const Profile = lazy(() => import("./components/Profile"));
+const FitToWorkValidationNew = lazy(() => import("./components/FitToWorkValidationNew"));
+const DailyAttendanceList = lazy(() => import("./components/DailyAttendance"));
+const FatigueCheckList = lazy(() => import("./components/FatigueCheck"));
+const PTOForm = lazy(() => import("./components/PTOForm"));
+
+// Simple Loading Spinner Component
+const PageLoader = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh', 
+    width: '100%',
+    background: '#f3f4f6'
+  }}>
+    <div style={{
+      width: '40px',
+      height: '40px',
+      border: '4px solid #e5e7eb',
+      borderTop: '4px solid #ea580c',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    }} />
+    <style>{`
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
 
 function App() {
   const [user, setUser] = useState(null);
@@ -1207,7 +1233,9 @@ function App() {
     return (
       <div className="app-container">
         {/* <DebugNrp /> */}
-        <MonitoringPage user={user} onBack={() => setCurrentPage("main-app")} />
+        <Suspense fallback={<PageLoader />}>
+          <MonitoringPage user={user} onBack={() => setCurrentPage("main-app")} />
+        </Suspense>
       </div>
     );
   }
@@ -1227,15 +1255,19 @@ function App() {
       {currentPage === "login" && <Login onLogin={handleLogin} />}
 
       {currentPage === "site-selection" && (
-        <SiteSelectionPage
-          user={user}
-          onSiteSelect={handleSiteSelection}
-          onBack={() => setCurrentPage("login")}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <SiteSelectionPage
+            user={user}
+            onSiteSelect={handleSiteSelection}
+            onBack={() => setCurrentPage("login")}
+          />
+        </Suspense>
       )}
 
       {currentPage === "main-app" && (
-        <MainApp setBackHandler={setBackHandler} />
+        <Suspense fallback={<PageLoader />}>
+          <MainApp setBackHandler={setBackHandler} />
+        </Suspense>
       )}
     </div>
   );
