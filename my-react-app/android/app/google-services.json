@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "354378562314",
+    "project_id": "aegis-d72fc",
+    "storage_bucket": "aegis-d72fc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:354378562314:android:9081d5e99d874fec2b98f3",
+        "android_client_info": {
+          "package_name": "com.citrasmaradahana.aegis"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3FquKD359-_wpTMqLarxoVp4hZwjH404"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
