@@ -1,5 +1,9 @@
 import { supabase } from "../supabaseClient";
 
+// Cache untuk Tasklist Count
+const todoCache = {};
+const CACHE_TTL = 30 * 1000; // 30 detik
+
 /**
  * User punya aksi pada hazard report? (PIC, Pelapor, atau Evaluator)
  * Sama dengan logic di TasklistPageMobile
@@ -24,6 +28,13 @@ function userHasAction(report, user) {
 export async function fetchTasklistTodoCountForUser(user) {
   if (!user?.id || !user?.site) return 0;
 
+  // Cek cache
+  const cacheKey = `${user.id}:${user.site}`;
+  const cached = todoCache[cacheKey];
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    return cached.count;
+  }
+
   const { data, error } = await supabase
     .from("hazard_report")
     .select("id, pic, pelapor_nama, evaluator_nama, status")
@@ -37,5 +48,16 @@ export async function fetchTasklistTodoCountForUser(user) {
   }
 
   const count = (data || []).filter((r) => userHasAction(r, user)).length;
+  
+  // Simpan cache
+  todoCache[cacheKey] = { count, timestamp: Date.now() };
+
   return count;
+}
+
+// Helper untuk invalidate cache saat user melakukan aksi
+export function invalidateTasklistTodoCache(userId) {
+  if (!userId) return;
+  const keys = Object.keys(todoCache).filter(k => k.startsWith(userId));
+  keys.forEach(k => delete todoCache[k]);
 }

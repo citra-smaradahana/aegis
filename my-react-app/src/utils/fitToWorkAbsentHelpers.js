@@ -9,6 +9,10 @@ import {
 
 export { getTodayWITA };
 
+// Cache untuk usersNotYetFilledFTW
+const usersCache = {};
+const CACHE_TTL = 30 * 1000; // 30 detik
+
 /**
  * Daftar jabatan bawahan per validator (untuk scope "belum isi FTW")
  * Leading Hand & Plant Leading Hand hanya lihat bawahan mereka.
@@ -76,7 +80,13 @@ export { getSubordinateJabatansForValidator };
  * @param {Array<string>} additionalJabatans - Optional: Jabatan tambahan yang ingin dilihat (misal: sesama LH)
  */
 export async function fetchUsersNotYetFilledFTW(user, additionalJabatans = []) {
-  if (!user?.site) return [];
+  if (!user?.site || !user?.id) return [];
+
+  const cacheKey = `${user.id}:${user.site}:${additionalJabatans.join(',')}`;
+  const cached = usersCache[cacheKey];
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    return cached.data;
+  }
 
   const userSite = user.site;
 
@@ -98,72 +108,78 @@ export async function fetchUsersNotYetFilledFTW(user, additionalJabatans = []) {
     "Administrator",
     "Admin Site Project",
   ];
-  if (!validatorJabatans.includes(jabatan)) {
-    return [];
+
+  if (validatorJabatans.includes(jabatan)) {
+    // 1. Ambil daftar jabatan bawahan
+    const mandates = await fetchActiveMandatesForUser(user.id, userSite);
+    const subordinateJabatans = getSubordinateJabatansForValidator(
+      jabatan,
+      mandates,
+    );
+
+    let finalJabatans = subordinateJabatans;
+    if (subordinateJabatans === null) {
+      // null means ALL -> no filter by jabatan
+      finalJabatans = null;
+    } else {
+      // Gabungkan dengan additional
+      finalJabatans = [
+        ...new Set([...subordinateJabatans, ...additionalJabatans]),
+      ];
+    }
+
+    // 2. Query user yang belum isi FTW hari ini
+    let query = supabase
+      .from("users")
+      .select("id, nama, jabatan, nrp, site, foto_url")
+      .eq("site", userSite)
+      .eq("status", "Aktif");
+
+    if (finalJabatans !== null) {
+      query = query.in("jabatan", finalJabatans);
+    }
+
+    const { data: allUsers, error } = await query;
+    if (error || !allUsers) return [];
+
+    // 3. Cek siapa yang SUDAH isi
+    const { data: filledIds } = await supabase
+      .from("fit_to_work")
+      .select("user_id")
+      .eq("site", userSite)
+      .eq("tanggal", today); // format YYYY-MM-DD
+
+    const filledSet = new Set((filledIds || []).map((r) => r.user_id));
+
+    // 4. Filter user yang BELUM isi
+    const notFilledUsers = allUsers.filter((u) => !filledSet.has(u.id));
+
+    // 5. Cek status OFF / Cuti / Sakit (agar tidak muncul di list merah)
+    //    Kita reuse logic buildAttendanceSummaryForUsers tapi hanya ambil yang statusnya NOT_YET_FILLED
+    const summary = await buildAttendanceSummaryForUsers(
+      notFilledUsers,
+      today,
+      userSite,
+    );
+
+    const result = summary
+      .filter((item) => item.status === "NOT_YET_FILLED")
+      .map((item) => item.user);
+
+    // Simpan cache
+    usersCache[cacheKey] = { data: result, timestamp: Date.now() };
+
+    return result;
   }
 
-  // Fetch mandates untuk Field Leading Hand (PLH->FLH)
-  let mandates = [];
-  if (jabatan === "Field Leading Hand") {
-    mandates = await fetchActiveMandatesForUser(user.id, userSite);
-  }
+  return [];
+}
 
-  const subordinateJabatans = getSubordinateJabatansForValidator(
-    jabatan,
-    mandates,
-  );
-
-  // 1. Ambil semua user di site (filter jabatan jika LH/PLH)
-  let usersQuery = supabase
-    .from("users")
-    .select("id, nama, nrp, jabatan, site")
-    .eq("site", userSite)
-    .neq("id", user.id); // Exclude self
-
-  if (subordinateJabatans && subordinateJabatans.length > 0) {
-    // GABUNGKAN subordinateJabatans dengan additionalJabatans
-    // Gunakan Set untuk unique values
-    const combinedJabatans = [
-      ...new Set([...subordinateJabatans, ...(additionalJabatans || [])]),
-    ];
-    usersQuery = usersQuery.in("jabatan", combinedJabatans);
-  } else if (additionalJabatans && additionalJabatans.length > 0) {
-    // Jika subordinateJabatans null (lihat semua), kita abaikan additionalJabatans.
-    // Tapi jika subordinateJabatans kosong [] (tidak punya bawahan), kita tetap cek additionalJabatans.
-    usersQuery = usersQuery.in("jabatan", additionalJabatans);
-  }
-
-  const { data: usersData, error: usersError } = await usersQuery;
-
-  if (usersError || !usersData || usersData.length === 0) {
-    return [];
-  }
-
-  // 2. User yang sudah isi FTW hari ini (by nrp + tanggal)
-  const { data: ftwToday } = await supabase
-    .from("fit_to_work")
-    .select("nrp")
-    .eq("site", userSite)
-    .eq("tanggal", today);
-
-  const nrpSudahIsi = new Set((ftwToday || []).map((r) => r.nrp));
-
-  // 3. User yang sudah ditandai off hari ini
-  const userIds = usersData.map((u) => u.id);
-  const { data: absentToday } = await supabase
-    .from("fit_to_work_absent")
-    .select("user_id")
-    .eq("tanggal", today)
-    .in("user_id", userIds);
-
-  const userIdSudahOff = new Set((absentToday || []).map((r) => r.user_id));
-
-  // 4. Filter: user yang belum isi DAN belum off
-  const result = usersData.filter(
-    (u) => !nrpSudahIsi.has(u.nrp) && !userIdSudahOff.has(u.id),
-  );
-
-  return result;
+// Invalidate cache helper
+export function invalidateUsersFTWCache(userId) {
+  if (!userId) return;
+  const keys = Object.keys(usersCache).filter(k => k.startsWith(userId));
+  keys.forEach(k => delete usersCache[k]);
 }
 
 /**

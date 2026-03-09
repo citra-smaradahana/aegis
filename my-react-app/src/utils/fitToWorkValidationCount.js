@@ -1,12 +1,25 @@
 import { supabase } from "../supabaseClient";
 import { fetchActiveMandatesForUser } from "./mandateHelpers";
 
+// Cache sederhana untuk menyimpan hasil validasi count
+// Format: { [userId]: { count: number, timestamp: number } }
+const countCache = {};
+const CACHE_TTL = 30 * 1000; // Cache berlaku 30 detik (cukup untuk navigasi antar menu)
+
 /**
  * Mengambil jumlah validasi Fit To Work yang perlu ditindaklanjuti oleh user (berdasarkan jabatan + mandat).
  * Dipakai untuk badge notifikasi (desktop: icon lonceng, mobile: angka di menu Validasi Fit To Work).
  */
 export async function fetchValidationCountForUser(user) {
-  if (!user?.site) return 0;
+  if (!user?.site || !user?.id) return 0;
+  
+  // Cek cache dulu
+  const cacheKey = `${user.id}:${user.site}`;
+  const cached = countCache[cacheKey];
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    return cached.count;
+  }
+
   const jabatan = (user?.jabatan || "").trim();
   const userSite = user.site;
   const ids = new Set();
@@ -126,5 +139,15 @@ export async function fetchValidationCountForUser(user) {
     return 0;
   }
 
+  // Simpan ke cache
+  countCache[cacheKey] = { count: ids.size, timestamp: Date.now() };
+
   return ids.size;
+}
+
+// Helper untuk invalidate cache saat user melakukan aksi (approve/reject)
+export function invalidateValidationCountCache(userId) {
+  if (!userId) return;
+  const keys = Object.keys(countCache).filter(k => k.startsWith(userId));
+  keys.forEach(k => delete countCache[k]);
 }
