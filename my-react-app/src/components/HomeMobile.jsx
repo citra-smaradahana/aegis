@@ -1,0 +1,1462 @@
+import React, { useState, useEffect, useRef } from "react";
+import { supabase } from "../supabaseClient";
+import MobileBottomNavigation from "./MobileBottomNavigation";
+import { fetchAllowedMenusForUser } from "../utils/menuAccessHelpers";
+import { Capacitor } from "@capacitor/core";
+
+const urlRegex = /(https?:\/\/[^\s]+)/g;
+function parseTextWithLinks(text) {
+  if (!text) return null;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    part.match(urlRegex) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: "#60a5fa", textDecoration: "underline" }}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
+function getPreviewText(text, maxLength = 90) {
+  if (!text) return "";
+  const cleanText = text.replace(urlRegex, "").replace(/\s+/g, " ").trim();
+  if (cleanText.length <= maxLength) return cleanText;
+  return `${cleanText.slice(0, maxLength).trimEnd()}...`;
+}
+
+// Fallback: jabatan validator (jika tidak ada config di DB)
+function canAccessFitToWorkValidationFallback(user) {
+  if (!user) return false;
+  if (
+    user?.jabatan === "Administrator" ||
+    user?.jabatan === "Admin Site Project"
+  )
+    return true;
+  const jabatan = (user?.jabatan || "").trim();
+  const validatorJabatan = [
+    "Field Leading Hand",
+    "Plant Leading Hand",
+    "Asst. Penanggung Jawab Operasional",
+    "Penanggung Jawab Operasional",
+    "SHE",
+    "SHERQ Officer",
+  ];
+  return validatorJabatan.includes(jabatan);
+}
+
+const REPORT_PTO_JABATAN = [
+  "SHERQ Officer",
+  "Field Leading Hand",
+  "Plant Leading Hand",
+  "Technical Service",
+  "Asst. Penanggung Jawab Operasional",
+  "Penanggung Jawab Operasional",
+];
+
+function canAccessReportFallback(user) {
+  if (!user) return false;
+  if (
+    user?.jabatan === "Administrator" ||
+    user?.jabatan === "Admin Site Project"
+  )
+    return true;
+  return REPORT_PTO_JABATAN.includes((user?.jabatan || "").trim());
+}
+
+function canAccessPTOFallback(user) {
+  if (!user) return false;
+  if (
+    user?.jabatan === "Administrator" ||
+    user?.jabatan === "Admin Site Project"
+  )
+    return true;
+  return REPORT_PTO_JABATAN.includes((user?.jabatan || "").trim());
+}
+
+function HomeMobile({
+  user,
+  onNavigate,
+  validationCount = 0,
+  ftwNeedsFill = false,
+  tasklistTodoCount = 0,
+}) {
+  const [campaigns, setCampaigns] = useState([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+  const [readMoreCampaign, setReadMoreCampaign] = useState(null);
+  const [fullScreenImage, setFullScreenImage] = useState(null);
+  const [campaignIndex, setCampaignIndex] = useState(0);
+  const [campaignPaused, setCampaignPaused] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 400,
+  );
+  const [viewportHeight, setViewportHeight] = useState(
+    typeof window !== "undefined" ? window.innerHeight : 800,
+  );
+  const [failedCampaignImages, setFailedCampaignImages] = useState({});
+  const [campaignImageRatios, setCampaignImageRatios] = useState({});
+  const resumeCampaignTimerRef = useRef(null);
+  const [kpiType, setKpiType] = useState("hazard");
+  const [kpiData, setKpiData] = useState(null);
+  const kpiMetrics = ["hazard", "take5", "pto"];
+  const kpiTouchRef = useRef({ startX: 0, dx: 0, moved: false });
+  const [pressedMenu, setPressedMenu] = useState(null);
+  const [menuRipples, setMenuRipples] = useState({});
+  const isAndroid =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+  const triggerMenuRipple = (e, key) => {
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+    const t = e.touches?.[0] || e.changedTouches?.[0];
+    const x = t ? t.clientX - rect.left : rect.width / 2;
+    const y = t ? t.clientY - rect.top : rect.height / 2;
+    setPressedMenu(key);
+    setMenuRipples((prev) => ({ ...prev, [key]: { x, y, animate: false } }));
+    requestAnimationFrame(() => {
+      setMenuRipples((prev) => ({
+        ...prev,
+        [key]: { ...prev[key], animate: true },
+      }));
+    });
+    setTimeout(() => {
+      setMenuRipples((prev) => {
+        const copy = { ...prev };
+        delete copy[key];
+        return copy;
+      });
+    }, 480);
+  };
+  const handleMenuTap = async (key, placeholder) => {
+    if (placeholder) return;
+    setPressedMenu(key);
+    setTimeout(() => setPressedMenu(null), 140);
+    if (isAndroid) {
+      try {
+        const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+        await Haptics.selectionStart();
+        await Haptics.impact({ style: ImpactStyle.Light });
+        await Haptics.selectionEnd();
+      } catch (_) {}
+    }
+    onNavigate(key);
+  };
+
+  const menuContentWidth = Math.max(220, viewportWidth - 54);
+  const campaignCardWidth = Math.min(350, menuContentWidth);
+  const compactViewport = viewportHeight < 760;
+  const campaignImageHeight = Math.round(
+    Math.min(
+      compactViewport ? 128 : 170,
+      Math.max(
+        compactViewport ? 98 : 120,
+        campaignCardWidth * (compactViewport ? 0.38 : 0.46),
+      ),
+    ),
+  );
+
+  const getCampaignImageFit = (campaign) => {
+    const ratio = campaignImageRatios[campaign?.id];
+    if (!ratio) return "cover";
+    return ratio < 1.2 ? "contain" : "cover";
+  };
+
+  const pauseCampaignTemporarily = (ms = 5000) => {
+    setCampaignPaused(true);
+    if (resumeCampaignTimerRef.current)
+      clearTimeout(resumeCampaignTimerRef.current);
+    resumeCampaignTimerRef.current = setTimeout(() => {
+      setCampaignPaused(false);
+    }, ms);
+  };
+
+  const goToNextCampaign = () => {
+    if (campaigns.length <= 1) return;
+    setCampaignIndex((prev) => (prev + 1) % campaigns.length);
+    pauseCampaignTemporarily(5500);
+  };
+
+  const goToPrevCampaign = () => {
+    if (campaigns.length <= 1) return;
+    setCampaignIndex(
+      (prev) => (prev - 1 + campaigns.length) % campaigns.length,
+    );
+    pauseCampaignTemporarily(5500);
+  };
+
+  useEffect(() => {
+    // Fallback viewport height untuk device lama yang belum stabil mendukung dvh.
+    const setLegacyViewportHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--app-vh", `${vh}px`);
+    };
+    setLegacyViewportHeight();
+    window.addEventListener("resize", setLegacyViewportHeight);
+    window.addEventListener("orientationchange", setLegacyViewportHeight);
+    return () => {
+      window.removeEventListener("resize", setLegacyViewportHeight);
+      window.removeEventListener("orientationchange", setLegacyViewportHeight);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("campaigns")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!error) setCampaigns(data || []);
+      } catch (e) {
+        console.error("Error fetching campaigns:", e);
+      } finally {
+        setLoadingCampaigns(false);
+      }
+    };
+    fetchCampaigns();
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => {
+      setViewportWidth(window.innerWidth);
+      setViewportHeight(window.innerHeight);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (campaigns.length <= 1 || campaignPaused) return;
+    const intervalId = setInterval(() => {
+      setCampaignIndex((prev) => (prev + 1) % campaigns.length);
+    }, 11000);
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [campaigns.length, campaignPaused]);
+
+  const [allowedMenus, setAllowedMenus] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setAllowedMenus(null);
+      return;
+    }
+    fetchAllowedMenusForUser(user).then((menus) => {
+      if (!cancelled) setAllowedMenus(menus);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.jabatan, user?.site]);
+
+  // KPI bulanan (hazard, take5, pto) untuk evaluator
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const roleStr = (user?.role || "").toString().toLowerCase();
+        const isEvaluator =
+          roleStr.includes("evaluator") || roleStr.includes("admin");
+        if (!isEvaluator || !user?.site) {
+          setKpiData(null);
+          return;
+        }
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999,
+        );
+        const { data: hz } = await supabase
+          .from("hazard_report")
+          .select("id")
+          .eq("lokasi", user.site)
+          .ilike("status", "closed")
+          .gte("created_at", start.toISOString())
+          .lte("created_at", end.toISOString());
+        const { data: t5 } = await supabase
+          .from("take_5")
+          .select("id")
+          .eq("site", user.site)
+          .ilike("status", "closed")
+          .gte("created_at", start.toISOString())
+          .lte("created_at", end.toISOString());
+        const { data: pto } = await supabase
+          .from("planned_task_observation")
+          .select("id")
+          .eq("site", user.site)
+          .eq("status", "closed")
+          .gte("created_at", start.toISOString())
+          .lte("created_at", end.toISOString());
+        // Ambil target per jabatan & site untuk modul terkait
+        const { data: targetRows } = await supabase
+          .from("target_per_jabatan_site")
+          .select("module, target_per_bulan")
+          .eq("site", user.site)
+          .in("module", ["hazard", "take_5", "pto"]);
+        // Hitung jumlah user per jabatan pada site ini
+        const { data: siteUsers } = await supabase
+          .from("users")
+          .select("jabatan")
+          .eq("site", user.site)
+          .not("jabatan", "is", null);
+        const usersPerJabatan = {};
+        (siteUsers || []).forEach((u) => {
+          const j = (u.jabatan || "").trim();
+          if (!j) return;
+          usersPerJabatan[j] = (usersPerJabatan[j] || 0) + 1;
+        });
+        // Target agregat = Σ (target_per_bulan_jabatan × jumlah_user_dengan_jabatan_itu)
+        const sumTarget = (mod) => {
+          return (targetRows || [])
+            .filter((r) => r.module === mod)
+            .reduce((acc, r) => {
+              const t = Number(r.target_per_bulan) || 0;
+              // Cari jumlah user untuk jabatan tersebut
+              // catatan: beberapa baris target mungkin tidak memiliki kolom jabatan jika skema lama,
+              // namun di pengaturan saat ini target diset per jabatan per site.
+              // Jika kolom jabatan tidak tersedia di select minimal, tambahkan pada select di atas.
+              return acc + t; // sementara asumsi setiap baris mewakili satu user jika kolom jabatan tidak tersedia
+            }, 0);
+        };
+        // Jika target_per_jabatan_site tidak memiliki kolom jabatan pada select di atas, tambahkan
+        // seleksi ulang dengan jabatan untuk akurasi per-baris:
+        if (
+          targetRows &&
+          targetRows.length > 0 &&
+          targetRows[0].jabatan === undefined
+        ) {
+          const { data: targetRowsWithJabatan } = await supabase
+            .from("target_per_jabatan_site")
+            .select("module, target_per_bulan, jabatan")
+            .eq("site", user.site)
+            .in("module", ["hazard", "take_5", "pto"]);
+          const sumTargetWithJabatan = (mod) =>
+            (targetRowsWithJabatan || [])
+              .filter((r) => r.module === mod)
+              .reduce((acc, r) => {
+                const t = Number(r.target_per_bulan) || 0;
+                const count = usersPerJabatan[(r.jabatan || "").trim()] || 0;
+                return acc + t * count;
+              }, 0);
+          const targetHazard = sumTargetWithJabatan("hazard");
+          const targetTake5 = sumTargetWithJabatan("take_5");
+          const targetPto = sumTargetWithJabatan("pto");
+          const closedHazard = (hz || []).length;
+          const closedTake5 = (t5 || []).length;
+          const closedPto = (pto || []).length;
+          const percent = {
+            hazard:
+              targetHazard > 0
+                ? Math.min(100, Math.round((closedHazard / targetHazard) * 100))
+                : 0,
+            take5:
+              targetTake5 > 0
+                ? Math.min(100, Math.round((closedTake5 / targetTake5) * 100))
+                : 0,
+            pto:
+              targetPto > 0
+                ? Math.min(100, Math.round((closedPto / targetPto) * 100))
+                : 0,
+          };
+          setKpiData({
+            site: user.site,
+            label: now.toLocaleDateString("id-ID", {
+              month: "long",
+              year: "numeric",
+            }),
+            count: { hazard: closedHazard, take5: closedTake5, pto: closedPto },
+            target: {
+              hazard: targetHazard,
+              take5: targetTake5,
+              pto: targetPto,
+            },
+            percent,
+          });
+          return; // selesai, tidak lanjutkan ke jalur fallback
+        }
+        const closedHazard = (hz || []).length;
+        const closedTake5 = (t5 || []).length;
+        const closedPto = (pto || []).length;
+        const target = {
+          hazard: sumTarget("hazard"),
+          take5: sumTarget("take_5"),
+          pto: sumTarget("pto"),
+        };
+        const percent = {
+          hazard:
+            target.hazard > 0
+              ? Math.min(100, Math.round((closedHazard / target.hazard) * 100))
+              : 0,
+          take5:
+            target.take5 > 0
+              ? Math.min(100, Math.round((closedTake5 / target.take5) * 100))
+              : 0,
+          pto:
+            target.pto > 0
+              ? Math.min(100, Math.round((closedPto / target.pto) * 100))
+              : 0,
+        };
+        setKpiData({
+          site: user.site,
+          label: now.toLocaleDateString("id-ID", {
+            month: "long",
+            year: "numeric",
+          }),
+          count: { hazard: closedHazard, take5: closedTake5, pto: closedPto },
+          target,
+          percent,
+        });
+      } catch (_) {
+        setKpiData(null);
+      }
+    };
+    load();
+  }, [user?.role, user?.site]);
+
+  useEffect(() => {
+    return () => {
+      if (resumeCampaignTimerRef.current) {
+        clearTimeout(resumeCampaignTimerRef.current);
+      }
+    };
+  }, []);
+
+  const canAccessMonitoring =
+    user?.role === "evaluator" ||
+    user?.role === "admin" ||
+    user?.jabatan === "Admin Site Project";
+
+  const allMenuItems = [
+    {
+      key: "fit-to-work",
+      label: "FTW",
+      fullLabel: "Fit To Work",
+      icon: "👷",
+      color: "#3b82f6",
+      placeholder: false,
+    },
+    {
+      key: "fit-to-work-validation",
+      label: "Validasi",
+      fullLabel: "Validasi Fit To Work",
+      icon: "✅",
+      color: "#10b981",
+      placeholder: false,
+    },
+    {
+      key: "daily-attendance",
+      label: "Laporan",
+      fullLabel: "Laporan Kehadiran",
+      icon: "📄",
+      color: "#0ea5e9",
+      placeholder: false,
+    },
+    {
+      key: "fatigue-check",
+      label: "Fatigue",
+      fullLabel: "Fatigue Check Report",
+      icon: "😴",
+      color: "#8b5cf6",
+      placeholder: false,
+    },
+    {
+      key: "take-5",
+      label: "Take 5",
+      fullLabel: "Take 5",
+      icon: "⏰",
+      color: "#f59e0b",
+      placeholder: false,
+    },
+    {
+      key: "hazard",
+      label: "Hazard",
+      fullLabel: "Hazard",
+      icon: "⚠️",
+      color: "#ef4444",
+      placeholder: false,
+    },
+    {
+      key: "pto",
+      label: "PTO",
+      fullLabel: "Laporan PTO",
+      icon: "📋",
+      color: "#8b5cf6",
+      placeholder: false,
+    },
+    ...(canAccessMonitoring
+      ? [
+          {
+            key: "monitoring",
+            label: "Monitoring",
+            fullLabel: "Monitoring",
+            icon: "📊",
+            color: "#ea580c",
+            placeholder: false,
+          },
+        ]
+      : []),
+    {
+      key: "slot-7",
+      label: "Segera",
+      fullLabel: "Segera",
+      icon: "➕",
+      color: "#9ca3af",
+      placeholder: true,
+    },
+    {
+      key: "slot-8",
+      label: "Segera",
+      fullLabel: "Segera",
+      icon: "➕",
+      color: "#9ca3af",
+      placeholder: true,
+    },
+  ];
+
+  const hasReportAccess = allowedMenus
+    ? allowedMenus.includes("daily-attendance")
+    : canAccessReportFallback(user);
+  const hasFatigueCheckAccess = allowedMenus
+    ? allowedMenus.includes("fatigue-check")
+    : canAccessReportFallback(user);
+  const hasPTOAccess = allowedMenus
+    ? allowedMenus.includes("pto")
+    : canAccessPTOFallback(user);
+  const hasValidasiAccess = allowedMenus
+    ? allowedMenus.includes("fit-to-work-validation")
+    : canAccessFitToWorkValidationFallback(user);
+  const isRegularUser = !hasReportAccess && !hasPTOAccess && !hasValidasiAccess;
+
+  const menuItemsRaw = (
+    allowedMenus
+      ? allMenuItems.filter(
+          (item) =>
+            !item.placeholder &&
+            (allowedMenus.includes(item.key) ||
+              (item.key === "monitoring" && canAccessMonitoring)),
+        )
+      : allMenuItems.filter((item) => {
+          if (item.key === "monitoring") return canAccessMonitoring;
+          if (isRegularUser)
+            return ["fit-to-work", "take-5", "hazard"].includes(item.key);
+          if (item.key === "daily-attendance" && !hasReportAccess) return false;
+          if (item.key === "fatigue-check" && !hasFatigueCheckAccess)
+            return false;
+          if (item.key === "pto" && !hasPTOAccess) return false;
+          return true;
+        })
+  ).map((item) => {
+    if (item.key === "fit-to-work-validation" && !hasValidasiAccess) {
+      return { ...item, placeholder: true, label: "Segera" };
+    }
+    return item;
+  });
+
+  const menuItems = allowedMenus
+    ? menuItemsRaw
+    : isRegularUser
+      ? menuItemsRaw
+      : hasReportAccess
+        ? menuItemsRaw
+        : menuItemsRaw.slice(0, 6);
+
+  const useListLayout = menuItems.length <= 5;
+
+  return (
+    <>
+      <style>{`
+      .mobile-campaign-scroll::-webkit-scrollbar { display: none; }
+    `}</style>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          minHeight: "calc(var(--app-vh, 1vh) * 100)",
+          background: "#f8fafc",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
+          display: "flex",
+          flexDirection: "column",
+          paddingBottom: "calc(70px + env(safe-area-inset-bottom))", // Space untuk bottom nav
+          boxSizing: "border-box",
+        }}
+      >
+        {/* Header dengan foto profil - fixed layout, tidak scroll */}
+        <div
+          className="mobile-home-header"
+          style={{
+            flexShrink: 0,
+            background: "linear-gradient(135deg, #ea580c 0%, #dc2626 100%)",
+            padding: "16px 20px",
+            color: "white",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+          }}
+        >
+          <div
+            className="mobile-home-profile"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              maxWidth: 1200,
+              margin: "0 auto",
+              minHeight: 56,
+            }}
+          >
+            {/* Foto Profil */}
+            <div
+              className="mobile-home-avatar"
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid rgba(255,255,255,0.3)",
+                flexShrink: 0,
+              }}
+            >
+              {(() => {
+                const avatarUrl =
+                  user?.photo_url ||
+                  user?.avatar_url ||
+                  user?.foto_url ||
+                  user?.foto ||
+                  null;
+                const initials = (user?.nama || user?.user || "?")
+                  .toString()
+                  .trim()
+                  .split(" ")
+                  .map((s) => s[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
+
+                return avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="avatar"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 700,
+                      color: "white",
+                    }}
+                  >
+                    {initials}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Nama dan Jabatan - dibatasi lebar dan baris agar height konsisten */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                overflow: "hidden",
+              }}
+            >
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  marginBottom: 2,
+                  lineHeight: 1.3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
+                {user?.nama || user?.user || "Pengguna"}
+              </h1>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  opacity: 0.95,
+                  fontWeight: 500,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  lineHeight: 1.3,
+                }}
+              >
+                {user?.jabatan || "Karyawan"}
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  opacity: 0.85,
+                  marginTop: 2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Selamat datang di AEGIS KMB
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Menu + Campaign - tanpa scroll vertikal */}
+        <div
+          className="mobile-home-menu"
+          style={{
+            flex: 1,
+            minHeight: "min-content",
+            overflow: "visible",
+            padding: "8px 20px 8px",
+            maxWidth: 1200,
+            margin: "0 auto",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            className="mobile-home-menu-grid"
+            style={{
+              display: useListLayout ? "flex" : "grid",
+              flexDirection: useListLayout ? "column" : undefined,
+              gridTemplateColumns: useListLayout
+                ? undefined
+                : menuItems.length > 5
+                  ? "repeat(4, 1fr)"
+                  : "repeat(3, 1fr)",
+              gap: useListLayout ? 8 : 10,
+              flexShrink: 0,
+              paddingRight: 8,
+              boxSizing: "border-box",
+            }}
+          >
+            {menuItems.map((item) => (
+              <button
+                key={item.key}
+                onClick={() => handleMenuTap(item.key, item.placeholder)}
+                onTouchStart={(e) => triggerMenuRipple(e, item.key)}
+                onTouchEnd={() => setTimeout(() => setPressedMenu(null), 120)}
+                disabled={item.placeholder}
+                className="mobile-home-menu-item"
+                style={{
+                  background: item.placeholder ? "#f1f5f9" : "white",
+                  border: "none",
+                  borderRadius: 12,
+                  padding: useListLayout ? "12px 16px" : "10px 8px",
+                  cursor: item.placeholder ? "default" : "pointer",
+                  boxShadow: item.placeholder
+                    ? "none"
+                    : "0 4px 12px rgba(0,0,0,0.1)",
+                  transition: "all 0.2s ease",
+                  textAlign: useListLayout ? "left" : "center",
+                  display: "flex",
+                  flexDirection: useListLayout ? "row" : "column",
+                  alignItems: "center",
+                  gap: useListLayout ? 14 : 6,
+                  minHeight: useListLayout ? 56 : 72,
+                  transform:
+                    pressedMenu === item.key ? "scale(0.98)" : "scale(1)",
+                  backgroundColor:
+                    pressedMenu === item.key
+                      ? "#2563eb"
+                      : item.placeholder
+                        ? "#f1f5f9"
+                        : "white",
+                  opacity: item.placeholder ? 0.7 : 1,
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+                onMouseEnter={(e) => {
+                  if (!item.placeholder) {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow =
+                      "0 8px 24px rgba(0,0,0,0.15)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = item.placeholder
+                    ? "none"
+                    : "0 4px 12px rgba(0,0,0,0.1)";
+                }}
+              >
+                {menuRipples[item.key] && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: (menuRipples[item.key].y || 0) - 14,
+                      left: (menuRipples[item.key].x || 0) - 14,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      background: "rgba(59,130,246,0.35)",
+                      transform: menuRipples[item.key].animate
+                        ? "scale(16)"
+                        : "scale(0.6)",
+                      opacity: menuRipples[item.key].animate ? 0 : 0.6,
+                      transition: "transform 500ms ease, opacity 500ms ease",
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
+                <div
+                  className="mobile-home-menu-icon"
+                  style={{
+                    width: useListLayout ? 40 : 36,
+                    height: useListLayout ? 40 : 36,
+                    borderRadius: "10px",
+                    background: `${item.color}20`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: useListLayout ? 20 : 18,
+                    flexShrink: 0,
+                  }}
+                >
+                  {item.icon}
+                </div>
+                <span
+                  style={{
+                    fontSize: useListLayout ? 15 : 11,
+                    fontWeight: 600,
+                    color:
+                      pressedMenu === item.key
+                        ? "#ffffff"
+                        : item.placeholder
+                          ? "#94a3b8"
+                          : "#1f2937",
+                    lineHeight: 1.2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    flex: useListLayout ? 1 : undefined,
+                  }}
+                >
+                  {useListLayout && item.fullLabel && !item.placeholder
+                    ? item.fullLabel
+                    : item.label}
+                </span>
+                {item.key === "fit-to-work" &&
+                  ftwNeedsFill &&
+                  !item.placeholder && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 6,
+                        right: 6,
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        background: "#ef4444",
+                      }}
+                    />
+                  )}
+                {item.key === "fit-to-work-validation" &&
+                  validationCount > 0 &&
+                  !item.placeholder && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 6,
+                        right: 6,
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        background: "#ef4444",
+                      }}
+                    />
+                  )}
+              </button>
+            ))}
+          </div>
+
+          {/* KPI Target Bulanan - evaluator, dapat dipilih Hazard/Take5/PTO */}
+          {kpiData && (
+            <div style={{ paddingTop: 12, paddingBottom: 8 }}>
+              <div
+                style={{
+                  width: `min(${menuContentWidth}px, calc(100% - 14px))`,
+                  margin: 0,
+                  background: "#0f172a",
+                  border: "1px solid rgba(148,163,184,0.24)",
+                  borderRadius: 12,
+                  padding: 12,
+                  color: "#e2e8f0",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>
+                    Pencapaian Target Bulanan
+                  </div>
+                  <div
+                    style={{ fontSize: 12, color: "#93c5fd", fontWeight: 700 }}
+                  >
+                    {kpiData.label}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#cbd5e1",
+                    marginBottom: 8,
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>Site: {kpiData.site}</span>
+                  <span style={{ color: "#cbd5e1" }}>
+                    {kpiType === "hazard"
+                      ? "Hazard"
+                      : kpiType === "take5"
+                        ? "Take 5"
+                        : "PTO"}
+                  </span>
+                </div>
+                <div
+                  onTouchStart={(e) => {
+                    const x = e.touches?.[0]?.clientX || 0;
+                    kpiTouchRef.current = { startX: x, dx: 0, moved: false };
+                  }}
+                  onTouchMove={(e) => {
+                    const x = e.touches?.[0]?.clientX || 0;
+                    kpiTouchRef.current.dx = x - kpiTouchRef.current.startX;
+                    kpiTouchRef.current.moved = true;
+                  }}
+                  onTouchEnd={() => {
+                    const { dx, moved } = kpiTouchRef.current;
+                    const threshold = 40;
+                    if (moved && Math.abs(dx) > threshold) {
+                      if (dx < 0) {
+                        const next = kpiMetrics.indexOf(kpiType) + 1;
+                        if (next < kpiMetrics.length)
+                          setKpiType(kpiMetrics[next]);
+                      } else {
+                        const prev = kpiMetrics.indexOf(kpiType) - 1;
+                        if (prev >= 0) setKpiType(kpiMetrics[prev]);
+                      }
+                    }
+                  }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      width: `${kpiMetrics.length * 100}%`,
+                      transform: `translateX(-${kpiMetrics.indexOf(kpiType) * (100 / kpiMetrics.length)}%)`,
+                      transition: "transform 250ms ease",
+                    }}
+                  >
+                    {kpiMetrics.map((metric) => (
+                      <div
+                        key={metric}
+                        style={{
+                          width: `${100 / kpiMetrics.length}%`,
+                          paddingRight: 4,
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "relative",
+                            height: 10,
+                            borderRadius: 999,
+                            background: "rgba(148,163,184,0.25)",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${kpiData.percent[metric]}%`,
+                              height: "100%",
+                              background:
+                                "linear-gradient(90deg, #22c55e, #3b82f6)",
+                              transition: "width 300ms ease",
+                            }}
+                          />
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 6,
+                            fontSize: 12,
+                            color: "#93c5fd",
+                            fontWeight: 700,
+                            display: "flex",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <span>{kpiData.percent[metric]}% tercapai</span>
+                          <span>
+                            {metric === "hazard"
+                              ? "Closed Hazard"
+                              : metric === "take5"
+                                ? "Closed Take 5"
+                                : "Closed PTO"}
+                            : {kpiData.count[metric]}/{kpiData.target[metric]}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  {kpiMetrics.map((m) => {
+                    const idx = kpiMetrics.indexOf(kpiType);
+                    const cur = kpiMetrics.indexOf(m);
+                    return (
+                      <div
+                        key={`kpi-dot-${m}`}
+                        style={{
+                          width: cur === idx ? 18 : 6,
+                          height: 6,
+                          borderRadius: 999,
+                          background:
+                            cur === idx ? "#3b82f6" : "rgba(100,116,139,0.45)",
+                          transition: "all 200ms ease",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Campaign Carousel - below KPI */}
+          {!loadingCampaigns && campaigns.length > 0 && (
+            <div
+              style={{
+                flexShrink: 0,
+                padding: "10px 0 8px",
+              }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  width: `min(${menuContentWidth}px, calc(100% - 14px))`,
+                  margin: 0,
+                  minHeight: campaignImageHeight + (compactViewport ? 70 : 78),
+                }}
+                onTouchStart={() => setCampaignPaused(true)}
+                onTouchEnd={() => pauseCampaignTemporarily(4500)}
+                onMouseEnter={() => setCampaignPaused(true)}
+                onMouseLeave={() => setCampaignPaused(false)}
+              >
+                {campaigns.map((c, idx) => {
+                  const isActive = idx === campaignIndex;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() =>
+                        c.deskripsi ? setReadMoreCampaign(c) : undefined
+                      }
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        background: "#1f2937",
+                        border: "1px solid #374151",
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        cursor: c.deskripsi ? "pointer" : "default",
+                        boxShadow: "0 8px 20px rgba(15,23,42,0.20)",
+                        opacity: isActive ? 1 : 0,
+                        transform: isActive
+                          ? "translateX(0) scale(1)"
+                          : "translateX(6px) scale(0.985)",
+                        transition:
+                          "opacity 900ms ease, transform 1150ms cubic-bezier(0.22, 1, 0.36, 1)",
+                        pointerEvents: isActive ? "auto" : "none",
+                      }}
+                    >
+                      <div
+                        style={{ position: "relative", background: "#0f172a" }}
+                      >
+                        {c.image_url && !failedCampaignImages[c.id] ? (
+                          <img
+                            src={c.image_url}
+                            alt={c.judul}
+                            onLoad={(e) => {
+                              const ratio =
+                                e.currentTarget.naturalWidth /
+                                e.currentTarget.naturalHeight;
+                              setCampaignImageRatios((prev) =>
+                                prev[c.id] ? prev : { ...prev, [c.id]: ratio },
+                              );
+                            }}
+                            onError={() =>
+                              setFailedCampaignImages((prev) => ({
+                                ...prev,
+                                [c.id]: true,
+                              }))
+                            }
+                            style={{
+                              width: "100%",
+                              height: campaignImageHeight,
+                              objectFit: getCampaignImageFit(c),
+                              background: "#0f172a",
+                              display: "block",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "100%",
+                              height: campaignImageHeight,
+                              background:
+                                "linear-gradient(145deg, rgba(59,130,246,0.42), rgba(30,41,59,0.95))",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#bfdbfe",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              letterSpacing: "0.02em",
+                            }}
+                          >
+                            Image unavailable
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ padding: "10px 12px 12px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            color: "#e5e7eb",
+                            fontSize: compactViewport ? 13 : 14,
+                            marginBottom: c.deskripsi ? 3 : 0,
+                            lineHeight: 1.35,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {c.judul}
+                        </div>
+                        {c.deskripsi && (
+                          <>
+                            <div
+                              style={{
+                                color: "#9ca3af",
+                                fontSize: compactViewport ? 11 : 12,
+                                lineHeight: 1.4,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 1,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                marginBottom: 6,
+                              }}
+                            >
+                              {getPreviewText(c.deskripsi, 70)}
+                            </div>
+                            <span
+                              style={{
+                                color: "#93c5fd",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                letterSpacing: "0.02em",
+                              }}
+                            >
+                              Read more
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {campaigns.length > 1 && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={goToPrevCampaign}
+                    aria-label="Campaign sebelumnya"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      border: "1px solid #cbd5e1",
+                      background: "#fff",
+                      color: "#334155",
+                      fontSize: 16,
+                      lineHeight: 1,
+                      cursor: "pointer",
+                    }}
+                  >
+                    &#8249;
+                  </button>
+                  {campaigns.map((_, idx) => (
+                    <button
+                      key={`mobile-dot-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        setCampaignIndex(idx);
+                        pauseCampaignTemporarily(3000);
+                      }}
+                      aria-label={`Ke campaign ${idx + 1}`}
+                      style={{
+                        width: idx === campaignIndex ? 16 : 6,
+                        height: 6,
+                        borderRadius: 999,
+                        border: "none",
+                        background:
+                          idx === campaignIndex
+                            ? "#3b82f6"
+                            : "rgba(100,116,139,0.45)",
+                        cursor: "pointer",
+                        transition: "all 220ms ease",
+                      }}
+                    />
+                  ))}
+                  <span
+                    style={{
+                      marginLeft: 6,
+                      color: "#64748b",
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {campaignIndex + 1}/{campaigns.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={goToNextCampaign}
+                    aria-label="Campaign berikutnya"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      border: "1px solid #cbd5e1",
+                      background: "#fff",
+                      color: "#334155",
+                      fontSize: 16,
+                      lineHeight: 1,
+                      cursor: "pointer",
+                    }}
+                  >
+                    &#8250;
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {readMoreCampaign && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1100,
+              padding: "20px 20px 90px 20px",
+              boxSizing: "border-box",
+            }}
+            onClick={() => setReadMoreCampaign(null)}
+          >
+            <div
+              style={{
+                background: "#1f2937",
+                border: "1px solid #374151",
+                borderRadius: 12,
+                padding: 18,
+                maxWidth: 500,
+                width: "100%",
+                maxHeight: "65vh",
+                overflow: "auto",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3
+                style={{
+                  margin: "0 0 12px 0",
+                  color: "#e5e7eb",
+                  fontSize: 16,
+                  fontWeight: 700,
+                }}
+              >
+                {readMoreCampaign.judul}
+              </h3>
+              {readMoreCampaign.image_url && (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFullScreenImage(readMoreCampaign.image_url);
+                  }}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    setFullScreenImage(readMoreCampaign.image_url)
+                  }
+                  style={{
+                    cursor: "pointer",
+                    marginBottom: 12,
+                  }}
+                >
+                  <img
+                    src={readMoreCampaign.image_url}
+                    alt={readMoreCampaign.judul}
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                    }}
+                    style={{
+                      width: "100%",
+                      maxHeight: 140,
+                      objectFit: "cover",
+                      borderRadius: 8,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#60a5fa",
+                      marginTop: 4,
+                    }}
+                  >
+                    Ketuk untuk lihat ukuran penuh
+                  </div>
+                </div>
+              )}
+              <div
+                style={{
+                  color: "#9ca3af",
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}
+              >
+                {parseTextWithLinks(readMoreCampaign.deskripsi)}
+              </div>
+              <button
+                type="button"
+                onClick={() => setReadMoreCampaign(null)}
+                style={{
+                  marginTop: 14,
+                  padding: "8px 18px",
+                  background: "#374151",
+                  color: "#e5e7eb",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        )}
+
+        {fullScreenImage && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.95)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1200,
+              padding: 20,
+              boxSizing: "border-box",
+            }}
+            onClick={() => setFullScreenImage(null)}
+          >
+            <img
+              src={fullScreenImage}
+              alt="Full size"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
+
+        {/* Bottom Navigation */}
+        <MobileBottomNavigation
+          activeTab="home"
+          tasklistTodoCount={tasklistTodoCount}
+          onNavigate={(tab) => {
+            if (tab === "home") {
+              // Already on home
+            } else if (tab === "tasklist") {
+              onNavigate("tasklist");
+            } else if (tab === "profile") {
+              onNavigate("profile");
+            }
+          }}
+        />
+      </div>
+    </>
+  );
+}
+
+export default HomeMobile;
