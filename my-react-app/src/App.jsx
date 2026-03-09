@@ -236,7 +236,6 @@ function App() {
 
     // Tutup panel notifikasi saat pindah menu
     useEffect(() => {
-    useEffect(() => {
       setShowNotificationPanel(false);
     }, [activeMenu]);
 
