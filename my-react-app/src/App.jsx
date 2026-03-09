@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { supabase } from "./supabaseClient";
@@ -12,72 +12,30 @@ import {
   unregisterPushNotifications,
 } from "./utils/pushNotificationHelpers";
 import Login from "./components/Login";
-import Home from "./components/Home";
+import MonitoringPage from "./components/MonitoringPage";
+import SiteSelectionPage from "./components/SiteSelectionPage";
 import OfflineStatus from "./components/OfflineStatus";
-import VersionCheck from "./components/VersionCheck";
+import FitToWorkForm from "./components/FitToWorkForm";
+import Take5Form from "./components/Take5Form";
+import HazardForm from "./components/HazardForm";
+import TasklistPage from "./components/TasklistPage";
+import UserManagement from "./components/UserManagement";
+import Campaign from "./components/Campaign";
+import AdminSettings from "./components/AdminSettings";
+import Profile from "./components/Profile";
+import Home from "./components/Home";
+import FitToWorkValidationNew from "./components/FitToWorkValidationNew";
+import DailyAttendanceList from "./components/DailyAttendance";
+import DailyAttendanceForm from "./components/DailyAttendance/DailyAttendanceForm";
+import DailyAttendanceView from "./components/DailyAttendance/DailyAttendanceView";
+import FatigueCheckList from "./components/FatigueCheck";
+import FatigueCheckForm from "./components/FatigueCheck/FatigueCheckForm";
 import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
-// import DebugNrp from "./components/DebugNrp"; // Temporary Debug Component
+import PTOForm from "./components/PTOForm";
+import VersionCheck from "./components/VersionCheck";
+import DebugNrp from "./components/DebugNrp"; // Temporary Debug Component
 import aegisLogo from "./assets/aegis.png";
 import kmbLogo from "./assets/kmb.png";
-
-// Lazy load heavy components with prefetch capability
-const lazyWithPreload = (factory) => {
-  const Component = lazy(factory);
-  Component.preload = factory;
-  return Component;
-};
-
-const MonitoringPage = lazyWithPreload(() => import("./components/MonitoringPage"));
-const SiteSelectionPage = lazyWithPreload(() => import("./components/SiteSelectionPage"));
-const FitToWorkForm = lazyWithPreload(() => import("./components/FitToWorkForm"));
-const Take5Form = lazyWithPreload(() => import("./components/Take5Form"));
-const HazardForm = lazyWithPreload(() => import("./components/HazardForm"));
-const TasklistPage = lazyWithPreload(() => import("./components/TasklistPage"));
-const UserManagement = lazyWithPreload(() => import("./components/UserManagement"));
-const Campaign = lazyWithPreload(() => import("./components/Campaign"));
-const AdminSettings = lazyWithPreload(() => import("./components/AdminSettings"));
-const Profile = lazyWithPreload(() => import("./components/Profile"));
-const FitToWorkValidationNew = lazyWithPreload(() => import("./components/FitToWorkValidationNew"));
-const DailyAttendanceList = lazyWithPreload(() => import("./components/DailyAttendance"));
-const FatigueCheckList = lazyWithPreload(() => import("./components/FatigueCheck"));
-const PTOForm = lazyWithPreload(() => import("./components/PTOForm"));
-
-// Enhanced Loading Spinner Component
-const PageLoader = () => (
-  <div style={{ 
-    display: 'flex', 
-    flexDirection: 'column',
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    height: '100vh', 
-    width: '100%',
-    background: '#f8fafc',
-    gap: '16px'
-  }}>
-    <div style={{
-      width: '48px',
-      height: '48px',
-      border: '4px solid #e2e8f0',
-      borderTop: '4px solid #ea580c',
-      borderRadius: '50%',
-      animation: 'spin 0.8s ease-in-out infinite'
-    }} />
-    <div style={{ 
-      color: '#64748b', 
-      fontSize: '14px', 
-      fontWeight: 500,
-      fontFamily: 'system-ui, sans-serif'
-    }}>
-      Memuat...
-    </div>
-    <style>{`
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `}</style>
-  </div>
-);
 
 function App() {
   const [user, setUser] = useState(null);
@@ -276,37 +234,8 @@ function App() {
       };
     }, [user?.id, user?.jabatan, user?.site]);
 
-    // Prefetch components on idle
-    useEffect(() => {
-      const prefetchComponents = () => {
-        const components = [
-          TasklistPage,
-          Profile,
-          FitToWorkForm,
-          Take5Form,
-          HazardForm,
-          DailyAttendanceList
-        ];
-        
-        // Load one by one with delay to avoid network congestion
-        components.forEach((component, index) => {
-          setTimeout(() => {
-            if (component.preload) {
-              component.preload();
-            }
-          }, (index + 1) * 2000); // 2s, 4s, 6s...
-        });
-      };
-
-      // Only prefetch if on main app and idle
-      if (currentPage === "main-app" && 'requestIdleCallback' in window) {
-        window.requestIdleCallback(prefetchComponents, { timeout: 5000 });
-      } else if (currentPage === "main-app") {
-        setTimeout(prefetchComponents, 3000);
-      }
-    }, [currentPage]);
-
     // Tutup panel notifikasi saat pindah menu
+    useEffect(() => {
     useEffect(() => {
       setShowNotificationPanel(false);
     }, [activeMenu]);
@@ -1279,9 +1208,7 @@ function App() {
     return (
       <div className="app-container">
         {/* <DebugNrp /> */}
-        <Suspense fallback={<PageLoader />}>
-          <MonitoringPage user={user} onBack={() => setCurrentPage("main-app")} />
-        </Suspense>
+        <MonitoringPage user={user} onBack={() => setCurrentPage("main-app")} />
       </div>
     );
   }
@@ -1301,19 +1228,15 @@ function App() {
       {currentPage === "login" && <Login onLogin={handleLogin} />}
 
       {currentPage === "site-selection" && (
-        <Suspense fallback={<PageLoader />}>
-          <SiteSelectionPage
-            user={user}
-            onSiteSelect={handleSiteSelection}
-            onBack={() => setCurrentPage("login")}
-          />
-        </Suspense>
+        <SiteSelectionPage
+          user={user}
+          onSiteSelect={handleSiteSelection}
+          onBack={() => setCurrentPage("login")}
+        />
       )}
 
       {currentPage === "main-app" && (
-        <Suspense fallback={<PageLoader />}>
-          <MainApp setBackHandler={setBackHandler} />
-        </Suspense>
+        <MainApp setBackHandler={setBackHandler} />
       )}
     </div>
   );

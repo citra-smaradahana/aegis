@@ -14,9 +14,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           supabase: ['@supabase/supabase-js'],
-          utils: ['xlsx', 'jspdf', 'jspdf-autotable', 'html2canvas', 'react-to-print'],
-          charts: ['recharts'],
-          icons: ['react-icons'],
+          utils: ['xlsx', 'jspdf', 'jspdf-autotable'],
         },
       },
     },
