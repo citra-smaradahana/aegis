@@ -20,40 +20,56 @@ import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
 import aegisLogo from "./assets/aegis.png";
 import kmbLogo from "./assets/kmb.png";
 
-// Lazy load heavy components
-const MonitoringPage = lazy(() => import("./components/MonitoringPage"));
-const SiteSelectionPage = lazy(() => import("./components/SiteSelectionPage"));
-const FitToWorkForm = lazy(() => import("./components/FitToWorkForm"));
-const Take5Form = lazy(() => import("./components/Take5Form"));
-const HazardForm = lazy(() => import("./components/HazardForm"));
-const TasklistPage = lazy(() => import("./components/TasklistPage"));
-const UserManagement = lazy(() => import("./components/UserManagement"));
-const Campaign = lazy(() => import("./components/Campaign"));
-const AdminSettings = lazy(() => import("./components/AdminSettings"));
-const Profile = lazy(() => import("./components/Profile"));
-const FitToWorkValidationNew = lazy(() => import("./components/FitToWorkValidationNew"));
-const DailyAttendanceList = lazy(() => import("./components/DailyAttendance"));
-const FatigueCheckList = lazy(() => import("./components/FatigueCheck"));
-const PTOForm = lazy(() => import("./components/PTOForm"));
+// Lazy load heavy components with prefetch capability
+const lazyWithPreload = (factory) => {
+  const Component = lazy(factory);
+  Component.preload = factory;
+  return Component;
+};
 
-// Simple Loading Spinner Component
+const MonitoringPage = lazyWithPreload(() => import("./components/MonitoringPage"));
+const SiteSelectionPage = lazyWithPreload(() => import("./components/SiteSelectionPage"));
+const FitToWorkForm = lazyWithPreload(() => import("./components/FitToWorkForm"));
+const Take5Form = lazyWithPreload(() => import("./components/Take5Form"));
+const HazardForm = lazyWithPreload(() => import("./components/HazardForm"));
+const TasklistPage = lazyWithPreload(() => import("./components/TasklistPage"));
+const UserManagement = lazyWithPreload(() => import("./components/UserManagement"));
+const Campaign = lazyWithPreload(() => import("./components/Campaign"));
+const AdminSettings = lazyWithPreload(() => import("./components/AdminSettings"));
+const Profile = lazyWithPreload(() => import("./components/Profile"));
+const FitToWorkValidationNew = lazyWithPreload(() => import("./components/FitToWorkValidationNew"));
+const DailyAttendanceList = lazyWithPreload(() => import("./components/DailyAttendance"));
+const FatigueCheckList = lazyWithPreload(() => import("./components/FatigueCheck"));
+const PTOForm = lazyWithPreload(() => import("./components/PTOForm"));
+
+// Enhanced Loading Spinner Component
 const PageLoader = () => (
   <div style={{ 
     display: 'flex', 
+    flexDirection: 'column',
     justifyContent: 'center', 
     alignItems: 'center', 
     height: '100vh', 
     width: '100%',
-    background: '#f3f4f6'
+    background: '#f8fafc',
+    gap: '16px'
   }}>
     <div style={{
-      width: '40px',
-      height: '40px',
-      border: '4px solid #e5e7eb',
+      width: '48px',
+      height: '48px',
+      border: '4px solid #e2e8f0',
       borderTop: '4px solid #ea580c',
       borderRadius: '50%',
-      animation: 'spin 1s linear infinite'
+      animation: 'spin 0.8s ease-in-out infinite'
     }} />
+    <div style={{ 
+      color: '#64748b', 
+      fontSize: '14px', 
+      fontWeight: 500,
+      fontFamily: 'system-ui, sans-serif'
+    }}>
+      Memuat...
+    </div>
     <style>{`
       @keyframes spin {
         0% { transform: rotate(0deg); }
@@ -259,6 +275,36 @@ function App() {
         cancelled = true;
       };
     }, [user?.id, user?.jabatan, user?.site]);
+
+    // Prefetch components on idle
+    useEffect(() => {
+      const prefetchComponents = () => {
+        const components = [
+          TasklistPage,
+          Profile,
+          FitToWorkForm,
+          Take5Form,
+          HazardForm,
+          DailyAttendanceList
+        ];
+        
+        // Load one by one with delay to avoid network congestion
+        components.forEach((component, index) => {
+          setTimeout(() => {
+            if (component.preload) {
+              component.preload();
+            }
+          }, (index + 1) * 2000); // 2s, 4s, 6s...
+        });
+      };
+
+      // Only prefetch if on main app and idle
+      if (currentPage === "main-app" && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(prefetchComponents, { timeout: 5000 });
+      } else if (currentPage === "main-app") {
+        setTimeout(prefetchComponents, 3000);
+      }
+    }, [currentPage]);
 
     // Tutup panel notifikasi saat pindah menu
     useEffect(() => {
