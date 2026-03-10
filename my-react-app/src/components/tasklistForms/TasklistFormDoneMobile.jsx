@@ -33,7 +33,6 @@ function TasklistFormDoneMobile({ hazard, onClose, onSuccess, readOnly, embedded
         };
       } else {
         updateData = {
-        updateData = {
           alasan_penolakan_done: alasanPenolakan,
           status: 'Reject at Done',
           updated_at: new Date().toISOString(),
