@@ -35,7 +35,11 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
       if (selected === "terima") {
         const { error } = await supabase
           .from("hazard_report")
-          .update({ status: "Closed" })
+          .update({
+            status: "Closed",
+            updated_at: new Date().toISOString(),
+            date_closed: new Date().toISOString(),
+          })
           .eq("id", hazard.id);
         if (error) throw error;
       } else if (selected === "tolak") {
@@ -44,6 +48,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
           .update({
             status: "Reject at Done",
             alasan_penolakan_done: alasan,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", hazard.id);
         if (error) throw error;

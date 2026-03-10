@@ -42,6 +42,16 @@ const TABLE_OPTIONS = [
   { value: "tasklist", label: "Hazard Report" },
 ];
 
+const getStatusColor = (status) => {
+  if (!status) return "#6b7280";
+  const s = String(status).toLowerCase();
+  if (s === "open" || s === "pending" || s === "progress" || s === "submit") return "#f59e0b";
+  if (s === "done" || s === "approved" || s === "fit to work") return "#10b981";
+  if (s === "closed") return "#3b82f6";
+  if (s.includes("reject") || s === "not fit to work") return "#ef4444";
+  return "#6b7280";
+};
+
 function MonitoringPage({ user }) {
   const [selectedTable, setSelectedTable] = useState("fit_to_work_stats");
   const [dateFrom, setDateFrom] = useState("");
@@ -168,6 +178,19 @@ function MonitoringPage({ user }) {
   const [fitToWorkTablePage, setFitToWorkTablePage] = useState(0);
   const [fitToWorkTablePageSize, setFitToWorkTablePageSize] = useState(10);
 
+  // Pagination untuk tabel Data Monitoring (Take 5, Hazard, PTO)
+  const [take5TablePage, setTake5TablePage] = useState(0);
+  const [take5TablePageSize, setTake5TablePageSize] = useState(10);
+  const [hazardTablePage, setHazardTablePage] = useState(0);
+  const [hazardTablePageSize, setHazardTablePageSize] = useState(10);
+  const [ptoTablePage, setPtoTablePage] = useState(0);
+  const [ptoTablePageSize, setPtoTablePageSize] = useState(10);
+
+  // Detail Modal State
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedDetailData, setSelectedDetailData] = useState(null);
+  const [selectedDetailType, setSelectedDetailType] = useState("");
+
   // Detect mobile untuk posisi filter fixed (sidebar 240px di desktop)
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768,
@@ -203,8 +226,20 @@ function MonitoringPage({ user }) {
   useEffect(() => {
     if (selectedTable === "fit_to_work_stats") {
       setFitToWorkTablePage(0);
+    } else if (selectedTable === "take_5_stats") {
+      setTake5TablePage(0);
+    } else if (selectedTable === "hazard_stats") {
+      setHazardTablePage(0);
+    } else if (selectedTable === "pto_stats") {
+      setPtoTablePage(0);
     }
-  }, [fitToWorkStats.listData?.length, selectedTable]);
+  }, [
+    fitToWorkStats.listData?.length,
+    take5Stats.listData?.length,
+    hazardStats.listData?.length,
+    ptoStats.listData?.length,
+    selectedTable,
+  ]);
 
   // Fetch data when filters change (kecuali tab Pengaturan Target)
   useEffect(() => {
@@ -1763,13 +1798,13 @@ function MonitoringPage({ user }) {
     const listData = [...filteredData].sort(
       (a, b) =>
         new Date(
-          (a.tanggal && String(a.tanggal).slice(0, 10)) ||
-            (a.created_at && String(a.created_at).slice(0, 10)) ||
+          (b.tanggal && String(b.tanggal).slice(0, 10)) ||
+            (b.created_at && String(b.created_at).slice(0, 10)) ||
             "1970-01-01",
         ) -
         new Date(
-          (b.tanggal && String(b.tanggal).slice(0, 10)) ||
-            (b.created_at && String(b.created_at).slice(0, 10)) ||
+          (a.tanggal && String(a.tanggal).slice(0, 10)) ||
+            (a.created_at && String(a.created_at).slice(0, 10)) ||
             "1970-01-01",
         ),
     );
@@ -2011,7 +2046,7 @@ function MonitoringPage({ user }) {
 
     // Semua data (untuk download/analisa lengkap)
     const listData = [...filteredData].sort(
-      (a, b) => new Date(a.created_at) - new Date(b.created_at),
+      (a, b) => new Date(b.created_at) - new Date(a.created_at),
     );
 
     console.log("calculateHazardStats - Recent reports:", recentReports);
@@ -2138,7 +2173,7 @@ function MonitoringPage({ user }) {
       .slice(0, 10);
 
     const listData = [...filteredData].sort(
-      (a, b) => new Date(getPtoDateStr(a)) - new Date(getPtoDateStr(b)),
+      (a, b) => new Date(getPtoDateStr(b)) - new Date(getPtoDateStr(a)),
     );
 
     return {
@@ -4511,22 +4546,20 @@ function MonitoringPage({ user }) {
     if (loading) {
       return (
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-          Memuat statistik Take 5...
+          Memuat data Take 5...
         </div>
       );
     }
 
     return (
       <div style={{ padding: "0" }}>
-        {/* Content Container - Centered (lebar sama dengan Fit To Work) */}
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          {/* Header */}
           <div style={{ marginBottom: "30px" }}>
             <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
-              📊 Dashboard Statistik Take 5
+              📋 Data Laporan Take 5 Global
             </h2>
             <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
-              Monitoring pelaporan Take 5 dan status penyelesaian
+              Daftar seluruh laporan Take 5 yang telah dikerjakan oleh user
             </p>
           </div>
 
@@ -4539,7 +4572,6 @@ function MonitoringPage({ user }) {
               marginBottom: "30px",
             }}
           >
-            {/* Total Reports */}
             <div
               style={{
                 background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
@@ -4549,21 +4581,11 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Total Laporan
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Total Laporan</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {take5Stats.totalReports}
               </div>
             </div>
-
-            {/* Open Reports */}
             <div
               style={{
                 background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -4573,21 +4595,11 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Laporan Terbuka
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Laporan Terbuka</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {take5Stats.openReports}
               </div>
             </div>
-
-            {/* Done Reports */}
             <div
               style={{
                 background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -4597,21 +4609,11 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Laporan Selesai
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Laporan Selesai</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {take5Stats.doneReports}
               </div>
             </div>
-
-            {/* Completion Rate */}
             <div
               style={{
                 background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -4621,136 +4623,15 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Tingkat Penyelesaian
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Tingkat Penyelesaian</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {take5Stats.completionRate}%
               </div>
             </div>
           </div>
 
-          {/* Site Statistics */}
+          {/* Data Pengisian Take 5 */}
           <div style={{ marginBottom: "30px" }}>
-            <h3
-              style={{
-                color: "#ffffff",
-                marginBottom: "20px",
-                fontWeight: "600",
-              }}
-            >
-              📈 Statistik per Site {site && `- ${site}`}
-            </h3>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                gap: "16px",
-              }}
-            >
-              {Object.entries(take5Stats.siteStats).map(([siteName, stats]) => (
-                <div
-                  key={siteName}
-                  style={{
-                    background: "white",
-                    padding: "20px",
-                    borderRadius: "12px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    border: "1px solid #e5e7eb",
-                  }}
-                >
-                  <h4 style={{ color: "#232946", marginBottom: "15px" }}>
-                    {siteName}
-                  </h4>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "10px",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: "12px", color: "#666" }}>
-                        Total
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: "bold",
-                          color: "#232946",
-                        }}
-                      >
-                        {stats.total}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "12px", color: "#666" }}>
-                        Terbuka
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: "bold",
-                          color: "#f59e0b",
-                        }}
-                      >
-                        {stats.open}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "12px", color: "#666" }}>
-                        Selesai
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: "bold",
-                          color: "#10b981",
-                        }}
-                      >
-                        {stats.done}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "12px", color: "#666" }}>
-                        Tertutup
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: "bold",
-                          color: "#6b7280",
-                        }}
-                      >
-                        {stats.closed}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Daily Statistics */}
-          <div style={{ marginBottom: "30px" }}>
-            <h3
-              style={{
-                color: "#ffffff",
-                marginBottom: "20px",
-                fontWeight: "600",
-              }}
-            >
-              📅 Statistik{" "}
-              {dateFrom && dateTo
-                ? `${dateFrom} s/d ${dateTo}`
-                : "7 Hari Terakhir"}
-            </h3>
             <div
               style={{
                 background: "white",
@@ -4758,381 +4639,200 @@ function MonitoringPage({ user }) {
                 borderRadius: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 border: "1px solid #e5e7eb",
+                overflowX: "auto",
               }}
             >
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                    <th
+              {(take5Stats.listData || []).length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "#666",
+                    padding: "40px",
+                  }}
+                >
+                  Belum ada data pengisian Take 5
+                </div>
+              ) : (
+                <>
+                  {/* Pagination controls */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div
                       style={{
-                        textAlign: "left",
-                        padding: "12px",
-                        color: "#232946",
-                        fontWeight: "bold",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
                       }}
                     >
-                      Tanggal
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#232946",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Total
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#f59e0b",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Terbuka
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#10b981",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Selesai
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#6b7280",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Tertutup
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {take5Stats.dailyStats
-                    .slice()
-                    .reverse()
-                    .map((day, index) => (
-                      <tr
-                        key={day.date}
-                        style={{ borderBottom: "1px solid #e5e7eb" }}
+                      <span style={{ fontSize: "13px", color: "#374151" }}>Tampilkan</span>
+                      <select
+                        value={take5TablePageSize}
+                        onChange={(e) => {
+                          setTake5TablePageSize(Number(e.target.value));
+                          setTake5TablePage(0);
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          fontSize: "13px",
+                        }}
                       >
-                        <td style={{ padding: "12px", color: "#232946" }}>
-                          {new Date(day.date).toLocaleDateString("id-ID", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#232946",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.total}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#f59e0b",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.open}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#10b981",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.done}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#6b7280",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.closed}
-                        </td>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span style={{ fontSize: "13px", color: "#374151" }}>data</span>
+                    </div>
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      {take5Stats.listData.length} total data
+                    </div>
+                  </div>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Tanggal</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Nama Pekerja</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>NRP</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Site</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Tugas</th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#374151" }}>Status</th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#374151" }}>Aksi</th>
                       </tr>
-                    ))}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {(take5Stats.listData || [])
+                        .slice(
+                          take5TablePage * take5TablePageSize,
+                          take5TablePage * take5TablePageSize + take5TablePageSize
+                        )
+                        .map((row, index) => {
+                          return (
+                            <tr key={row.id || index} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                              <td style={{ padding: "12px", color: "#374151" }}>
+                                {row.tanggal
+                                  ? new Date(row.tanggal + "T12:00:00").toLocaleDateString("id-ID")
+                                  : "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.pelapor_nama || row.nama || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.nrp || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.site || row.lokasi || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.judul_pekerjaan || row.tugas || row.pekerjaan || row.area_observasi || "-"}</td>
+                              <td style={{ padding: "12px", textAlign: "center" }}>
+                                <span
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    backgroundColor: getStatusColor(row.status) + "20",
+                                    color: getStatusColor(row.status),
+                                  }}
+                                >
+                                  {row.status || "-"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px", textAlign: "center" }}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedDetailData(row);
+                                    setSelectedDetailType("take5");
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#3b82f6",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontSize: "13px",
+                                  }}
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  {/* Pagination next/prev */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      Menampilkan{" "}
+                      {take5Stats.listData.length === 0 ? 0 : take5TablePage * take5TablePageSize + 1} -{" "}
+                      {Math.min((take5TablePage + 1) * take5TablePageSize, take5Stats.listData.length)}{" "}
+                      dari {take5Stats.listData.length}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={() => setTake5TablePage((p) => Math.max(0, p - 1))}
+                        disabled={take5TablePage === 0}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background: take5TablePage === 0 ? "#f3f4f6" : "#fff",
+                          cursor: take5TablePage === 0 ? "not-allowed" : "pointer",
+                          fontSize: "13px",
+                          color: take5TablePage === 0 ? "#9ca3af" : "#374151",
+                        }}
+                      >
+                        Sebelumnya
+                      </button>
+                      <button
+                        onClick={() =>
+                          setTake5TablePage((p) =>
+                            p + 1 < Math.ceil(take5Stats.listData.length / take5TablePageSize) ? p + 1 : p
+                          )
+                        }
+                        disabled={take5TablePage + 1 >= Math.ceil(take5Stats.listData.length / take5TablePageSize)}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background:
+                            take5TablePage + 1 >= Math.ceil(take5Stats.listData.length / take5TablePageSize)
+                              ? "#f3f4f6"
+                              : "#fff",
+                          cursor:
+                            take5TablePage + 1 >= Math.ceil(take5Stats.listData.length / take5TablePageSize)
+                              ? "not-allowed"
+                              : "pointer",
+                          fontSize: "13px",
+                          color:
+                            take5TablePage + 1 >= Math.ceil(take5Stats.listData.length / take5TablePageSize)
+                              ? "#9ca3af"
+                              : "#374151",
+                        }}
+                      >
+                        Berikutnya
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-
-          {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
-          {(() => {
-            const isDaily = chartViewMode === "daily";
-            const agg = take5ChartAggregatedData;
-            let totalOpen = 0,
-              totalDone = 0,
-              totalClosed = 0;
-            if (isDaily || agg.length === 0) {
-              (take5Stats.dailyStats || []).forEach((d) => {
-                totalOpen += d.open ?? 0;
-                totalDone += d.done ?? 0;
-                totalClosed += d.closed ?? 0;
-              });
-            } else {
-              agg.forEach((d) => {
-                totalOpen += d.open ?? 0;
-                totalDone += d.done ?? 0;
-                totalClosed += d.closed ?? 0;
-              });
-            }
-            const pieData = [
-              { name: "Terbuka", value: totalOpen, color: "#f59e0b" },
-              { name: "Selesai", value: totalDone, color: "#10b981" },
-              { name: "Tertutup", value: totalClosed, color: "#6b7280" },
-            ].filter((d) => d.value > 0);
-            const barData =
-              isDaily || agg.length === 0
-                ? (take5Stats.dailyStats || []).map((d) => ({
-                    tanggal: new Date(d.date + "T12:00:00").toLocaleDateString(
-                      "id-ID",
-                      { weekday: "short", day: "numeric", month: "short" },
-                    ),
-                    Total: d.total ?? 0,
-                    Terbuka: d.open ?? 0,
-                    Selesai: d.done ?? 0,
-                    Tertutup: d.closed ?? 0,
-                  }))
-                : agg.map((d) => ({
-                    tanggal: d.label ?? "-",
-                    Total: d.total ?? 0,
-                    Terbuka: d.open ?? 0,
-                    Selesai: d.done ?? 0,
-                    Tertutup: d.closed ?? 0,
-                  }));
-            const hasCharts = pieData.length > 0 || barData.length > 0;
-            if (!hasCharts && isDaily) return null;
-            return (
-              <div
-                style={{
-                  marginBottom: "30px",
-                  background: "white",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
-                    gap: "12px",
-                  }}
-                >
-                  <h3
-                    style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}
-                  >
-                    📊 Distribusi Laporan
-                  </h3>
-                  <div style={{ display: "flex", gap: "4px" }}>
-                    {["daily", "monthly", "yearly"].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setChartViewMode(m)}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          border:
-                            chartViewMode === m
-                              ? "2px solid #3b82f6"
-                              : "1px solid #d1d5db",
-                          background: chartViewMode === m ? "#eff6ff" : "#fff",
-                          color: chartViewMode === m ? "#1d4ed8" : "#374151",
-                          fontSize: "12px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {m === "daily" && "Harian"}
-                        {m === "monthly" && "Bulanan"}
-                        {m === "yearly" && "Tahunan"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                    gap: "24px",
-                  }}
-                >
-                  {pieData.length > 0 && (
-                    <div>
-                      <h4
-                        style={{
-                          color: "#374151",
-                          marginBottom: "12px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Distribusi Status Laporan
-                        {chartViewMode === "daily" && " (7 Hari)"}
-                        {chartViewMode === "monthly" &&
-                          agg.length > 0 &&
-                          " (12 Bulan)"}
-                        {chartViewMode === "yearly" &&
-                          agg.length > 0 &&
-                          " (5 Tahun)"}
-                      </h4>
-                      <div
-                        style={{
-                          width: "100%",
-                          maxWidth: 380,
-                          height: 300,
-                          margin: "0 auto",
-                        }}
-                      >
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={55}
-                              outerRadius={90}
-                              paddingAngle={2}
-                              dataKey="value"
-                              label={({ name, value }) => `${name}: ${value}`}
-                            >
-                              {pieData.map((entry, i) => (
-                                <Cell key={i} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(v) => [v, ""]} />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  )}
-                  {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
-                    <div>
-                      <h4
-                        style={{
-                          color: "#374151",
-                          marginBottom: "12px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Statistik{" "}
-                        {chartViewMode === "daily"
-                          ? "Harian"
-                          : chartViewMode === "monthly"
-                            ? "Bulanan"
-                            : "Tahunan"}
-                        {chartViewMode === "daily" && " (7 Hari)"}
-                        {chartViewMode === "monthly" &&
-                          agg.length > 0 &&
-                          " (12 Bulan)"}
-                        {chartViewMode === "yearly" &&
-                          agg.length > 0 &&
-                          " (5 Tahun)"}
-                      </h4>
-                      <div style={{ width: "100%", height: 300 }}>
-                        {barData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                              data={barData}
-                              margin={{
-                                top: 10,
-                                right: 20,
-                                left: 10,
-                                bottom: 40,
-                              }}
-                            >
-                              <CartesianGrid
-                                strokeDasharray="3 3"
-                                stroke="#e5e7eb"
-                              />
-                              <XAxis
-                                dataKey="tanggal"
-                                tick={{ fontSize: 11 }}
-                                height={40}
-                              />
-                              <YAxis
-                                tick={{ fontSize: 12 }}
-                                allowDecimals={false}
-                              />
-                              <Tooltip />
-                              <Legend />
-                              <Bar
-                                dataKey="Total"
-                                fill="#3b82f6"
-                                name="Total"
-                                radius={[4, 4, 0, 0]}
-                              />
-                              <Bar
-                                dataKey="Terbuka"
-                                fill="#f59e0b"
-                                name="Terbuka"
-                                radius={[4, 4, 0, 0]}
-                              />
-                              <Bar
-                                dataKey="Selesai"
-                                fill="#10b981"
-                                name="Selesai"
-                                radius={[4, 4, 0, 0]}
-                              />
-                              <Bar
-                                dataKey="Tertutup"
-                                fill="#6b7280"
-                                name="Tertutup"
-                                radius={[4, 4, 0, 0]}
-                              />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div
-                            style={{
-                              textAlign: "center",
-                              color: "#6b7280",
-                              fontSize: "13px",
-                              paddingTop: "80px",
-                            }}
-                          >
-                            Memuat data...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Individual Statistics */}
-          {renderIndividualStatsTable(individualStats.take5, "take_5")}
         </div>
       </div>
     );
@@ -5143,7 +4843,7 @@ function MonitoringPage({ user }) {
     if (loading) {
       return (
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-          Memuat statistik Hazard...
+          Memuat data Hazard...
         </div>
       );
     }
@@ -5155,10 +4855,10 @@ function MonitoringPage({ user }) {
           {/* Header */}
           <div style={{ marginBottom: "30px" }}>
             <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
-              📊 Dashboard Statistik Hazard
+              📋 Data Laporan Hazard Global
             </h2>
             <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
-              Monitoring pelaporan Hazard dan status penyelesaian
+              Daftar seluruh laporan Hazard yang telah dikerjakan oleh user
             </p>
           </div>
 
@@ -5181,16 +4881,8 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Total Laporan
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Total Laporan</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.totalReports}
               </div>
             </div>
@@ -5206,13 +4898,7 @@ function MonitoringPage({ user }) {
               }}
             >
               <div style={{ fontSize: "14px", opacity: 0.9 }}>Submit</div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.submitReports}
               </div>
             </div>
@@ -5228,13 +4914,7 @@ function MonitoringPage({ user }) {
               }}
             >
               <div style={{ fontSize: "14px", opacity: 0.9 }}>Open</div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.openReports}
               </div>
             </div>
@@ -5250,13 +4930,7 @@ function MonitoringPage({ user }) {
               }}
             >
               <div style={{ fontSize: "14px", opacity: 0.9 }}>Progress</div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.progressReports}
               </div>
             </div>
@@ -5272,18 +4946,28 @@ function MonitoringPage({ user }) {
               }}
             >
               <div style={{ fontSize: "14px", opacity: 0.9 }}>Done</div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.doneReports}
               </div>
             </div>
 
-            {/* Completion Rate */}
+            {/* Closed Reports */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(6, 182, 212, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
+                {hazardStats.closedReports}
+              </div>
+            </div>
+
+            {/* Reject Reports */}
             <div
               style={{
                 background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
@@ -5293,16 +4977,24 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Tingkat Penyelesaian
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Reject</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
+                {hazardStats.rejectOpenReports + hazardStats.rejectDoneReports}
               </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+            </div>
+
+            {/* Completion Rate */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                color: "white",
+                padding: "20px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Tingkat Penyelesaian</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.completionRate}%
               </div>
             </div>
@@ -5312,22 +5004,11 @@ function MonitoringPage({ user }) {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gridTemplateColumns: "repeat(3, 1fr)",
               gap: "16px",
               marginBottom: "30px",
             }}
           >
-            <h3
-              style={{
-                color: "#ffffff",
-                marginBottom: "20px",
-                gridColumn: "1 / -1",
-                fontWeight: "600",
-              }}
-            >
-              ⏰ Statistik Ketepatan Penyelesaian
-            </h3>
-
             {/* Closed On Time */}
             <div
               style={{
@@ -5338,16 +5019,8 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Closed On Time
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed On Time</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.closedOnTime || 0}
               </div>
               <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
@@ -5365,16 +5038,8 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Overdue Reports
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Overdue Reports</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.overdueReports || 0}
               </div>
               <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
@@ -5392,16 +5057,8 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Closed Overdue
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed Overdue</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {hazardStats.closedOverdue || 0}
               </div>
               <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "4px" }}>
@@ -5410,151 +5067,8 @@ function MonitoringPage({ user }) {
             </div>
           </div>
 
-          {/* Site Statistics */}
+          {/* Data Pengisian Hazard */}
           <div style={{ marginBottom: "30px" }}>
-            <h3
-              style={{
-                color: "#ffffff",
-                marginBottom: "20px",
-                fontWeight: "600",
-              }}
-            >
-              📈 Statistik per Site {site && `- ${site}`}
-            </h3>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                gap: "16px",
-              }}
-            >
-              {Object.entries(hazardStats.siteStats).map(
-                ([siteName, stats]) => (
-                  <div
-                    key={siteName}
-                    style={{
-                      background: "white",
-                      padding: "20px",
-                      borderRadius: "12px",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                      border: "1px solid #e5e7eb",
-                    }}
-                  >
-                    <h4 style={{ color: "#232946", marginBottom: "15px" }}>
-                      {siteName}
-                    </h4>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "10px",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Total
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#232946",
-                          }}
-                        >
-                          {stats.total}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Submit
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#6b7280",
-                          }}
-                        >
-                          {stats.submit}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Open
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#f59e0b",
-                          }}
-                        >
-                          {stats.open}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Progress
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#8b5cf6",
-                          }}
-                        >
-                          {stats.progress}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Done
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#10b981",
-                          }}
-                        >
-                          {stats.done}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Closed
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#6b7280",
-                          }}
-                        >
-                          {stats.closed}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
-
-          {/* Daily Statistics */}
-          <div style={{ marginBottom: "30px" }}>
-            <h3
-              style={{
-                color: "#ffffff",
-                marginBottom: "20px",
-                fontWeight: "600",
-              }}
-            >
-              📅 Statistik{" "}
-              {dateFrom && dateTo
-                ? `${dateFrom} s/d ${dateTo}`
-                : "7 Hari Terakhir"}
-            </h3>
             <div
               style={{
                 background: "white",
@@ -5562,371 +5076,200 @@ function MonitoringPage({ user }) {
                 borderRadius: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 border: "1px solid #e5e7eb",
-                overflow: "auto",
+                overflowX: "auto",
               }}
             >
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  minWidth: "800px",
-                }}
-              >
-                <thead>
-                  <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "12px",
-                        color: "#232946",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Tanggal
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#232946",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Total
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#6b7280",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Submit
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#f59e0b",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Open
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#8b5cf6",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Progress
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#10b981",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Done
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#ef4444",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Reject
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#6b7280",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Closed
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hazardStats.dailyStats
-                    .slice()
-                    .reverse()
-                    .map((day, index) => (
-                      <tr
-                        key={day.date}
-                        style={{ borderBottom: "1px solid #e5e7eb" }}
-                      >
-                        <td style={{ padding: "12px", color: "#232946" }}>
-                          {new Date(day.date).toLocaleDateString("id-ID", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#232946",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.total}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#6b7280",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.submit}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#f59e0b",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.open}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#8b5cf6",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.progress}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#10b981",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.done}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#ef4444",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.rejectOpen + day.rejectDone}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#6b7280",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.closed}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Distribusi Laporan - Satu container, dua chart kiri kanan */}
-          {(() => {
-            const pieData = [
-              {
-                name: "Submit",
-                value: hazardStats.submitReports || 0,
-                color: "#6b7280",
-              },
-              {
-                name: "Open",
-                value: hazardStats.openReports || 0,
-                color: "#f59e0b",
-              },
-              {
-                name: "Progress",
-                value: hazardStats.progressReports || 0,
-                color: "#8b5cf6",
-              },
-              {
-                name: "Done",
-                value: hazardStats.doneReports || 0,
-                color: "#10b981",
-              },
-              {
-                name: "Reject Open",
-                value: hazardStats.rejectOpenReports || 0,
-                color: "#ef4444",
-              },
-              {
-                name: "Reject Done",
-                value: hazardStats.rejectDoneReports || 0,
-                color: "#f97316",
-              },
-              {
-                name: "Closed",
-                value: hazardStats.closedReports || 0,
-                color: "#3b82f6",
-              },
-            ].filter((d) => d.value > 0);
-            const timelinessData = [
-              {
-                name: "Closed On Time",
-                value: hazardStats.closedOnTime || 0,
-                color: "#10b981",
-              },
-              {
-                name: "Overdue",
-                value: hazardStats.overdueReports || 0,
-                color: "#f59e0b",
-              },
-              {
-                name: "Closed Over Due",
-                value: hazardStats.closedOverdue || 0,
-                color: "#ef4444",
-              },
-            ].filter((d) => d.value > 0);
-            const hasCharts = pieData.length > 0 || timelinessData.length > 0;
-            if (!hasCharts) return null;
-            return (
-              <div
-                style={{
-                  marginBottom: "30px",
-                  background: "white",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                <h3
-                  style={{
-                    color: "#1a1a1a",
-                    marginBottom: "20px",
-                    fontWeight: "600",
-                  }}
-                >
-                  📊 Distribusi Laporan
-                </h3>
+              {(hazardStats.listData || []).length === 0 ? (
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                    gap: "24px",
+                    textAlign: "center",
+                    color: "#666",
+                    padding: "40px",
                   }}
                 >
-                  {pieData.length > 0 && (
-                    <div>
-                      <h4
-                        style={{
-                          color: "#374151",
-                          marginBottom: "12px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Distribusi Status Laporan
-                      </h4>
-                      <div
-                        style={{
-                          width: "100%",
-                          maxWidth: 420,
-                          height: 300,
-                          margin: "0 auto",
-                        }}
-                      >
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={55}
-                              outerRadius={90}
-                              paddingAngle={2}
-                              dataKey="value"
-                              label={({ name, value }) => `${name}: ${value}`}
-                            >
-                              {pieData.map((entry, i) => (
-                                <Cell key={i} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(v) => [v, ""]} />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  )}
-                  {timelinessData.length > 0 && (
-                    <div>
-                      <h4
-                        style={{
-                          color: "#374151",
-                          marginBottom: "12px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Ketepatan Penyelesaian
-                      </h4>
-                      <div
-                        style={{
-                          width: "100%",
-                          maxWidth: 420,
-                          height: 300,
-                          margin: "0 auto",
-                        }}
-                      >
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={timelinessData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={55}
-                              outerRadius={90}
-                              paddingAngle={2}
-                              dataKey="value"
-                              label={({ name, value }) => `${name}: ${value}`}
-                            >
-                              {timelinessData.map((entry, i) => (
-                                <Cell key={i} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(v) => [v, ""]} />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  )}
+                  Belum ada data pengisian Hazard
                 </div>
-              </div>
-            );
-          })()}
-
-          {/* Individual Statistics */}
-          {renderIndividualStatsTable(individualStats.hazard, "hazard")}
+              ) : (
+                <>
+                  {/* Pagination controls */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <span style={{ fontSize: "13px", color: "#374151" }}>Tampilkan</span>
+                      <select
+                        value={hazardTablePageSize}
+                        onChange={(e) => {
+                          setHazardTablePageSize(Number(e.target.value));
+                          setHazardTablePage(0);
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span style={{ fontSize: "13px", color: "#374151" }}>data</span>
+                    </div>
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      {hazardStats.listData.length} total data
+                    </div>
+                  </div>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Tanggal</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Pelapor</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Lokasi</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Bahaya</th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#374151" }}>Status</th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#374151" }}>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(hazardStats.listData || [])
+                        .slice(
+                          hazardTablePage * hazardTablePageSize,
+                          hazardTablePage * hazardTablePageSize + hazardTablePageSize
+                        )
+                        .map((row, index) => {
+                          return (
+                            <tr key={row.id || index} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                              <td style={{ padding: "12px", color: "#374151" }}>
+                                {row.created_at
+                                  ? toWitaDateStrFromISO(row.created_at)
+                                  : "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.pelapor_nama || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.lokasi || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>
+                                {row.deskripsi || row.tindakan || row.kategori_bahaya || "-"}
+                              </td>
+                              <td style={{ padding: "12px", textAlign: "center" }}>
+                                <span
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    backgroundColor: getStatusColor(row.status) + "20",
+                                    color: getStatusColor(row.status),
+                                  }}
+                                >
+                                  {row.status || "-"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px", textAlign: "center" }}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedDetailData(row);
+                                    setSelectedDetailType("hazard");
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#3b82f6",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontSize: "13px",
+                                  }}
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  {/* Pagination next/prev */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      Menampilkan{" "}
+                      {hazardStats.listData.length === 0 ? 0 : hazardTablePage * hazardTablePageSize + 1} -{" "}
+                      {Math.min((hazardTablePage + 1) * hazardTablePageSize, hazardStats.listData.length)}{" "}
+                      dari {hazardStats.listData.length}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={() => setHazardTablePage((p) => Math.max(0, p - 1))}
+                        disabled={hazardTablePage === 0}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background: hazardTablePage === 0 ? "#f3f4f6" : "#fff",
+                          cursor: hazardTablePage === 0 ? "not-allowed" : "pointer",
+                          fontSize: "13px",
+                          color: hazardTablePage === 0 ? "#9ca3af" : "#374151",
+                        }}
+                      >
+                        Sebelumnya
+                      </button>
+                      <button
+                        onClick={() =>
+                          setHazardTablePage((p) =>
+                            p + 1 < Math.ceil(hazardStats.listData.length / hazardTablePageSize) ? p + 1 : p
+                          )
+                        }
+                        disabled={hazardTablePage + 1 >= Math.ceil(hazardStats.listData.length / hazardTablePageSize)}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background:
+                            hazardTablePage + 1 >= Math.ceil(hazardStats.listData.length / hazardTablePageSize)
+                              ? "#f3f4f6"
+                              : "#fff",
+                          cursor:
+                            hazardTablePage + 1 >= Math.ceil(hazardStats.listData.length / hazardTablePageSize)
+                              ? "not-allowed"
+                              : "pointer",
+                          fontSize: "13px",
+                          color:
+                            hazardTablePage + 1 >= Math.ceil(hazardStats.listData.length / hazardTablePageSize)
+                              ? "#9ca3af"
+                              : "#374151",
+                        }}
+                      >
+                        Berikutnya
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -5937,7 +5280,7 @@ function MonitoringPage({ user }) {
     if (loading) {
       return (
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-          Memuat statistik PTO...
+          Memuat data PTO...
         </div>
       );
     }
@@ -5948,12 +5291,14 @@ function MonitoringPage({ user }) {
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
           <div style={{ marginBottom: "30px" }}>
             <h2 style={{ color: "#ffffff", marginBottom: "10px" }}>
-              📊 Dashboard Statistik PTO
+              📋 Data Laporan PTO Global
             </h2>
             <p style={{ color: "#ffffff", fontSize: "14px", opacity: 0.9 }}>
-              Monitoring Planned Task Observation (PTO) dan status penyelesaian
+              Daftar seluruh laporan Planned Task Observation (PTO) yang telah dikerjakan oleh user
             </p>
           </div>
+
+          {/* Summary Cards */}
           <div
             style={{
               display: "grid",
@@ -5971,16 +5316,8 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Total Laporan
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Total Laporan</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {ptoStats.totalReports}
               </div>
             </div>
@@ -5994,13 +5331,7 @@ function MonitoringPage({ user }) {
               }}
             >
               <div style={{ fontSize: "14px", opacity: 0.9 }}>Pending</div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {ptoStats.pendingReports}
               </div>
             </div>
@@ -6014,13 +5345,7 @@ function MonitoringPage({ user }) {
               }}
             >
               <div style={{ fontSize: "14px", opacity: 0.9 }}>Closed</div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {ptoStats.closedReports}
               </div>
             </div>
@@ -6033,120 +5358,15 @@ function MonitoringPage({ user }) {
                 boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
               }}
             >
-              <div style={{ fontSize: "14px", opacity: 0.9 }}>
-                Tingkat Penyelesaian
-              </div>
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  marginTop: "8px",
-                }}
-              >
+              <div style={{ fontSize: "14px", opacity: 0.9 }}>Tingkat Penyelesaian</div>
+              <div style={{ fontSize: "32px", fontWeight: "bold", marginTop: "8px" }}>
                 {ptoStats.completionRate}%
               </div>
             </div>
           </div>
+
+          {/* Data Pengisian PTO */}
           <div style={{ marginBottom: "30px" }}>
-            <h3
-              style={{
-                color: "#ffffff",
-                marginBottom: "20px",
-                fontWeight: "600",
-              }}
-            >
-              📈 Statistik per Site {site && `- ${site}`}
-            </h3>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                gap: "16px",
-              }}
-            >
-              {Object.entries(ptoStats.siteStats || {}).map(
-                ([siteName, stats]) => (
-                  <div
-                    key={siteName}
-                    style={{
-                      background: "white",
-                      padding: "20px",
-                      borderRadius: "12px",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                      border: "1px solid #e5e7eb",
-                    }}
-                  >
-                    <h4 style={{ color: "#232946", marginBottom: "15px" }}>
-                      {siteName}
-                    </h4>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "10px",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Total
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#232946",
-                          }}
-                        >
-                          {stats.total}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Pending
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#f59e0b",
-                          }}
-                        >
-                          {stats.pending}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Closed
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#10b981",
-                          }}
-                        >
-                          {stats.closed}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
-          <div style={{ marginBottom: "30px" }}>
-            <h3
-              style={{
-                color: "#ffffff",
-                marginBottom: "20px",
-                fontWeight: "600",
-              }}
-            >
-              📅 Statistik{" "}
-              {dateFrom && dateTo
-                ? `${dateFrom} s/d ${dateTo}`
-                : "7 Hari Terakhir"}
-            </h3>
             <div
               style={{
                 background: "white",
@@ -6154,348 +5374,198 @@ function MonitoringPage({ user }) {
                 borderRadius: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 border: "1px solid #e5e7eb",
+                overflowX: "auto",
               }}
             >
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                    <th
+              {(ptoStats.listData || []).length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "#666",
+                    padding: "40px",
+                  }}
+                >
+                  Belum ada data pengisian PTO
+                </div>
+              ) : (
+                <>
+                  {/* Pagination controls */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div
                       style={{
-                        textAlign: "left",
-                        padding: "12px",
-                        color: "#232946",
-                        fontWeight: "bold",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
                       }}
                     >
-                      Tanggal
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#232946",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Total
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#f59e0b",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Pending
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "12px",
-                        color: "#10b981",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Closed
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(ptoStats.dailyStats || [])
-                    .slice()
-                    .reverse()
-                    .map((day) => (
-                      <tr
-                        key={day.date}
-                        style={{ borderBottom: "1px solid #e5e7eb" }}
+                      <span style={{ fontSize: "13px", color: "#374151" }}>Tampilkan</span>
+                      <select
+                        value={ptoTablePageSize}
+                        onChange={(e) => {
+                          setPtoTablePageSize(Number(e.target.value));
+                          setPtoTablePage(0);
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          fontSize: "13px",
+                        }}
                       >
-                        <td style={{ padding: "12px", color: "#232946" }}>
-                          {new Date(day.date).toLocaleDateString("id-ID", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#232946",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.total}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#f59e0b",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.pending}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            padding: "12px",
-                            color: "#10b981",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {day.closed}
-                        </td>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span style={{ fontSize: "13px", color: "#374151" }}>data</span>
+                    </div>
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      {ptoStats.listData.length} total data
+                    </div>
+                  </div>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Tanggal</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Pelapor</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Observee</th>
+                        <th style={{ textAlign: "left", padding: "12px", color: "#374151" }}>Site</th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#374151" }}>Status</th>
+                        <th style={{ textAlign: "center", padding: "12px", color: "#374151" }}>Aksi</th>
                       </tr>
-                    ))}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {(ptoStats.listData || [])
+                        .slice(
+                          ptoTablePage * ptoTablePageSize,
+                          ptoTablePage * ptoTablePageSize + ptoTablePageSize
+                        )
+                        .map((row, index) => {
+                          return (
+                            <tr key={row.id || index} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                              <td style={{ padding: "12px", color: "#374151" }}>
+                                {row.tanggal
+                                  ? new Date(row.tanggal + "T12:00:00").toLocaleDateString("id-ID")
+                                  : "-"}
+                              </td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.nama_observer || row.pelapor_nama || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.nama_observee || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.site || "-"}</td>
+                              <td style={{ padding: "12px", textAlign: "center" }}>
+                                <span
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    backgroundColor: getStatusColor(row.status) + "20",
+                                    color: getStatusColor(row.status),
+                                  }}
+                                >
+                                  {row.status || "-"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px", textAlign: "center" }}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedDetailData(row);
+                                    setSelectedDetailType("pto");
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#3b82f6",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontSize: "13px",
+                                  }}
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  {/* Pagination next/prev */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: "16px",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                      Menampilkan{" "}
+                      {ptoStats.listData.length === 0 ? 0 : ptoTablePage * ptoTablePageSize + 1} -{" "}
+                      {Math.min((ptoTablePage + 1) * ptoTablePageSize, ptoStats.listData.length)}{" "}
+                      dari {ptoStats.listData.length}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={() => setPtoTablePage((p) => Math.max(0, p - 1))}
+                        disabled={ptoTablePage === 0}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background: ptoTablePage === 0 ? "#f3f4f6" : "#fff",
+                          cursor: ptoTablePage === 0 ? "not-allowed" : "pointer",
+                          fontSize: "13px",
+                          color: ptoTablePage === 0 ? "#9ca3af" : "#374151",
+                        }}
+                      >
+                        Sebelumnya
+                      </button>
+                      <button
+                        onClick={() =>
+                          setPtoTablePage((p) =>
+                            p + 1 < Math.ceil(ptoStats.listData.length / ptoTablePageSize) ? p + 1 : p
+                          )
+                        }
+                        disabled={ptoTablePage + 1 >= Math.ceil(ptoStats.listData.length / ptoTablePageSize)}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d1d5db",
+                          background:
+                            ptoTablePage + 1 >= Math.ceil(ptoStats.listData.length / ptoTablePageSize)
+                              ? "#f3f4f6"
+                              : "#fff",
+                          cursor:
+                            ptoTablePage + 1 >= Math.ceil(ptoStats.listData.length / ptoTablePageSize)
+                              ? "not-allowed"
+                              : "pointer",
+                          fontSize: "13px",
+                          color:
+                            ptoTablePage + 1 >= Math.ceil(ptoStats.listData.length / ptoTablePageSize)
+                              ? "#9ca3af"
+                              : "#374151",
+                        }}
+                      >
+                        Berikutnya
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-
-          {/* Distribusi Laporan - Satu container, pie + bar kiri kanan, filter Harian/Bulanan/Tahunan */}
-          {(() => {
-            const isDaily = chartViewMode === "daily";
-            const agg = ptoChartAggregatedData;
-            let totalPending = 0,
-              totalClosed = 0;
-            if (isDaily || agg.length === 0) {
-              (ptoStats.dailyStats || []).forEach((d) => {
-                totalPending += d.pending ?? 0;
-                totalClosed += d.closed ?? 0;
-              });
-            } else {
-              agg.forEach((d) => {
-                totalPending += d.pending ?? 0;
-                totalClosed += d.closed ?? 0;
-              });
-            }
-            const pieData = [
-              { name: "Pending", value: totalPending, color: "#f59e0b" },
-              { name: "Closed", value: totalClosed, color: "#10b981" },
-            ].filter((d) => d.value > 0);
-            const barData =
-              isDaily || agg.length === 0
-                ? (ptoStats.dailyStats || []).map((d) => ({
-                    tanggal: new Date(d.date + "T12:00:00").toLocaleDateString(
-                      "id-ID",
-                      { weekday: "short", day: "numeric", month: "short" },
-                    ),
-                    Total: d.total ?? 0,
-                    Pending: d.pending ?? 0,
-                    Closed: d.closed ?? 0,
-                  }))
-                : agg.map((d) => ({
-                    tanggal: d.label ?? "-",
-                    Total: d.total ?? 0,
-                    Pending: d.pending ?? 0,
-                    Closed: d.closed ?? 0,
-                  }));
-            const hasCharts = pieData.length > 0 || barData.length > 0;
-            if (!hasCharts && isDaily) return null;
-            return (
-              <div
-                style={{
-                  marginBottom: "30px",
-                  background: "white",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
-                    gap: "12px",
-                  }}
-                >
-                  <h3
-                    style={{ color: "#1a1a1a", margin: 0, fontWeight: "600" }}
-                  >
-                    📊 Distribusi Laporan
-                  </h3>
-                  <div style={{ display: "flex", gap: "4px" }}>
-                    {["daily", "monthly", "yearly"].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setChartViewMode(m)}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          border:
-                            chartViewMode === m
-                              ? "2px solid #3b82f6"
-                              : "1px solid #d1d5db",
-                          background: chartViewMode === m ? "#eff6ff" : "#fff",
-                          color: chartViewMode === m ? "#1d4ed8" : "#374151",
-                          fontSize: "12px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {m === "daily" && "Harian"}
-                        {m === "monthly" && "Bulanan"}
-                        {m === "yearly" && "Tahunan"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                    gap: "24px",
-                  }}
-                >
-                  {pieData.length > 0 && (
-                    <div>
-                      <h4
-                        style={{
-                          color: "#374151",
-                          marginBottom: "12px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Distribusi Status Laporan
-                        {chartViewMode === "daily" && " (7 Hari)"}
-                        {chartViewMode === "monthly" &&
-                          agg.length > 0 &&
-                          " (12 Bulan)"}
-                        {chartViewMode === "yearly" &&
-                          agg.length > 0 &&
-                          " (5 Tahun)"}
-                      </h4>
-                      <div
-                        style={{
-                          width: "100%",
-                          maxWidth: 380,
-                          height: 300,
-                          margin: "0 auto",
-                        }}
-                      >
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={55}
-                              outerRadius={90}
-                              paddingAngle={2}
-                              dataKey="value"
-                              label={({ name, value }) => `${name}: ${value}`}
-                            >
-                              {pieData.map((entry, i) => (
-                                <Cell key={i} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(v) => [v, ""]} />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  )}
-                  {(barData.length > 0 || (!isDaily && agg.length === 0)) && (
-                    <div>
-                      <h4
-                        style={{
-                          color: "#374151",
-                          marginBottom: "12px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Statistik{" "}
-                        {chartViewMode === "daily"
-                          ? "Harian"
-                          : chartViewMode === "monthly"
-                            ? "Bulanan"
-                            : "Tahunan"}
-                        {chartViewMode === "daily" && " (7 Hari)"}
-                        {chartViewMode === "monthly" &&
-                          agg.length > 0 &&
-                          " (12 Bulan)"}
-                        {chartViewMode === "yearly" &&
-                          agg.length > 0 &&
-                          " (5 Tahun)"}
-                      </h4>
-                      <div style={{ width: "100%", height: 300 }}>
-                        {barData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                              data={barData}
-                              margin={{
-                                top: 10,
-                                right: 20,
-                                left: 10,
-                                bottom: 40,
-                              }}
-                            >
-                              <CartesianGrid
-                                strokeDasharray="3 3"
-                                stroke="#e5e7eb"
-                              />
-                              <XAxis
-                                dataKey="tanggal"
-                                tick={{ fontSize: 11 }}
-                                height={40}
-                              />
-                              <YAxis
-                                tick={{ fontSize: 12 }}
-                                allowDecimals={false}
-                              />
-                              <Tooltip />
-                              <Legend />
-                              <Bar
-                                dataKey="Total"
-                                fill="#3b82f6"
-                                name="Total"
-                                radius={[4, 4, 0, 0]}
-                              />
-                              <Bar
-                                dataKey="Pending"
-                                fill="#f59e0b"
-                                name="Pending"
-                                radius={[4, 4, 0, 0]}
-                              />
-                              <Bar
-                                dataKey="Closed"
-                                fill="#10b981"
-                                name="Closed"
-                                radius={[4, 4, 0, 0]}
-                              />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div
-                            style={{
-                              textAlign: "center",
-                              color: "#6b7280",
-                              fontSize: "13px",
-                              paddingTop: "80px",
-                            }}
-                          >
-                            Memuat data...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {renderIndividualStatsTable(individualStats.pto, "pto")}
         </div>
       </div>
     );
@@ -8290,6 +7360,471 @@ function MonitoringPage({ user }) {
           </div>
         )}
       </div>
+
+      {/* Detail Modal */}
+      {isDetailModalOpen && selectedDetailData && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+          onClick={() => setIsDetailModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              padding: "24px",
+              maxWidth: "800px",
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              position: "relative",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsDetailModalOpen(false)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                background: "none",
+                border: "none",
+                fontSize: "24px",
+                cursor: "pointer",
+                color: "#6b7280",
+              }}
+            >
+              ×
+            </button>
+
+            <h2
+              style={{
+                marginTop: 0,
+                marginBottom: "20px",
+                color: "#1f2937",
+                borderBottom: "1px solid #e5e7eb",
+                paddingBottom: "12px",
+              }}
+            >
+              Detail Laporan{" "}
+              {selectedDetailType === "take5"
+                ? "Take 5"
+                : selectedDetailType === "hazard"
+                  ? "Hazard"
+                  : "PTO"}
+            </h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "20px",
+                marginBottom: "24px",
+              }}
+            >
+              {/* Common Fields */}
+              <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", marginBottom: "8px" }}>
+                <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Informasi Umum</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Tanggal</label>
+                    <div style={{ fontWeight: 600, color: "#111827" }}>
+                      {selectedDetailData.tanggal
+                        ? new Date(selectedDetailData.tanggal).toLocaleDateString("id-ID", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : selectedDetailData.created_at
+                          ? new Date(selectedDetailData.created_at).toLocaleDateString("id-ID", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
+                          : "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Status</label>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        backgroundColor: getStatusColor(selectedDetailData.status) + "20",
+                        color: getStatusColor(selectedDetailData.status),
+                      }}
+                    >
+                      {selectedDetailData.status || "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>
+                      {selectedDetailType === "pto" ? "Observer" : "Pelapor"}
+                    </label>
+                    <div style={{ fontWeight: 600, color: "#111827" }}>
+                      {selectedDetailData.pelapor_nama ||
+                        selectedDetailData.nama_observer ||
+                        selectedDetailData.nama ||
+                        "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>NRP</label>
+                    <div style={{ fontWeight: 600, color: "#111827" }}>
+                      {selectedDetailData.nrp || selectedDetailData.nrp_pelapor || "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Site</label>
+                    <div style={{ fontWeight: 600, color: "#111827" }}>
+                      {selectedDetailData.site || selectedDetailData.lokasi || "-"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Type Specific Fields */}
+              {selectedDetailType === "take5" && (
+                <>
+                  <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", marginBottom: "8px" }}>
+                    <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Detail Pekerjaan</h3>
+                     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                       <div>
+                         <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Tugas / Pekerjaan</label>
+                         <div style={{ fontWeight: 500, color: "#111827" }}>
+                           {selectedDetailData.judul_pekerjaan || selectedDetailData.tugas || selectedDetailData.pekerjaan || "-"}
+                         </div>
+                       </div>
+                       <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Detail Lokasi</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.detail_lokasi || "-"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px" }}>
+                    <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Checklist Keselamatan</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                       {[
+                         { label: "Sehat Fisik & Mental", key: "sehat_fisik" },
+                         { label: "Mengerti Pekerjaan", key: "mengerti_pekerjaan" },
+                         { label: "Mengerti Potensi Bahaya", key: "mengerti_potensi_bahaya" },
+                         { label: "Sebutkan Bahaya", key: "sebutkan_bahaya", isText: true },
+                         { label: "Peralatan Aman", key: "peralatan" },
+                         { label: "APD Sesuai", key: "apd" },
+                         { label: "Area Kerja Aman", key: "aman" },
+                       ].map(item => (
+                         <div key={item.key} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #e5e7eb", paddingBottom: "4px" }}>
+                           <span style={{ fontSize: "13px", color: "#4b5563" }}>{item.label}</span>
+                           <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827" }}>
+                             {item.isText ? (selectedDetailData[item.key] || "-") : (selectedDetailData[item.key] === true || selectedDetailData[item.key] === "Yes" || selectedDetailData[item.key] === "Ya" ? "Ya" : "Tidak")}
+                           </span>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedDetailType === "hazard" && (
+                <>
+                   <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", marginBottom: "8px" }}>
+                    <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Detail Temuan</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Deskripsi Bahaya / Temuan</label>
+                        <div style={{ fontWeight: 500, color: "#111827", whiteSpace: "pre-wrap" }}>
+                          {selectedDetailData.deskripsi ||
+                            selectedDetailData.deskripsi_temuan ||
+                            selectedDetailData.kategori_bahaya ||
+                            "-"}
+                        </div>
+                      </div>
+                       <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Kategori Ketidaksesuaian</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.ketidaksesuaian || selectedDetailData.kategori_bahaya || "-"}
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Sub Kategori</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.sub_ketidaksesuaian || "-"}
+                        </div>
+                      </div>
+                       <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Resiko Bahaya</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.resiko_bahaya || "-"}
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Detail Lokasi</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.detail_lokasi || selectedDetailData.keterangan_lokasi || "-"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", marginBottom: "8px" }}>
+                    <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tindakan Perbaikan</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                       <div style={{ gridColumn: "1 / -1" }}>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Tindakan Langsung (Quick Action)</label>
+                        <div style={{ fontWeight: 500, color: "#111827", whiteSpace: "pre-wrap" }}>
+                          {selectedDetailData.tindakan ||
+                            selectedDetailData.tindakan_perbaikan ||
+                            selectedDetailData.quick_action ||
+                            "-"}
+                        </div>
+                      </div>
+                       <div style={{ gridColumn: "1 / -1" }}>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Rencana Perbaikan (Action Plan)</label>
+                        <div style={{ fontWeight: 500, color: "#111827", whiteSpace: "pre-wrap" }}>
+                          {selectedDetailData.action_plan || "-"}
+                        </div>
+                      </div>
+                       <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>PIC</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.pic || selectedDetailData.pic_nama || "-"}
+                        </div>
+                      </div>
+                       <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Due Date</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                           {selectedDetailData.due_date ? new Date(selectedDetailData.due_date).toLocaleDateString("id-ID") : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Closing Section */}
+                  {(selectedDetailData.status === "Closed" || selectedDetailData.status === "Done" || selectedDetailData.evidence_perbaikan || selectedDetailData.foto_perbaikan) && (
+                     <div style={{ gridColumn: "1 / -1", backgroundColor: "#ecfdf5", padding: "12px", borderRadius: "8px", border: "1px solid #10b981" }}>
+                      <h3 style={{ fontSize: "14px", color: "#065f46", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Penyelesaian (Closing)</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                         <div>
+                          <label style={{ display: "block", fontSize: "12px", color: "#065f46", marginBottom: "4px" }}>Deskripsi Penyelesaian</label>
+                          <div style={{ fontWeight: 500, color: "#111827", whiteSpace: "pre-wrap" }}>
+                            {selectedDetailData.deskripsi_penyelesaian || "Laporan telah diselesaikan."}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selectedDetailType === "pto" && (
+                <>
+                  <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", marginBottom: "8px" }}>
+                    <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Detail Observasi</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                       <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Observee (Yang Diamati)</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.nama_observee || "-"}
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Alasan Observasi</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.alasan_observasi || "-"}
+                        </div>
+                      </div>
+                       <div style={{ gridColumn: "1 / -1" }}>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Pekerjaan yang Dilakukan</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.pekerjaan_yang_dilakukan || "-"}
+                        </div>
+                      </div>
+                       <div style={{ gridColumn: "1 / -1" }}>
+                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Nama Prosedur</label>
+                        <div style={{ fontWeight: 500, color: "#111827" }}>
+                          {selectedDetailData.nama_prosedur || "-"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px" }}>
+                    <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Checklist Observasi</h3>
+                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                       {[
+                         { label: "Langkah Kerja Aman", key: "langkah_kerja_aman" },
+                         { label: "APD Sesuai", key: "apd_sesuai" },
+                         { label: "Area Kerja Aman", key: "area_kerja_aman" },
+                         { label: "Peralatan Aman", key: "peralatan_aman" },
+                         { label: "Peduli Keselamatan", key: "peduli_keselamatan" },
+                         { label: "Paham Resiko & Prosedur", key: "paham_resiko_prosedur" },
+                       ].map(item => (
+                         <div key={item.key} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #e5e7eb", paddingBottom: "4px" }}>
+                           <span style={{ fontSize: "13px", color: "#4b5563" }}>{item.label}</span>
+                           <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827" }}>
+                             {selectedDetailData[item.key] === true || selectedDetailData[item.key] === "Yes" || selectedDetailData[item.key] === "Ya" ? "Ya" : (selectedDetailData[item.key] ? "Tidak" : "-")}
+                           </span>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                   <div style={{ gridColumn: "1 / -1", marginTop: "12px" }}>
+                      <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Tindakan Perbaikan</label>
+                      <div style={{ fontWeight: 500, color: "#111827", whiteSpace: "pre-wrap" }}>
+                        {selectedDetailData.tindakan_perbaikan || "-"}
+                      </div>
+                   </div>
+                </>
+              )}
+            </div>
+
+            {/* Image Section */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+               {/* Finding/Main Image */}
+               {(selectedDetailData.foto ||
+                  selectedDetailData.foto_temuan ||
+                  selectedDetailData.gambar ||
+                  selectedDetailData.evidence) && (
+                  <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>
+                    <h3 style={{ fontSize: "16px", color: "#111827", marginBottom: "12px" }}>
+                      Dokumentasi Temuan
+                    </h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "12px",
+                      }}
+                    >
+                      <img
+                        src={
+                          selectedDetailData.foto ||
+                          selectedDetailData.foto_temuan ||
+                          selectedDetailData.gambar ||
+                          selectedDetailData.evidence
+                        }
+                        alt="Dokumentasi Temuan"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "300px",
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          objectFit: "contain"
+                        }}
+                      />
+                      <a
+                        href={
+                          selectedDetailData.foto ||
+                          selectedDetailData.foto_temuan ||
+                          selectedDetailData.gambar ||
+                          selectedDetailData.evidence
+                        }
+                        download={`Temuan_${selectedDetailType}_${
+                          selectedDetailData.id || "image"
+                        }.jpg`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "8px 16px",
+                          backgroundColor: "#ef4444", // Red for finding
+                          color: "white",
+                          borderRadius: "6px",
+                          textDecoration: "none",
+                          fontWeight: 500,
+                          fontSize: "13px",
+                        }}
+                      >
+                        ⬇️ Download Temuan
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+               {/* Closing/Repair Image (Hazard only) */}
+               {selectedDetailType === "hazard" && (selectedDetailData.evidence_perbaikan || selectedDetailData.foto_perbaikan) && (
+                  <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>
+                    <h3 style={{ fontSize: "16px", color: "#111827", marginBottom: "12px" }}>
+                      Dokumentasi Perbaikan (Closing)
+                    </h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "12px",
+                      }}
+                    >
+                      <img
+                        src={
+                          selectedDetailData.evidence_perbaikan ||
+                          selectedDetailData.foto_perbaikan
+                        }
+                        alt="Dokumentasi Perbaikan"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "300px",
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                           objectFit: "contain"
+                        }}
+                      />
+                      <a
+                        href={
+                          selectedDetailData.evidence_perbaikan ||
+                          selectedDetailData.foto_perbaikan
+                        }
+                        download={`Closing_${selectedDetailType}_${
+                          selectedDetailData.id || "image"
+                        }.jpg`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "8px 16px",
+                          backgroundColor: "#10b981", // Green for closing
+                          color: "white",
+                          borderRadius: "6px",
+                          textDecoration: "none",
+                          fontWeight: 500,
+                          fontSize: "13px",
+                        }}
+                      >
+                        ⬇️ Download Closing
+                      </a>
+                    </div>
+                  </div>
+                )}
+            </div>
+            
+          </div>
+        </div>
+      )}
     </div>
   );
 }
