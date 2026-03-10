@@ -12,26 +12,34 @@ function computeHariMasukFromSets(ftwDates, absentDates, anchorDate) {
   let startDate = anchorDate;
   // LOGIKA BARU: Optimistic count
   // Selalu mulai hitung dari hari ini (anchorDate), KECUALI jika hari ini sudah ditandai Absent.
-  // Walaupun hari ini belum ada di ftwDates (belum submit), kita anggap hari ini sbg hari kerja ke-1.
+  // Jika ditandai Absent, maka di hari tersebut hari masuknya berhenti dan kita cek dari sebelumnya lagi (atau justru reset ke 0? 
+  // Loop di bawah akan langsung break jika cursor kena absentDates, karena itu kita hanya geser startDate ke H-1 jika hari ini libur, 
+  // lalu cursor yg H-1 akan kena absentDates di masa lalu atau lanjut hitung).
   if (absentDates.has(anchorDate)) {
-    // Jika hari ini libur, maka hitungan hari ini 0.
-    // Kita cek hari sebelumnya.
     startDate = getPreviousDate(anchorDate);
-  } else {
-    // Jika hari ini TIDAK libur, kita anggap ini adalah hari kerja aktif.
-    // Lanjut hitung mundur.
+  }
+
+  // Cari tanggal record paling awal dari user (FTW atau absent)
+  // sebagai batas bawah untuk menghindari infinite loop jika user tidak submit FTW
+  // tapi belum di-off-kan secara resmi.
+  const allDates = [...ftwDates, ...absentDates].sort();
+  const earliestDate = allDates.length > 0 ? allDates[0] : null;
+
+  if (!earliestDate) {
+    // Belum pernah ada record.
+    return { count: 0, lastFtwDate: null };
   }
 
   let cursor = startDate;
   let count = 0;
   let lastFtwDate = null;
 
-  while (cursor) {
+  while (cursor && cursor >= earliestDate) {
     if (absentDates.has(cursor)) break;
 
-    // Khusus untuk anchorDate (Hari Ini), kita tidak cek ftwDates.
-    // Kita anggap user "sedang" bekerja hari ini.
-    if (cursor !== anchorDate && !ftwDates.has(cursor)) break;
+    // Menjawab request: Selama tidak ada cuti/absent/off dari berwenang, 
+    // hari terus bertambah meskipun tidak mengisi FTW satu atau beberapa hari.
+    // Karenanya, kita TIDAK lagi melakukan check !ftwDates.has(cursor) untuk break;
 
     count += 1;
     // Update lastFtwDate jika ditemukan record nyata di ftwDates

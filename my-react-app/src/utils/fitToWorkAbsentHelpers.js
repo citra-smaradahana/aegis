@@ -80,22 +80,29 @@ export { getSubordinateJabatansForValidator };
  * @param {Array<string>} additionalJabatans - Optional: Jabatan tambahan yang ingin dilihat (misal: sesama LH)
  */
 export async function fetchUsersNotYetFilledFTW(user, additionalJabatans = []) {
-  if (!user?.site || !user?.id) return [];
-
-  const cacheKey = `${user.id}:${user.site}:${additionalJabatans.join(',')}`;
-  const cached = usersCache[cacheKey];
-  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-    return cached.data;
+  if (!user?.site || !user?.id) {
+    console.log("fetchUsersNotYetFilledFTW: RETURN EMPTY (No user site or id)", user);
+    return [];
   }
+
+  // Kita skip cache untuk sementara karena filter logika baru di-deploy dan server belum direstart
+  // atau user masih terjebak di cache lama
+  // const cacheKey = `${user.id}:${user.site}:${additionalJabatans.join(',')}`;
+  // const cached = usersCache[cacheKey];
+  // if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+  //   return cached.data;
+  // }
 
   const userSite = user.site;
 
   // Site dengan FTW disabled: tidak ada yang wajib isi, return kosong
   const ftwStatusMap = await fetchSitesFTWStatusMap();
+  console.log("fetchUsersNotYetFilledFTW: ftwStatusMap[userSite]", ftwStatusMap[userSite]);
   if (ftwStatusMap[userSite] === false) return [];
 
   const jabatan = (user?.jabatan || "").trim();
   const today = getTodayWITA();
+  console.log(`fetchUsersNotYetFilledFTW: User Jabatan = "${jabatan}", Today = ${today}`);
 
   // Cek jabatan validator
   const validatorJabatans = [
@@ -127,51 +134,62 @@ export async function fetchUsersNotYetFilledFTW(user, additionalJabatans = []) {
         ...new Set([...subordinateJabatans, ...additionalJabatans]),
       ];
     }
+    
+    console.log("fetchUsersNotYetFilledFTW: finalJabatans filter:", finalJabatans);
 
     // 2. Query user yang belum isi FTW hari ini
     let query = supabase
       .from("users")
-      .select("id, nama, jabatan, nrp, site, foto_url")
-      .eq("site", userSite)
-      .eq("status", "Aktif");
+      .select("id, nama, jabatan, nrp, site")
+      .eq("site", userSite);
 
     if (finalJabatans !== null) {
       query = query.in("jabatan", finalJabatans);
     }
 
     const { data: allUsers, error } = await query;
+    if (error) {
+      console.error("fetchUsersNotYetFilledFTW: Error fetching all users", error);
+    }
+    console.log(`fetchUsersNotYetFilledFTW: Total active users fetched for scope = ${allUsers?.length}`);
     if (error || !allUsers) return [];
 
     // 3. Cek siapa yang SUDAH isi
     const { data: filledIds } = await supabase
       .from("fit_to_work")
-      .select("user_id")
+      .select("user_id, nrp")
       .eq("site", userSite)
       .eq("tanggal", today); // format YYYY-MM-DD
 
-    const filledSet = new Set((filledIds || []).map((r) => r.user_id));
+    console.log(`fetchUsersNotYetFilledFTW: Total users who filled FTW today = ${filledIds?.length}`);
+    const filledSetId = new Set((filledIds || []).map((r) => r.user_id).filter(Boolean));
+    const filledSetNrp = new Set((filledIds || []).map((r) => r.nrp).filter(Boolean));
 
     // 4. Filter user yang BELUM isi
-    const notFilledUsers = allUsers.filter((u) => !filledSet.has(u.id));
+    const notFilledUsers = allUsers.filter((u) => !filledSetId.has(u.id) && !filledSetNrp.has(u.nrp));
+    console.log(`fetchUsersNotYetFilledFTW: Users who haven't filled FTW today = ${notFilledUsers.length}`);
 
     // 5. Cek status OFF / Cuti / Sakit (agar tidak muncul di list merah)
-    //    Kita reuse logic buildAttendanceSummaryForUsers tapi hanya ambil yang statusnya NOT_YET_FILLED
-    const summary = await buildAttendanceSummaryForUsers(
-      notFilledUsers,
-      today,
-      userSite,
-    );
+    const { data: absentIds } = await supabase
+      .from("fit_to_work_absent")
+      .select("user_id")
+      .eq("tanggal", today);
 
-    const result = summary
-      .filter((item) => item.status === "NOT_YET_FILLED")
-      .map((item) => item.user);
+    console.log(`fetchUsersNotYetFilledFTW: Total absent users today = ${absentIds?.length}`);
+    const absentSet = new Set((absentIds || []).map((r) => r.user_id));
+
+    // Filter out users yang sudah ditandai absent/off hari ini
+    const result = notFilledUsers.filter((u) => !absentSet.has(u.id));
+    
+    console.log(`fetchUsersNotYetFilledFTW: FINAL RESULT (not filled & not absent) = ${result.length}`);
 
     // Simpan cache
-    usersCache[cacheKey] = { data: result, timestamp: Date.now() };
+    // usersCache[cacheKey] = { data: result, timestamp: Date.now() };
 
     return result;
   }
-
+  
+  console.log("fetchUsersNotYetFilledFTW: RETURN EMPTY (Jabatan not validator)");
   return [];
 }
 
