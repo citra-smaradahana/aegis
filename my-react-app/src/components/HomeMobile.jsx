@@ -105,6 +105,7 @@ function HomeMobile({
   const resumeCampaignTimerRef = useRef(null);
   const [kpiType, setKpiType] = useState("hazard");
   const [kpiData, setKpiData] = useState(null);
+  const [showPersonalKpi, setShowPersonalKpi] = useState(true);
   const kpiMetrics = ["hazard", "take5", "pto"];
   const kpiTouchRef = useRef({ startX: 0, dx: 0, moved: false });
   const [pressedMenu, setPressedMenu] = useState(null);
@@ -259,17 +260,22 @@ function HomeMobile({
     };
   }, [user?.id, user?.jabatan, user?.site]);
 
-  // KPI bulanan (hazard, take5, pto) untuk evaluator
+  // KPI bulanan (hazard, take5, pto)
   useEffect(() => {
     const load = async () => {
       try {
-        const roleStr = (user?.role || "").toString().toLowerCase();
-        const isEvaluator =
-          roleStr.includes("evaluator") || roleStr.includes("admin");
-        if (!isEvaluator || !user?.site) {
+        if (!user?.site) {
           setKpiData(null);
           return;
         }
+
+        const roleStr = (user?.role || "").toString().toLowerCase();
+        const isEvaluator =
+          roleStr.includes("evaluator") || roleStr.includes("admin");
+
+        // Jika bukan evaluator, paksa showPersonalKpi = true
+        const effectiveShowPersonal = isEvaluator ? showPersonalKpi : true;
+
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), 1);
         const end = new Date(
@@ -281,152 +287,142 @@ function HomeMobile({
           59,
           999,
         );
-        const { data: hz } = await supabase
+
+        // Query dasar
+        let hzQuery = supabase
           .from("hazard_report")
-          .select("id")
+          .select("id", { count: "exact" })
           .eq("lokasi", user.site)
           .ilike("status", "closed")
           .gte("created_at", start.toISOString())
           .lte("created_at", end.toISOString());
-        const { data: t5 } = await supabase
+
+        let t5Query = supabase
           .from("take_5")
-          .select("id")
+          .select("id", { count: "exact" })
           .eq("site", user.site)
           .ilike("status", "closed")
           .gte("created_at", start.toISOString())
           .lte("created_at", end.toISOString());
-        const { data: pto } = await supabase
+
+        let ptoQuery = supabase
           .from("planned_task_observation")
-          .select("id")
+          .select("id", { count: "exact" })
           .eq("site", user.site)
           .eq("status", "closed")
           .gte("created_at", start.toISOString())
           .lte("created_at", end.toISOString());
-        // Ambil target per jabatan & site untuk modul terkait
-        const { data: targetRows } = await supabase
-          .from("target_per_jabatan_site")
-          .select("module, target_per_bulan")
-          .eq("site", user.site)
-          .in("module", ["hazard", "take_5", "pto"]);
-        // Hitung jumlah user per jabatan pada site ini
-        const { data: siteUsers } = await supabase
-          .from("users")
-          .select("jabatan")
-          .eq("site", user.site)
-          .not("jabatan", "is", null);
-        const usersPerJabatan = {};
-        (siteUsers || []).forEach((u) => {
-          const j = (u.jabatan || "").trim();
-          if (!j) return;
-          usersPerJabatan[j] = (usersPerJabatan[j] || 0) + 1;
-        });
-        // Target agregat = Σ (target_per_bulan_jabatan × jumlah_user_dengan_jabatan_itu)
-        const sumTarget = (mod) => {
-          return (targetRows || [])
-            .filter((r) => r.module === mod)
-            .reduce((acc, r) => {
-              const t = Number(r.target_per_bulan) || 0;
-              // Cari jumlah user untuk jabatan tersebut
-              // catatan: beberapa baris target mungkin tidak memiliki kolom jabatan jika skema lama,
-              // namun di pengaturan saat ini target diset per jabatan per site.
-              // Jika kolom jabatan tidak tersedia di select minimal, tambahkan pada select di atas.
-              return acc + t; // sementara asumsi setiap baris mewakili satu user jika kolom jabatan tidak tersedia
-            }, 0);
-        };
-        // Jika target_per_jabatan_site tidak memiliki kolom jabatan pada select di atas, tambahkan
-        // seleksi ulang dengan jabatan untuk akurasi per-baris:
-        if (
-          targetRows &&
-          targetRows.length > 0 &&
-          targetRows[0].jabatan === undefined
-        ) {
-          const { data: targetRowsWithJabatan } = await supabase
+
+        // Jika mode personal, filter berdasarkan NRP
+        if (effectiveShowPersonal) {
+          hzQuery = hzQuery.eq("pelapor_nrp", user.nrp);
+          t5Query = t5Query.eq("nrp", user.nrp);
+          ptoQuery = ptoQuery.eq("nrp_pelapor", user.nrp);
+        }
+
+        const [hzRes, t5Res, ptoRes] = await Promise.all([
+          hzQuery,
+          t5Query,
+          ptoQuery,
+        ]);
+
+        const closedHazard = hzRes.count || 0;
+        const closedTake5 = t5Res.count || 0;
+        const closedPto = ptoRes.count || 0;
+
+        let targetHazard = 0;
+        let targetTake5 = 0;
+        let targetPto = 0;
+
+        if (!effectiveShowPersonal) {
+          // Ambil target agregat per site (Mode Site)
+          const { data: targetRows } = await supabase
             .from("target_per_jabatan_site")
             .select("module, target_per_bulan, jabatan")
             .eq("site", user.site)
             .in("module", ["hazard", "take_5", "pto"]);
+
+          const { data: siteUsers } = await supabase
+            .from("users")
+            .select("jabatan")
+            .eq("site", user.site)
+            .not("jabatan", "is", null);
+
+          const usersPerJabatan = {};
+          (siteUsers || []).forEach((u) => {
+            const j = (u.jabatan || "").trim();
+            if (!j) return;
+            usersPerJabatan[j] = (usersPerJabatan[j] || 0) + 1;
+          });
+
           const sumTargetWithJabatan = (mod) =>
-            (targetRowsWithJabatan || [])
+            (targetRows || [])
               .filter((r) => r.module === mod)
               .reduce((acc, r) => {
                 const t = Number(r.target_per_bulan) || 0;
                 const count = usersPerJabatan[(r.jabatan || "").trim()] || 0;
                 return acc + t * count;
               }, 0);
-          const targetHazard = sumTargetWithJabatan("hazard");
-          const targetTake5 = sumTargetWithJabatan("take_5");
-          const targetPto = sumTargetWithJabatan("pto");
-          const closedHazard = (hz || []).length;
-          const closedTake5 = (t5 || []).length;
-          const closedPto = (pto || []).length;
-          const percent = {
-            hazard:
-              targetHazard > 0
-                ? Math.min(100, Math.round((closedHazard / targetHazard) * 100))
-                : 0,
-            take5:
-              targetTake5 > 0
-                ? Math.min(100, Math.round((closedTake5 / targetTake5) * 100))
-                : 0,
-            pto:
-              targetPto > 0
-                ? Math.min(100, Math.round((closedPto / targetPto) * 100))
-                : 0,
-          };
-          setKpiData({
-            site: user.site,
-            label: now.toLocaleDateString("id-ID", {
-              month: "long",
-              year: "numeric",
-            }),
-            count: { hazard: closedHazard, take5: closedTake5, pto: closedPto },
-            target: {
-              hazard: targetHazard,
-              take5: targetTake5,
-              pto: targetPto,
-            },
-            percent,
-          });
-          return; // selesai, tidak lanjutkan ke jalur fallback
+
+          targetHazard = sumTargetWithJabatan("hazard");
+          targetTake5 = sumTargetWithJabatan("take_5");
+          targetPto = sumTargetWithJabatan("pto");
+        } else {
+          // Ambil target individu (Mode Pribadi)
+          const { data: targetRows } = await supabase
+            .from("target_per_jabatan_site")
+            .select("module, target_per_bulan")
+            .eq("site", user.site)
+            .eq("jabatan", user.jabatan)
+            .in("module", ["hazard", "take_5", "pto"]);
+
+          targetHazard =
+            targetRows?.find((r) => r.module === "hazard")?.target_per_bulan ||
+            0;
+          targetTake5 =
+            targetRows?.find((r) => r.module === "take_5")?.target_per_bulan ||
+            0;
+          targetPto =
+            targetRows?.find((r) => r.module === "pto")?.target_per_bulan || 0;
         }
-        const closedHazard = (hz || []).length;
-        const closedTake5 = (t5 || []).length;
-        const closedPto = (pto || []).length;
-        const target = {
-          hazard: sumTarget("hazard"),
-          take5: sumTarget("take_5"),
-          pto: sumTarget("pto"),
-        };
+
         const percent = {
           hazard:
-            target.hazard > 0
-              ? Math.min(100, Math.round((closedHazard / target.hazard) * 100))
+            targetHazard > 0
+              ? Math.min(100, Math.round((closedHazard / targetHazard) * 100))
               : 0,
           take5:
-            target.take5 > 0
-              ? Math.min(100, Math.round((closedTake5 / target.take5) * 100))
+            targetTake5 > 0
+              ? Math.min(100, Math.round((closedTake5 / targetTake5) * 100))
               : 0,
           pto:
-            target.pto > 0
-              ? Math.min(100, Math.round((closedPto / target.pto) * 100))
+            targetPto > 0
+              ? Math.min(100, Math.round((closedPto / targetPto) * 100))
               : 0,
         };
+
         setKpiData({
           site: user.site,
+          isPersonal: effectiveShowPersonal,
           label: now.toLocaleDateString("id-ID", {
             month: "long",
             year: "numeric",
           }),
           count: { hazard: closedHazard, take5: closedTake5, pto: closedPto },
-          target,
+          target: {
+            hazard: targetHazard,
+            take5: targetTake5,
+            pto: targetPto,
+          },
           percent,
         });
-      } catch (_) {
+      } catch (err) {
+        console.error("Error loading KPI data:", err);
         setKpiData(null);
       }
     };
     load();
-  }, [user?.role, user?.site]);
+  }, [user?.role, user?.site, user?.id, user?.jabatan, user?.nrp, showPersonalKpi]);
 
   useEffect(() => {
     return () => {
@@ -498,18 +494,6 @@ function HomeMobile({
       color: "#8b5cf6",
       placeholder: false,
     },
-    ...(canAccessMonitoring
-      ? [
-          {
-            key: "monitoring",
-            label: "Monitoring",
-            fullLabel: "Monitoring",
-            icon: "📊",
-            color: "#ea580c",
-            placeholder: false,
-          },
-        ]
-      : []),
     {
       key: "slot-7",
       label: "Segera",
@@ -929,8 +913,29 @@ function HomeMobile({
                     alignItems: "center",
                   }}
                 >
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>
-                    Pencapaian Target Bulanan
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#f8fafc" }}>
+                      {kpiData.isPersonal ? "Pencapaian Saya" : "Pencapaian Site"}
+                    </div>
+                    {(user?.role?.toLowerCase().includes("evaluator") ||
+                      user?.role?.toLowerCase().includes("admin")) && (
+                      <div
+                        onClick={() => setShowPersonalKpi(!showPersonalKpi)}
+                        style={{
+                          background: "rgba(148,163,184,0.15)",
+                          border: "1px solid rgba(148,163,184,0.3)",
+                          borderRadius: 6,
+                          padding: "2px 6px",
+                          fontSize: 9,
+                          color: "#93c5fd",
+                          cursor: "pointer",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {showPersonalKpi ? "Unit" : "Personal"}
+                      </div>
+                    )}
                   </div>
                   <div
                     style={{ fontSize: 12, color: "#93c5fd", fontWeight: 700 }}
