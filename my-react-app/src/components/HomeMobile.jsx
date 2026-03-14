@@ -269,9 +269,10 @@ function HomeMobile({
           return;
         }
 
-        const roleStr = (user?.role || "").toString().toLowerCase();
         const isEvaluator =
-          roleStr.includes("evaluator") || roleStr.includes("admin");
+          roleStr.includes("evaluator") ||
+          roleStr.includes("admin") ||
+          user?.jabatan === "Admin Site Project";
 
         // Jika bukan evaluator, paksa showPersonalKpi = true
         const effectiveShowPersonal = isEvaluator ? showPersonalKpi : true;
@@ -401,6 +402,12 @@ function HomeMobile({
               : 0,
         };
 
+        // Tentukan metrik mana yang aktif (target > 0)
+        const activeMainMetrics = [];
+        if (targetHazard > 0) activeMainMetrics.push("hazard");
+        if (targetTake5 > 0) activeMainMetrics.push("take5");
+        if (targetPto > 0) activeMainMetrics.push("pto");
+
         setKpiData({
           site: user.site,
           isPersonal: effectiveShowPersonal,
@@ -415,7 +422,13 @@ function HomeMobile({
             pto: targetPto,
           },
           percent,
+          activeMetrics: activeMainMetrics,
         });
+
+        // Jika kpiType saat ini tidak ada di daftar aktif, pindah ke yang pertama tersedia
+        if (activeMainMetrics.length > 0 && !activeMainMetrics.includes(kpiType)) {
+          setKpiType(activeMainMetrics[0]);
+        }
       } catch (err) {
         console.error("Error loading KPI data:", err);
         setKpiData(null);
@@ -892,7 +905,7 @@ function HomeMobile({
           </div>
 
           {/* KPI Target Bulanan - evaluator, dapat dipilih Hazard/Take5/PTO */}
-          {kpiData && (
+          {kpiData && kpiData.activeMetrics && kpiData.activeMetrics.length > 0 && (
             <div style={{ paddingTop: 12, paddingBottom: 8 }}>
               <div
                 style={{
@@ -918,7 +931,8 @@ function HomeMobile({
                       {kpiData.isPersonal ? "Pencapaian Saya" : "Pencapaian Site"}
                     </div>
                     {(user?.role?.toLowerCase().includes("evaluator") ||
-                      user?.role?.toLowerCase().includes("admin")) && (
+                      user?.role?.toLowerCase().includes("admin") ||
+                      user?.jabatan === "Admin Site Project") && (
                       <div
                         onClick={() => setShowPersonalKpi(!showPersonalKpi)}
                         style={{
@@ -972,16 +986,19 @@ function HomeMobile({
                     kpiTouchRef.current.moved = true;
                   }}
                   onTouchEnd={() => {
-                    const { dx, moved } = kpiTouchRef.current;
+                    const metrics =
+                      kpiData.activeMetrics && kpiData.activeMetrics.length > 0
+                        ? kpiData.activeMetrics
+                        : kpiMetrics;
+
                     const threshold = 40;
                     if (moved && Math.abs(dx) > threshold) {
                       if (dx < 0) {
-                        const next = kpiMetrics.indexOf(kpiType) + 1;
-                        if (next < kpiMetrics.length)
-                          setKpiType(kpiMetrics[next]);
+                        const next = metrics.indexOf(kpiType) + 1;
+                        if (next < metrics.length) setKpiType(metrics[next]);
                       } else {
-                        const prev = kpiMetrics.indexOf(kpiType) - 1;
-                        if (prev >= 0) setKpiType(kpiMetrics[prev]);
+                        const prev = metrics.indexOf(kpiType) - 1;
+                        if (prev >= 0) setKpiType(metrics[prev]);
                       }
                     }
                   }}
@@ -990,16 +1007,16 @@ function HomeMobile({
                   <div
                     style={{
                       display: "flex",
-                      width: `${kpiMetrics.length * 100}%`,
-                      transform: `translateX(-${kpiMetrics.indexOf(kpiType) * (100 / kpiMetrics.length)}%)`,
+                      width: `${(kpiData.activeMetrics?.length || 1) * 100}%`,
+                      transform: `translateX(-${(kpiData.activeMetrics?.indexOf(kpiType) || 0) * (100 / (kpiData.activeMetrics?.length || 1))}%)`,
                       transition: "transform 250ms ease",
                     }}
                   >
-                    {kpiMetrics.map((metric) => (
+                    {(kpiData.activeMetrics || kpiMetrics).map((metric) => (
                       <div
                         key={metric}
                         style={{
-                          width: `${100 / kpiMetrics.length}%`,
+                          width: `${100 / (kpiData.activeMetrics?.length || 1)}%`,
                           paddingRight: 4,
                           boxSizing: "border-box",
                         }}
@@ -1055,9 +1072,10 @@ function HomeMobile({
                     gap: 6,
                   }}
                 >
-                  {kpiMetrics.map((m) => {
-                    const idx = kpiMetrics.indexOf(kpiType);
-                    const cur = kpiMetrics.indexOf(m);
+                  {(kpiData.activeMetrics || kpiMetrics).map((m) => {
+                    const metrics = kpiData.activeMetrics || kpiMetrics;
+                    const idx = metrics.indexOf(kpiType);
+                    const cur = metrics.indexOf(m);
                     return (
                       <div
                         key={`kpi-dot-${m}`}
