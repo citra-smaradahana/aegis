@@ -852,25 +852,95 @@ const DailyAttendanceForm = ({
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Jam Mulai
                     </label>
-                    <input
-                      type="time"
-                      name="timeStart"
-                      value={formData.timeStart}
-                      onChange={handleHeaderChange}
-                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
-                    />
+                    <div className="relative">
+                      <input
+                        type="time"
+                        name="timeStart"
+                        value={formData.timeStart}
+                        onChange={handleHeaderChange}
+                        onClick={(e) => {
+                          try {
+                            e.target.showPicker();
+                          } catch (_) {}
+                        }}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
+                        style={{ cursor: "pointer" }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          pointerEvents: "none",
+                          color: "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Jam Selesai
                     </label>
-                    <input
-                      type="time"
-                      name="timeEnd"
-                      value={formData.timeEnd}
-                      onChange={handleHeaderChange}
-                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
-                    />
+                    <div className="relative">
+                      <input
+                        type="time"
+                        name="timeEnd"
+                        value={formData.timeEnd}
+                        onChange={handleHeaderChange}
+                        onClick={(e) => {
+                          try {
+                            e.target.showPicker();
+                          } catch (_) {}
+                        }}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition"
+                        style={{ cursor: "pointer" }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          pointerEvents: "none",
+                          color: "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div>
