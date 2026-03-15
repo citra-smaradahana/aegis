@@ -5,6 +5,8 @@ import getCroppedImg from "../Dropzone/cropImageUtil";
 import {
   allowsCustomInput,
   shouldUseLocationSelector,
+  getLocationOptions,
+  getLocationOptionsAsync
 } from "../../config/siteLocations";
 import LocationDetailSelector from "../LocationDetailSelector";
 import { fetchSites } from "../../utils/masterDataHelpers";
@@ -31,7 +33,7 @@ const SITE_OPTIONS_FALLBACK = [
 ];
 
 const JUDUL_PEKERJAAN_OPTIONS = [
-  "Pengoperasian Kendaraan/Unit",
+  "Pengoperasian Kendaraaan & Unit",
   "Loading Aksesoris Blasting",
   "Pengawalan Bahan Peledak",
   "Pembagian Aksesoris",
@@ -41,14 +43,41 @@ const JUDUL_PEKERJAAN_OPTIONS = [
   "Tie Up",
   "Firing",
   "Post Blast",
-  "Pembuatan Emulsion",
-  "Transfer Emulsion ke BIN",
+  "Pembuatan EP",
+  "Transfer EP ke BIN",
   "Loading AN ke BIN",
   "Preventive Maintenance",
   "Perbaikan Unit & Peralatan",
   "Stock Opname Gudang",
   "Administrasi Office",
-  "Lainnya",
+  "Yang lain:",
+];
+
+const POTENSI_BAHAYA_OPTIONS = [
+  "Jatuh dari ketinggian",
+  "Kejatuhan benda",
+  "Bahaya Line of fire",
+  "Tersandung, Terpeleset",
+  "Mengangkat dengan manual",
+  "Pengangkatan dengan crane",
+  "Gangguan kesehatan, debu",
+  "Ruang terbatas",
+  "Terbakar / meledak",
+  "Tersetrum",
+  "Alat Terperosok lumpur",
+  "Melintasi kabel listrik",
+  "Jari terjepit, kaki tertimpa",
+  "Tersangkut benda berputar",
+  "Tenggelam",
+  "Interaksi alat berat",
+  "Tekanan, hidrolik, pneumatic",
+  "Tertimbun reruntuhan",
+  "Tidak kompeten",
+  "Cuaca, petir, angina, hujan",
+  "Tergigit / tersengat binatang",
+  "Limbah tercecer, tumpah",
+  "Terpapar bahan kimia",
+  "Bising, pencahayaan kurang",
 ];
 
 const Take5FormDesktop = ({ user, onRedirectHazard }) => {
@@ -56,11 +85,15 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const [detailLokasi, setDetailLokasi] = useState("");
   const [siteOptions, setSiteOptions] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
-  const [potensiBahaya, setPotensiBahaya] = useState("");
+  const [potensiBahaya, setPotensiBahaya] = useState([]); // Changed to array
+  const [potensiBahayaLainnya, setPotensiBahayaLainnya] = useState(""); // New state for custom bahaya
+  const [resikoTinggi, setResikoTinggi] = useState(null);
+  const [kontrolBahaya, setKontrolBahaya] = useState("");
   const [q1, setQ1] = useState(null);
   const [q2, setQ2] = useState(null);
   const [q3, setQ3] = useState(null);
   const [q4, setQ4] = useState(null);
+  const [q5, setQ5] = useState(null);
   const [kondisiKerja, setKondisiKerja] = useState("");
   const [buktiPerbaikan, setBuktiPerbaikan] = useState(null);
   const [buktiPreview, setBuktiPreview] = useState(null);
@@ -77,18 +110,31 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const [activeTab, setActiveTab] = useState("input");
   const [judulPekerjaan, setJudulPekerjaan] = useState("");
   const [judulPekerjaanCustom, setJudulPekerjaanCustom] = useState("");
+  const [isJudulOpen, setIsJudulOpen] = useState(false);
+  const judulDropdownRef = React.useRef(null);
+  const [isSiteOpen, setIsSiteOpen] = useState(false);
+  const siteDropdownRef = React.useRef(null);
+  const [isDetailLokasiOpen, setIsDetailLokasiOpen] = useState(false);
+  const detailLokasiDropdownRef = React.useRef(null);
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [searchBahaya, setSearchBahaya] = useState("");
+  const [isBahayaOpen, setIsBahayaOpen] = useState(false);
+  const bahayaDropdownRef = React.useRef(null);
 
   // Validasi form
   const isFormValid =
     !!site &&
     !!detailLokasi.trim() &&
     !!judulPekerjaan.trim() &&
-    (judulPekerjaan !== "Lainnya" || !!judulPekerjaanCustom.trim()) &&
-    !!potensiBahaya.trim() &&
+    (judulPekerjaan !== "Yang lain:" || !!judulPekerjaanCustom.trim()) &&
+    (potensiBahaya.length > 0 || !!potensiBahayaLainnya.trim()) && // Updated validation for potensiBahaya
+    resikoTinggi !== null &&
+    !!kontrolBahaya.trim() &&
     q1 !== null &&
     q2 !== null &&
     q3 !== null &&
     q4 !== null &&
+    q5 !== null &&
     !!kondisiKerja &&
     !(kondisiKerja === "perbaikan" && !deskripsiPerbaikan.trim()) &&
     !(kondisiKerja === "stop" && !deskripsiKondisi.trim());
@@ -97,11 +143,13 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   console.log("Form validation debug:", {
     site,
     detailLokasi: detailLokasi.trim(),
-    potensiBahaya: potensiBahaya.trim(),
+    potensiBahaya, // Changed to array
+    potensiBahayaLainnya: potensiBahayaLainnya.trim(), // New debug field
     q1,
     q2,
     q3,
     q4,
+    q5,
     kondisiKerja,
     buktiPerbaikan,
     deskripsiPerbaikan: deskripsiPerbaikan.trim(),
@@ -111,7 +159,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
   // Cek apakah ada jawaban "Tidak" pada pertanyaan
   const hasNegativeAnswer =
-    q1 === false || q2 === false || q3 === false || q4 === false;
+    q1 === false || q2 === false || q3 === false || q4 === false || q5 === false;
 
   // Tombol "Ya" pada kondisi kerja tidak bisa diklik jika ada jawaban "Tidak"
   const isAmanButtonDisabled = hasNegativeAnswer;
@@ -122,6 +170,19 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
       setKondisiKerja("");
     }
   }, [hasNegativeAnswer, kondisiKerja]);
+
+  // Fetch location options dari DB
+  useEffect(() => {
+    if (!site) {
+      setLocationOptions(getLocationOptions(site));
+      return;
+    }
+    let cancelled = false;
+    getLocationOptionsAsync(site).then((opts) => {
+      if (!cancelled) setLocationOptions(opts || getLocationOptions(site));
+    });
+    return () => { cancelled = true; };
+  }, [site]);
 
   // Fetch site options dari DB, fallback ke config
   useEffect(() => {
@@ -142,6 +203,26 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     setDetailLokasi("");
     setShowCustomInput(false);
   }, [site]);
+
+  // Handle click outside for dropdown bahaya & judul
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (bahayaDropdownRef.current && !bahayaDropdownRef.current.contains(event.target)) {
+        setIsBahayaOpen(false);
+      }
+      if (judulDropdownRef.current && !judulDropdownRef.current.contains(event.target)) {
+        setIsJudulOpen(false);
+      }
+      if (siteDropdownRef.current && !siteDropdownRef.current.contains(event.target)) {
+        setIsSiteOpen(false);
+      }
+      if (detailLokasiDropdownRef.current && !detailLokasiDropdownRef.current.contains(event.target)) {
+        setIsDetailLokasiOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Handle detail lokasi change
   const handleDetailLokasiChange = (e) => {
@@ -198,8 +279,19 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     setCropImageSrc(null);
   };
 
+  // Fungsi bantu untuk checkbox bahaya
+  const handleBahayaToggle = (bahaya) => {
+    setPotensiBahaya((prev) =>
+      prev.includes(bahaya)
+        ? prev.filter((item) => item !== bahaya)
+        : [...prev, bahaya]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isFormValid || loading) return;
+
     setLoading(true);
     setError("");
 
@@ -227,9 +319,16 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
       // Tentukan status berdasarkan kondisi kerja
       const status = kondisiKerja === "stop" ? "pending" : "closed";
 
+      // Gabungkan bahaya terpilih dan bahaya lainnya
+      let finalBahaya = [...potensiBahaya];
+      if (potensiBahayaLainnya?.trim()) {
+        finalBahaya.push(potensiBahayaLainnya.trim());
+      }
+      const finalBahayaString = finalBahaya.join(", ");
+
       // Log data yang akan dikirim untuk debugging
       const selectedJudul =
-        judulPekerjaan === "Lainnya"
+        judulPekerjaan === "Yang lain:" || judulPekerjaan === "Lainnya"
           ? judulPekerjaanCustom.trim()
           : judulPekerjaan;
       const take5Data = {
@@ -238,15 +337,18 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
         site: site,
         detail_lokasi: detailLokasi,
         judul_pekerjaan: selectedJudul,
-        potensi_bahaya: potensiBahaya,
+        potensi_bahaya: finalBahayaString,
         q1: q1,
         q2: q2,
         q3: q3,
         q4: q4,
+        q5: q5,
         aman: kondisiKerja,
         status: status,
         pelapor_nama: user.nama || "Unknown", // Nama pelapor dari user login
         nrp: user.nrp || "", // NRP dari user login
+        resiko_tinggi: resikoTinggi,
+        kontrol_bahaya: kontrolBahaya.trim(),
       };
 
       // Tambahkan field opsional hanya jika ada data
@@ -287,11 +389,15 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
           setDetailLokasi("");
           setJudulPekerjaan("");
           setJudulPekerjaanCustom("");
-          setPotensiBahaya("");
+          setPotensiBahaya([]);
+          setPotensiBahayaLainnya("");
+          setResikoTinggi(null);
+          setKontrolBahaya("");
           setQ1(null);
           setQ2(null);
           setQ3(null);
           setQ4(null);
+          setQ5(null);
           setKondisiKerja("");
           setBuktiPerbaikan(null);
           setBuktiPreview(null);
@@ -323,8 +429,8 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     background: "transparent",
     borderRadius: 18,
     boxShadow: "none",
-    padding: 16,
-    maxWidth: 1100,
+    padding: 12, // Dikurangi agar lebih ringkas
+    maxWidth: 1300,
     width: "100%",
     margin: "0 auto",
     height: "auto",
@@ -335,25 +441,16 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     minHeight: 0,
     overflowY: "auto",
     paddingRight: 4,
-    paddingBottom: 120,
+    paddingBottom: 20,
     maxHeight: "calc(100vh - 200px)",
     scrollBehavior: "smooth",
     WebkitOverflowScrolling: "touch",
-    scrollbarWidth: "thin",
-    scrollbarColor: "#334155 #0b1220",
+    scrollbarWidth: "none", // Firefox: transparent/hidden scrollbar
+    msOverflowStyle: "none", // IE/Edge: transparent/hidden scrollbar
+    // Note: Chrome/Safari using ::-webkit-scrollbar is handled via global css or inline style block if needed, but none works for hiding natively in some setups.
   };
 
-  const footerBarStyle = {
-    borderTop: "1px solid transparent",
-    paddingTop: 16,
-    paddingBottom: 16,
-    display: "flex",
-    justifyContent: "center",
-    background: "transparent",
-    borderRadius: 12,
-    position: "sticky",
-    bottom: 40,
-  };
+  // Footer bar removed to make button inline with the form
 
   const headerStyle = {
     textAlign: "center",
@@ -365,8 +462,8 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const formStyle = {
     width: "100%",
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 24,
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: 16, // Dikurangi dari 24 agar tidak terlalu lebar
     alignItems: "start",
   };
 
@@ -378,42 +475,42 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
   const sectionStyle = {
     display: "flex",
     flexDirection: "column",
-    gap: 16,
+    gap: 12, // Dikurangi dari 16
   };
 
   const leftTopSection = {
     ...sectionStyle,
-    gridArea: "1 / 1 / 2 / 2",
+    gridArea: "1 / 1 / 3 / 2",
   };
 
   const rightTopSection = {
     ...sectionStyle,
-    gridArea: "1 / 2 / 2 / 3",
+    gridArea: "1 / 2 / 3 / 3",
   };
 
   const leftBottomSection = {
     ...sectionStyle,
-    gridArea: "2 / 1 / 3 / 2",
+    gridArea: "1 / 3 / 2 / 4",
   };
 
   const rightBottomSection = {
     ...sectionStyle,
-    gridArea: "2 / 2 / 3 / 3",
+    gridArea: "2 / 3 / 3 / 4",
   };
 
   const labelStyle = {
     fontWeight: 600,
     color: "#e5e7eb",
-    marginBottom: 8,
+    marginBottom: 6,
     display: "block",
-    fontSize: 16,
+    fontSize: 15, // Dikecilkan dari 16
   };
 
   const inputStyle = {
     width: "100%",
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    padding: 10, // Dikurangi dari 12
+    fontSize: 15, // Dikecilkan dari 16
     border: "1px solid #334155",
     background: "#0b1220",
     color: "#e5e7eb",
@@ -421,16 +518,16 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
   const questionBtnGroupStyle = {
     display: "flex",
-    gap: 16,
-    marginTop: 8,
+    gap: 12, // Dikurangi dari 16
+    marginTop: 6,
   };
 
   const radioBtnStyle = (active, color, readOnly) => ({
     flex: 1,
-    padding: "12px 24px",
+    padding: "10px 16px", // Dikurangi dari 12px 24px
     borderRadius: 8,
     border: "2px solid",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 600,
     cursor: readOnly ? "not-allowed" : "pointer",
     background: active ? color : "transparent",
@@ -636,7 +733,10 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
         {activeTab === "input" ? (
           <>
-            <div style={scrollAreaStyle}>
+            <div style={scrollAreaStyle} className="hide-scrollbar">
+              <style>{
+                `.hide-scrollbar::-webkit-scrollbar { display: none; }`
+              }</style>
               <form id="take5-form" onSubmit={handleSubmit} style={formStyle}>
                 {/* SISI KIRI ATAS: Tanggal, Lokasi Kerja, Detail Lokasi, Potensi Bahaya */}
                 <div style={leftTopSection}>
@@ -656,53 +756,226 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
                   <div style={fieldMargin}>
                     <label style={labelStyle}>Lokasi Kerja</label>
-                    <select
-                      value={site}
-                      onChange={(e) => setSite(e.target.value)}
-                      required
-                      style={inputStyle}
-                    >
-                      <option value="">Pilih Lokasi</option>
-                      {(siteOptions.length > 0
-                        ? siteOptions
-                        : SITE_OPTIONS_FALLBACK
-                      ).map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                    <div ref={siteDropdownRef} style={{ position: "relative" }}>
+                      <div
+                        onClick={() => setIsSiteOpen(!isSiteOpen)}
+                        style={{
+                          ...inputStyle,
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}
+                      >
+                        <span style={{ color: site ? "#e5e7eb" : "#9ca3af" }}>
+                          {site || "Pilih Lokasi Kerja"}
+                        </span>
+                      </div>
+
+                      {isSiteOpen && (
+                        <div
+                          className="hide-scrollbar"
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            zIndex: 10,
+                            background: "#0b1220",
+                            border: "1px solid #334155",
+                            borderRadius: "8px",
+                            padding: "8px 0",
+                            marginTop: "4px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.5)",
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            scrollbarWidth: "none",
+                            msOverflowStyle: "none",
+                          }}
+                        >
+                          {(siteOptions.length > 0 ? siteOptions : SITE_OPTIONS_FALLBACK).map((s) => (
+                            <div
+                              key={s}
+                              onClick={() => {
+                                setSite(s);
+                                setIsSiteOpen(false);
+                              }}
+                              style={{
+                                padding: "10px 16px",
+                                cursor: "pointer",
+                                fontSize: "14px",
+                                color: site === s ? "#3b82f6" : "#e5e7eb",
+                                background: site === s ? "rgba(59, 130, 246, 0.1)" : "transparent",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (site !== s) e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                              }}
+                              onMouseLeave={(e) => {
+                                if (site !== s) e.currentTarget.style.background = "transparent";
+                              }}
+                            >
+                              {s}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div style={fieldMargin}>
                     <label style={labelStyle}>Detail Lokasi</label>
-                    {/* Hanya dropdown pada desktop; tanpa input bebas */}
-                    <LocationDetailSelector
-                      site={site}
-                      value={detailLokasi}
-                      onChange={handleDetailLokasiChange}
-                      placeholder="Pilih Detail Lokasi"
-                      style={inputStyle}
-                      required
-                    />
+                    <div ref={detailLokasiDropdownRef} style={{ position: "relative" }}>
+                      <div
+                        onClick={() => setIsDetailLokasiOpen(!isDetailLokasiOpen)}
+                        style={{
+                          ...inputStyle,
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}
+                      >
+                        <span style={{ color: detailLokasi && !showCustomInput ? "#e5e7eb" : "#9ca3af" }}>
+                          {(!showCustomInput && detailLokasi) || "Pilih Detail Lokasi"}
+                        </span>
+                      </div>
+
+                      {isDetailLokasiOpen && (
+                        <div
+                          className="hide-scrollbar"
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            zIndex: 10,
+                            background: "#0b1220",
+                            border: "1px solid #334155",
+                            borderRadius: "8px",
+                            padding: "8px 0",
+                            marginTop: "4px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.5)",
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            scrollbarWidth: "none",
+                            msOverflowStyle: "none",
+                          }}
+                        >
+                          {locationOptions.length === 0 ? (
+                            <div style={{ padding: "10px 16px", color: "#9ca3af", fontSize: "14px" }}>Pilih Lokasi Kerja terlebih dahulu</div>
+                          ) : (
+                            locationOptions.map((loc) => (
+                              <div
+                                key={loc}
+                                onClick={() => {
+                                  handleDetailLokasiChange({ target: { value: loc } });
+                                  setIsDetailLokasiOpen(false);
+                                }}
+                                style={{
+                                  padding: "10px 16px",
+                                  cursor: "pointer",
+                                  fontSize: "14px",
+                                  color: detailLokasi === loc ? "#3b82f6" : "#e5e7eb",
+                                  background: detailLokasi === loc ? "rgba(59, 130, 246, 0.1)" : "transparent",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (detailLokasi !== loc) e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (detailLokasi !== loc) e.currentTarget.style.background = "transparent";
+                                }}
+                              >
+                                {loc}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {/* Input manual untuk Detail Lokasi jika diperlukan */}
+                    {showCustomInput && (
+                      <input
+                        type="text"
+                        value={detailLokasi}
+                        onChange={(e) => setDetailLokasi(e.target.value)}
+                        required
+                        placeholder="Ketik detail lokasi..."
+                        style={{ ...inputStyle, marginTop: 8 }}
+                      />
+                    )}
                   </div>
 
                   <div style={fieldMargin}>
                     <label style={labelStyle}>Judul Pekerjaan</label>
-                    <select
-                      value={judulPekerjaan}
-                      onChange={(e) => setJudulPekerjaan(e.target.value)}
-                      required
-                      style={inputStyle}
-                    >
-                      <option value="">Pilih Judul Pekerjaan</option>
-                      {JUDUL_PEKERJAAN_OPTIONS.map((name) => (
-                        <option key={name} value={name}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                    {judulPekerjaan === "Lainnya" && (
+                    <div ref={judulDropdownRef} style={{ position: "relative" }}>
+                      <div
+                        onClick={() => setIsJudulOpen(!isJudulOpen)}
+                        style={{
+                          ...inputStyle,
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}
+                      >
+                        <span style={{ color: judulPekerjaan ? "#e5e7eb" : "#9ca3af" }}>
+                          {judulPekerjaan || "Pilih Judul Pekerjaan"}
+                        </span>
+                      </div>
+
+                      {isJudulOpen && (
+                        <div
+                          className="hide-scrollbar"
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            zIndex: 10,
+                            background: "#0b1220",
+                            border: "1px solid #334155",
+                            borderRadius: "8px",
+                            padding: "8px 0",
+                            marginTop: "4px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.5)",
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            scrollbarWidth: "none",
+                            msOverflowStyle: "none",
+                          }}
+                        >
+                          {JUDUL_PEKERJAAN_OPTIONS.map((name) => (
+                            <div
+                              key={name}
+                              onClick={() => {
+                                setJudulPekerjaan(name);
+                                setIsJudulOpen(false);
+                              }}
+                              style={{
+                                padding: "10px 16px",
+                                cursor: "pointer",
+                                fontSize: "14px",
+                                color: judulPekerjaan === name ? "#3b82f6" : "#e5e7eb",
+                                background: judulPekerjaan === name ? "rgba(59, 130, 246, 0.1)" : "transparent",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (judulPekerjaan !== name) {
+                                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (judulPekerjaan !== name) {
+                                  e.currentTarget.style.background = "transparent";
+                                }
+                              }}
+                            >
+                              {name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {judulPekerjaan === "Yang lain:" && (
                       <input
                         type="text"
                         value={judulPekerjaanCustom}
@@ -716,15 +989,149 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                     )}
                   </div>
 
+                  {/* Resiko Tinggi */}
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>
+                      Apakah pekerjaan Saya termasuk resiko tinggi?
+                    </label>
+                    <div style={questionBtnGroupStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setResikoTinggi(true)}
+                        style={radioBtnStyle(resikoTinggi === true, "#ef4444", false)}
+                      >
+                        Ya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResikoTinggi(false)}
+                        style={radioBtnStyle(resikoTinggi === false, "#22c55e", false)}
+                      >
+                        Tidak
+                      </button>
+                    </div>
+                  </div>
+
                   <div style={fieldMargin}>
                     <label style={labelStyle}>Potensi Bahaya</label>
+                    <div ref={bahayaDropdownRef} style={{ position: "relative" }}>
+                      <div
+                        onClick={() => setIsBahayaOpen(!isBahayaOpen)}
+                        style={{
+                          ...inputStyle,
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}
+                      >
+                        <span style={{ color: potensiBahaya.length ? "#e5e7eb" : "#9ca3af" }}>
+                          {potensiBahaya.length 
+                            ? `${potensiBahaya.length} bahaya dipilih` 
+                            : "Pilih potensi bahaya..."}
+                        </span>
+                      </div>
+
+                      {isBahayaOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            zIndex: 10,
+                            background: "#0b1220",
+                            border: "1px solid #334155",
+                            borderRadius: "8px",
+                            padding: "12px",
+                            marginTop: "4px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.5)"
+                          }}
+                        >
+                          <input 
+                            type="text"
+                            placeholder="Cari potensi bahaya..."
+                            value={searchBahaya}
+                            onChange={(e) => setSearchBahaya(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              ...inputStyle,
+                              marginBottom: "12px",
+                              padding: "8px 12px",
+                            }}
+                          />
+                          <div 
+                            className="hide-scrollbar"
+                            style={{ 
+                              display: "flex", 
+                              flexDirection: "column", 
+                              gap: "12px", 
+                              maxHeight: "145px", 
+                              overflowY: "auto",
+                              scrollbarWidth: "none",
+                              msOverflowStyle: "none",
+                            }}
+                          >
+                            {POTENSI_BAHAYA_OPTIONS.filter((bahaya) =>
+                              bahaya.toLowerCase().includes(searchBahaya.toLowerCase())
+                            ).length > 0 ? (
+                              POTENSI_BAHAYA_OPTIONS.filter((bahaya) =>
+                                bahaya.toLowerCase().includes(searchBahaya.toLowerCase())
+                              ).map((bahaya) => (
+                                <label
+                                  key={bahaya}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    gap: "8px",
+                                    fontSize: "14px",
+                                    color: "#e5e7eb",
+                                    cursor: "pointer",
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={potensiBahaya.includes(bahaya)}
+                                    onChange={() => handleBahayaToggle(bahaya)}
+                                    style={{
+                                      marginTop: "2px",
+                                      width: "16px",
+                                      height: "16px",
+                                      cursor: "pointer",
+                                    }}
+                                  />
+                                  <span style={{ lineHeight: "1.3" }}>{bahaya}</span>
+                                </label>
+                              ))
+                            ) : (
+                              <span style={{ color: "#9ca3af", fontSize: "14px" }}>Pencarian tidak ditemukan</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <label style={{ ...labelStyle, fontSize: "14px", marginTop: "8px" }}>
+                      Lainnya (Jika ada)
+                    </label>
                     <input
                       type="text"
-                      value={potensiBahaya}
-                      onChange={(e) => setPotensiBahaya(e.target.value)}
-                      required
-                      placeholder="Contoh: Listrik, Ketinggian, dll"
+                      value={potensiBahayaLainnya}
+                      onChange={(e) => setPotensiBahayaLainnya(e.target.value)}
+                      placeholder="Ketikan potensi bahaya lainnya..."
                       style={inputStyle}
+                    />
+
+                    <label style={{ ...labelStyle, fontSize: "14px", marginTop: "12px" }}>
+                      Bagaimana saya mengontrol potensi bahaya tersebut?
+                    </label>
+                    <textarea
+                      value={kontrolBahaya}
+                      onChange={(e) => setKontrolBahaya(e.target.value)}
+                      placeholder="Deskripsikan kontrol bahaya di sini..."
+                      rows={3}
+                      style={{...inputStyle, resize: "none"}}
                     />
                   </div>
                 </div>
@@ -733,7 +1140,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                 <div style={rightTopSection}>
                   <div style={fieldMargin}>
                     <label style={labelStyle}>
-                      Apakah Saya mengerti pekerjaan yang akan saya lakukan?
+                      Apakah saya sehat secara fisik untuk melakukan pekerjaan ini?
                     </label>
                     <div style={questionBtnGroupStyle}>
                       <button
@@ -760,8 +1167,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
                   <div style={fieldMargin}>
                     <label style={labelStyle}>
-                      Apakah Saya memiliki kompetensi untuk melakukan pekerjaan
-                      ini?
+                      Apakah saya mengerti pekerjaan yang akan saya lakukan, memahami langkah pekerjaan yang benar?
                     </label>
                     <div style={questionBtnGroupStyle}>
                       <button
@@ -788,7 +1194,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
                   <div style={fieldMargin}>
                     <label style={labelStyle}>
-                      Apakah Saya memiliki izin untuk melakukan pekerjaan ini?
+                      Apakah saya mengerti potensi bahaya yang akan terjadi saat melakukan pekerjaan yang benar?
                     </label>
                     <div style={questionBtnGroupStyle}>
                       <button
@@ -815,8 +1221,7 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
 
                   <div style={fieldMargin}>
                     <label style={labelStyle}>
-                      Apakah Saya memiliki peralatan yang tepat untuk pekerjaan
-                      ini?
+                      Apakah saya memiliki peralatan yang benar untuk melakukan pekerjaan ini?
                     </label>
                     <div style={questionBtnGroupStyle}>
                       <button
@@ -834,6 +1239,33 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                           borderWidth: q4 === false ? "3px" : "2px",
                           boxShadow:
                             q4 === false ? "0 0 0 2px #fef3c7" : "none",
+                        }}
+                      >
+                        Tidak
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={fieldMargin}>
+                    <label style={labelStyle}>
+                      Apakah saya memiliki APD yang benar untuk melakukan pekerjaan ini?
+                    </label>
+                    <div style={questionBtnGroupStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setQ5(true)}
+                        style={radioBtnStyle(q5 === true, "#22c55e", false)}
+                      >
+                        Ya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQ5(false)}
+                        style={{
+                          ...radioBtnStyle(q5 === false, "#ef4444", false),
+                          borderWidth: q5 === false ? "3px" : "2px",
+                          boxShadow:
+                            q5 === false ? "0 0 0 2px #fef3c7" : "none",
                         }}
                       >
                         Tidak
@@ -908,11 +1340,12 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                         STOP pekerjaan, lalu minta bantuan untuk perbaikan
                       </button>
                     </div>
+                    
                   </div>
                 </div>
 
                 {/* SISI KANAN BAWAH: Bukti/Deskripsi */}
-                <div style={rightBottomSection}>
+                <div style={{ ...rightBottomSection, marginTop: 8 }}>
                   {(kondisiKerja === "perbaikan" ||
                     kondisiKerja === "stop") && (
                     <div
@@ -1040,6 +1473,26 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                       </div>
                     </div>
                   )}
+                  {/* Submit Button ada di dalam grid rightBottomSection agar sejajar dan didorong oleh Bukti */}
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    width: "100%",
+                    marginTop: 16,
+                  }}>
+                    <button
+                      type="submit"
+                      disabled={!isFormValid || loading}
+                      style={{
+                        ...submitButtonStyle,
+                        width: "100%",
+                        background: !isFormValid || loading ? "#9ca3af" : "#2563eb",
+                        cursor: !isFormValid || loading ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {loading ? "Menyimpan..." : "Simpan Take 5"}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Error Message */}
@@ -1079,23 +1532,12 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
                 )}
               </form>
             </div>
-            <div style={footerBarStyle}>
-              <button
-                form="take5-form"
-                type="submit"
-                disabled={!isFormValid || loading}
-                style={{
-                  ...submitButtonStyle,
-                  background: !isFormValid || loading ? "#9ca3af" : "#2563eb",
-                  cursor: !isFormValid || loading ? "not-allowed" : "pointer",
-                }}
-              >
-                {loading ? "Menyimpan..." : "Simpan Take 5"}
-              </button>
-            </div>
+            {/* Footer Bar Removed */}
           </>
         ) : (
-          <Take5History user={user} />
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", maxHeight: "calc(100vh - 120px)", paddingRight: "8px", paddingBottom: "20px" }} className="hide-scrollbar">
+            <Take5History user={user} />
+          </div>
         )}
       </div>
     </div>

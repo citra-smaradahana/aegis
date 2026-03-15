@@ -11,6 +11,7 @@ import {
 } from "../../config/siteLocations";
 import { fetchSites } from "../../utils/masterDataHelpers";
 import SelectModalWithSearch from "../SelectModalWithSearch";
+import MultiSelectModalWithSearch from "../MultiSelectModalWithSearch";
 import PICSelector from "../PICSelector";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
@@ -19,7 +20,7 @@ import Take5History from "./Take5History";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
 const JUDUL_PEKERJAAN_OPTIONS = [
-  "Pengoperasian Kendaraan/Unit",
+  "Pengoperasian Kendaraaan & Unit",
   "Loading Aksesoris Blasting",
   "Pengawalan Bahan Peledak",
   "Pembagian Aksesoris",
@@ -29,14 +30,41 @@ const JUDUL_PEKERJAAN_OPTIONS = [
   "Tie Up",
   "Firing",
   "Post Blast",
-  "Pembuatan Emulsion",
-  "Transfer Emulsion ke BIN",
+  "Pembuatan EP",
+  "Transfer EP ke BIN",
   "Loading AN ke BIN",
   "Preventive Maintenance",
   "Perbaikan Unit & Peralatan",
   "Stock Opname Gudang",
   "Administrasi Office",
   "Lainnya",
+];
+
+const POTENSI_BAHAYA_OPTIONS = [
+  "Jatuh dari ketinggian",
+  "Kejatuhan benda",
+  "Bahaya Line of fire",
+  "Tersandung, Terpeleset",
+  "Mengangkat dengan manual",
+  "Pengangkatan dengan crane",
+  "Gangguan kesehatan, debu",
+  "Ruang terbatas",
+  "Terbakar / meledak",
+  "Tersetrum",
+  "Alat Terperosok lumpur",
+  "Melintasi kabel listrik",
+  "Jari terjepit, kaki tertimpa",
+  "Tersangkut benda berputar",
+  "Tenggelam",
+  "Interaksi alat berat",
+  "Tekanan, hidrolik, pneumatic",
+  "Tertimbun reruntuhan",
+  "Tidak kompeten",
+  "Cuaca, petir, angina, hujan",
+  "Tergigit / tersengat binatang",
+  "Limbah tercecer, tumpah",
+  "Terpapar bahan kimia",
+  "Bising, pencahayaan kurang",
 ];
 const Take5FormMobile = ({
   user,
@@ -54,11 +82,16 @@ const Take5FormMobile = ({
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showDetailLokasiModal, setShowDetailLokasiModal] = useState(false);
   const [detailLokasiSearchQuery, setDetailLokasiSearchQuery] = useState("");
-  const [potensiBahaya, setPotensiBahaya] = useState("");
+  // State untuk potensi bahaya berubah menjadi array
+  const [potensiBahaya, setPotensiBahaya] = useState([]);
+  const [potensiBahayaLainnya, setPotensiBahayaLainnya] = useState("");
+  const [resikoTinggi, setResikoTinggi] = useState(null);
+  const [kontrolBahaya, setKontrolBahaya] = useState("");
   const [q1, setQ1] = useState(null);
   const [q2, setQ2] = useState(null);
   const [q3, setQ3] = useState(null);
   const [q4, setQ4] = useState(null);
+  const [q5, setQ5] = useState(null);
   const [aman, setAman] = useState("");
   const [buktiPerbaikan, setBuktiPerbaikan] = useState(null);
   const [buktiPreview, setBuktiPreview] = useState(null);
@@ -78,6 +111,9 @@ const Take5FormMobile = ({
   const [judulPekerjaanCustom, setJudulPekerjaanCustom] = useState("");
   const [showJudulModal, setShowJudulModal] = useState(false);
   const [judulSearchQuery, setJudulSearchQuery] = useState("");
+  
+  const [showBahayaModal, setShowBahayaModal] = useState(false);
+  const [searchBahaya, setSearchBahaya] = useState("");
   const buktiCameraRef = useRef();
   const buktiGalleryRef = useRef();
 
@@ -86,11 +122,14 @@ const Take5FormMobile = ({
     const errors = [];
     if (!site) errors.push("Lokasi (Site)");
     if (!detailLokasi?.trim()) errors.push("Detail Lokasi");
-    if (!potensiBahaya?.trim()) errors.push("Potensi Bahaya");
-    if (q1 === null) errors.push("Pertanyaan 1: Apakah mengerti pekerjaan?");
-    if (q2 === null) errors.push("Pertanyaan 2: Kompetensi?");
-    if (q3 === null) errors.push("Pertanyaan 3: Izin?");
-    if (q4 === null) errors.push("Pertanyaan 4: Peralatan?");
+    if (potensiBahaya.length === 0 && !potensiBahayaLainnya?.trim()) {
+      errors.push("Potensi Bahaya");
+    }
+    if (q1 === null) errors.push("Pertanyaan 1: Sehat fisik?");
+    if (q2 === null) errors.push("Pertanyaan 2: Mengerti pekerjaan?");
+    if (q3 === null) errors.push("Pertanyaan 3: Mengerti potensi bahaya?");
+    if (q4 === null) errors.push("Pertanyaan 4: Peralatan yang benar?");
+    if (q5 === null) errors.push("Pertanyaan 5: APD yang benar?");
     if (!aman) errors.push("Kondisi kerja (Aman/Perbaikan/Stop)");
     if (aman === "perbaikan") {
       if (!buktiPerbaikan) errors.push("Bukti Perbaikan (Foto)");
@@ -99,6 +138,8 @@ const Take5FormMobile = ({
     if (aman === "stop") {
       if (!deskripsiKondisi?.trim()) errors.push("Deskripsi Kondisi");
     }
+    if (resikoTinggi === null) errors.push("Apakah pekerjaan beresiko tinggi?");
+    if (!kontrolBahaya?.trim()) errors.push("Kontrol Bahaya");
     return errors;
   };
 
@@ -108,11 +149,14 @@ const Take5FormMobile = ({
     detailLokasi.trim() &&
     judulPekerjaan.trim() &&
     (judulPekerjaan !== "Lainnya" ? true : !!judulPekerjaanCustom.trim()) &&
-    potensiBahaya.trim() &&
+    (potensiBahaya.length > 0 || potensiBahayaLainnya.trim()) &&
+    resikoTinggi !== null &&
+    kontrolBahaya?.trim() &&
     q1 !== null &&
     q2 !== null &&
     q3 !== null &&
     q4 !== null &&
+    q5 !== null &&
     aman &&
     // Validasi untuk perbaikan
     !(
@@ -124,7 +168,7 @@ const Take5FormMobile = ({
 
   // Cek apakah ada jawaban "Tidak" pada pertanyaan
   const hasNegativeAnswer =
-    q1 === false || q2 === false || q3 === false || q4 === false;
+    q1 === false || q2 === false || q3 === false || q4 === false || q5 === false;
 
   // Tombol "Ya" pada kondisi kerja tidak bisa diklik jika ada jawaban "Tidak"
   const isAmanButtonDisabled = hasNegativeAnswer;
@@ -147,9 +191,13 @@ const Take5FormMobile = ({
     };
   }, []);
 
+  // Reset detail lokasi when site changes
   useEffect(() => {
     setDetailLokasi("");
     setShowCustomInput(false);
+  }, [site]);
+
+  useEffect(() => {
     if (!site) {
       setDetailLokasiOptions([]);
       return;
@@ -210,6 +258,15 @@ const Take5FormMobile = ({
     setCropImageSrc(null);
   };
 
+  // Fungsi bantu untuk checkbox bahaya
+  const handleBahayaToggle = (bahaya) => {
+    setPotensiBahaya((prev) =>
+      prev.includes(bahaya)
+        ? prev.filter((item) => item !== bahaya)
+        : [...prev, bahaya]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid) {
@@ -228,6 +285,7 @@ const Take5FormMobile = ({
       q2,
       q3,
       q4,
+      q5,
       aman,
       buktiPerbaikan: !!buktiPerbaikan,
       deskripsiPerbaikan,
@@ -272,6 +330,13 @@ const Take5FormMobile = ({
       // Tentukan status berdasarkan kondisi kerja
       const status = aman === "stop" ? "pending" : "closed";
 
+      // Gabungkan bahaya terpilih dan bahaya lainnya
+      let finalBahaya = [...potensiBahaya];
+      if (potensiBahayaLainnya?.trim()) {
+        finalBahaya.push(potensiBahayaLainnya.trim());
+      }
+      const finalBahayaString = finalBahaya.join(", ");
+
       // Log data yang akan dikirim untuk debugging
       const selectedJudul =
         judulPekerjaan === "Lainnya"
@@ -282,16 +347,20 @@ const Take5FormMobile = ({
         tanggal: getTodayWITA(),
         site: site,
         detail_lokasi: detailLokasi,
-        judul_pekerjaan: selectedJudul,
-        potensi_bahaya: potensiBahaya,
+        judul_pekerjaan:
+          judulPekerjaan === "Lainnya" ? judulPekerjaanCustom : judulPekerjaan,
+        potensi_bahaya: finalBahayaString,
         q1: q1,
         q2: q2,
         q3: q3,
         q4: q4,
+        q5: q5,
         aman: aman,
         status: status,
         pelapor_nama: user.nama || "Unknown", // Nama pelapor dari user login
         nrp: user.nrp || "", // NRP dari user login
+        resiko_tinggi: resikoTinggi,
+        kontrol_bahaya: kontrolBahaya.trim(),
       };
 
       // Tambahkan field opsional hanya jika ada data
@@ -327,11 +396,15 @@ const Take5FormMobile = ({
         // Reset form immediately untuk STOP
         setSite(user.site || "");
         setDetailLokasi("");
-        setPotensiBahaya("");
+        setPotensiBahaya([]);
+        setPotensiBahayaLainnya("");
+        setResikoTinggi(null);
+        setKontrolBahaya("");
         setQ1(null);
         setQ2(null);
         setQ3(null);
         setQ4(null);
+        setQ5(null);
         setAman("");
         setBuktiPerbaikan(null);
         setBuktiPreview(null);
@@ -349,11 +422,15 @@ const Take5FormMobile = ({
           setDetailLokasi("");
           setJudulPekerjaan("");
           setJudulPekerjaanCustom("");
-          setPotensiBahaya("");
+          setPotensiBahaya([]);
+          setPotensiBahayaLainnya("");
+          setResikoTinggi(null);
+          setKontrolBahaya("");
           setQ1(null);
           setQ2(null);
           setQ3(null);
           setQ4(null);
+          setQ5(null);
           setAman("");
           setBuktiPerbaikan(null);
           setBuktiPreview(null);
@@ -711,17 +788,6 @@ const Take5FormMobile = ({
                   }}
                 >
                   <span>{site || "Pilih Lokasi"}</span>
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
                 </div>
                 <SelectModalWithSearch
                   title="Pilih Lokasi"
@@ -771,19 +837,6 @@ const Take5FormMobile = ({
                             ? "Pilih lokasi terlebih dahulu"
                             : "Pilih Detail Lokasi")}
                       </span>
-                      {site && (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          style={{ flexShrink: 0 }}
-                        >
-                          <path d="m6 9 6 6 6-6" />
-                        </svg>
-                      )}
                     </div>
                     <SelectModalWithSearch
                       title="Pilih Detail Lokasi"
@@ -857,17 +910,6 @@ const Take5FormMobile = ({
                   }}
                 >
                   <span>{judulPekerjaan || "Pilih Judul Pekerjaan"}</span>
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
                 </div>
                 <SelectModalWithSearch
                   title="Pilih Judul Pekerjaan"
@@ -894,23 +936,87 @@ const Take5FormMobile = ({
                 )}
               </div>
 
+              {/* Resiko Tinggi */}
+              <div style={fieldMargin}>
+                <label style={labelStyle}>
+                  Apakah pekerjaan Saya termasuk resiko tinggi?
+                </label>
+                <div style={questionBtnGroupStyle}>
+                  <button
+                    type="button"
+                    onClick={() => setResikoTinggi(true)}
+                    style={radioBtnStyle(resikoTinggi === true, "#ef4444", false)}
+                  >
+                    Ya
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResikoTinggi(false)}
+                    style={radioBtnStyle(resikoTinggi === false, "#22c55e", false)}
+                  >
+                    Tidak
+                  </button>
+                </div>
+              </div>
+
               {/* Potensi Bahaya */}
               <div style={fieldMargin}>
                 <label style={labelStyle}>Potensi Bahaya</label>
+                <div
+                  onClick={() => setShowBahayaModal(true)}
+                  style={{
+                    ...inputStyle,
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}
+                >
+                  <span style={{ color: potensiBahaya.length ? "#374151" : "#9ca3af" }}>
+                    {potensiBahaya.length 
+                      ? `${potensiBahaya.length} bahaya dipilih` 
+                      : "Pilih potensi bahaya..."}
+                  </span>
+                </div>
+
+                <MultiSelectModalWithSearch
+                  title="Pilih Potensi Bahaya"
+                  options={POTENSI_BAHAYA_OPTIONS}
+                  selectedOptions={potensiBahaya}
+                  onToggleOption={handleBahayaToggle}
+                  searchQuery={searchBahaya}
+                  onSearchChange={setSearchBahaya}
+                  show={showBahayaModal}
+                  onClose={() => setShowBahayaModal(false)}
+                />
+                
+                <label style={{ ...labelStyle, fontSize: "14px", marginTop: "8px" }}>
+                  Lainnya (Jika ada)
+                </label>
                 <input
                   type="text"
-                  value={potensiBahaya}
-                  onChange={(e) => setPotensiBahaya(e.target.value)}
-                  required
-                  placeholder="Contoh: Listrik, Ketinggian, dll"
+                  value={potensiBahayaLainnya}
+                  onChange={(e) => setPotensiBahayaLainnya(e.target.value)}
+                  placeholder="Ketikan potensi bahaya lainnya..."
                   style={inputStyle}
+                />
+
+                <label style={{ ...labelStyle, fontSize: "14px", marginTop: "16px" }}>
+                  Bagaimana saya mengontrol potensi bahaya tersebut?
+                </label>
+                <textarea
+                  value={kontrolBahaya}
+                  onChange={(e) => setKontrolBahaya(e.target.value)}
+                  placeholder="Deskripsikan kontrol bahaya di sini..."
+                  rows={3}
+                  style={{...inputStyle, resize: "none"}}
                 />
               </div>
 
               {/* Pertanyaan 1 */}
               <div style={fieldMargin}>
                 <label style={labelStyle}>
-                  Apakah Saya mengerti pekerjaan yang akan saya lakukan?
+                  Apakah saya sehat secara fisik untuk melakukan pekerjaan ini?
                 </label>
                 <div style={questionBtnGroupStyle}>
                   <button
@@ -937,7 +1043,7 @@ const Take5FormMobile = ({
               {/* Pertanyaan 2 */}
               <div style={fieldMargin}>
                 <label style={labelStyle}>
-                  Apakah Saya memiliki kompetensi untuk melakukan pekerjaan ini?
+                  Apakah saya mengerti pekerjaan yang akan saya lakukan, memahami langkah pekerjaan yang benar?
                 </label>
                 <div style={questionBtnGroupStyle}>
                   <button
@@ -964,7 +1070,7 @@ const Take5FormMobile = ({
               {/* Pertanyaan 3 */}
               <div style={fieldMargin}>
                 <label style={labelStyle}>
-                  Apakah Saya memiliki izin untuk melakukan pekerjaan ini?
+                  Apakah saya mengerti potensi bahaya yang akan terjadi saat melakukan pekerjaan yang benar?
                 </label>
                 <div style={questionBtnGroupStyle}>
                   <button
@@ -991,7 +1097,7 @@ const Take5FormMobile = ({
               {/* Pertanyaan 4 */}
               <div style={fieldMargin}>
                 <label style={labelStyle}>
-                  Apakah Saya memiliki peralatan yang tepat untuk pekerjaan ini?
+                  Apakah saya memiliki peralatan yang benar untuk melakukan pekerjaan ini?
                 </label>
                 <div style={questionBtnGroupStyle}>
                   <button
@@ -1008,6 +1114,33 @@ const Take5FormMobile = ({
                       ...radioBtnStyle(q4 === false, "#ef4444", false),
                       borderWidth: q4 === false ? "3px" : "2px",
                       boxShadow: q4 === false ? "0 0 0 2px #fef3c7" : "none",
+                    }}
+                  >
+                    Tidak
+                  </button>
+                </div>
+              </div>
+
+              {/* Pertanyaan 5 */}
+              <div style={fieldMargin}>
+                <label style={labelStyle}>
+                  Apakah saya memiliki APD yang benar untuk melakukan pekerjaan ini?
+                </label>
+                <div style={questionBtnGroupStyle}>
+                  <button
+                    type="button"
+                    onClick={() => setQ5(true)}
+                    style={radioBtnStyle(q5 === true, "#22c55e", false)}
+                  >
+                    Ya
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQ5(false)}
+                    style={{
+                      ...radioBtnStyle(q5 === false, "#ef4444", false),
+                      borderWidth: q5 === false ? "3px" : "2px",
+                      boxShadow: q5 === false ? "0 0 0 2px #fef3c7" : "none",
                     }}
                   >
                     Tidak

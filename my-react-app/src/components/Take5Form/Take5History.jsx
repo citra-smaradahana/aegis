@@ -6,6 +6,21 @@ const Take5History = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
 
+  // Helper function to safely format potensi_bahaya which might be a JSON array string
+  const formatPotensiBahaya = (bahayaData) => {
+    if (!bahayaData) return "-";
+    try {
+      // Coba untuk parse apakah itu adalah JSON array string
+      const parsed = JSON.parse(bahayaData);
+      if (Array.isArray(parsed)) {
+        return parsed.join(", ");
+      }
+    } catch (e) {
+      // Jika error, berarti itu sudah merupakan plain string, kembalikan apa adanya
+    }
+    return bahayaData;
+  };
+
   useEffect(() => {
     const fetchHistory = async () => {
       try {
@@ -171,6 +186,20 @@ const Take5History = ({ user }) => {
                     fontSize: "12px",
                   }}
                 >
+                  Pekerjaan Resiko Tinggi?
+                </span>
+                <span style={{ color: (item.resiko_tinggi === true && item.kontrol_bahaya !== null) ? "#ef4444" : (item.resiko_tinggi === false && item.kontrol_bahaya !== null) ? "#22c55e" : "#9ca3af", fontWeight: (item.resiko_tinggi === true && item.kontrol_bahaya !== null) ? "600" : "normal" }}>
+                  {(item.resiko_tinggi === true && item.kontrol_bahaya !== null) ? "Ya" : (item.resiko_tinggi === false && item.kontrol_bahaya !== null) ? "Tidak" : "-"}
+                </span>
+              </div>
+              <div>
+                <span
+                  style={{
+                    color: "#6b7280",
+                    display: "block",
+                    fontSize: "12px",
+                  }}
+                >
                   Judul Pekerjaan:
                 </span>
                 <span style={{ color: "#d1d5db" }}>
@@ -188,7 +217,7 @@ const Take5History = ({ user }) => {
                   Potensi Bahaya:
                 </span>
                 <span style={{ color: "#d1d5db" }}>
-                  {item.potensi_bahaya || "-"}
+                  {formatPotensiBahaya(item.potensi_bahaya)}
                 </span>
               </div>
               <div>
@@ -238,25 +267,28 @@ const Take5History = ({ user }) => {
             style={{
               backgroundColor: "#1e1e2d",
               borderRadius: "12px",
-              padding: "24px",
               width: "100%",
               maxWidth: "600px",
               maxHeight: "90vh",
-              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
               position: "relative",
               border: "1px solid #374151",
               color: "#e5e7eb",
+              overflow: "hidden", // Memastikan rounded corners tetap ada
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Header Statis */}
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: "20px",
                 borderBottom: "1px solid #374151",
-                paddingBottom: "16px",
+                padding: "16px 24px",
+                backgroundColor: "#1e1e2d", // Background agar menutupi
+                zIndex: 10,
               }}
             >
               <h2
@@ -278,14 +310,24 @@ const Take5History = ({ user }) => {
                   fontSize: "24px",
                   cursor: "pointer",
                   padding: "0 8px",
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
                 &times;
               </button>
             </div>
 
+            {/* Konten Scrollable */}
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+              style={{
+                padding: "24px",
+                overflowY: "auto",
+                flex: 1, // Memenuhi sisa ruang
+                display: "flex", 
+                flexDirection: "column", 
+                gap: "20px",
+              }}
             >
               <div
                 style={{
@@ -386,6 +428,22 @@ const Take5History = ({ user }) => {
                     marginBottom: "4px",
                   }}
                 >
+                  Pekerjaan Resiko Tinggi?
+                </label>
+                <div style={{ fontWeight: "600", color: (selectedReport.resiko_tinggi === true && selectedReport.kontrol_bahaya !== null) ? "#ef4444" : (selectedReport.resiko_tinggi === false && selectedReport.kontrol_bahaya !== null) ? "#22c55e" : "#9ca3af" }}>
+                  {(selectedReport.resiko_tinggi === true && selectedReport.kontrol_bahaya !== null) ? "Ya" : (selectedReport.resiko_tinggi === false && selectedReport.kontrol_bahaya !== null) ? "Tidak" : "-"}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "#9ca3af",
+                    fontSize: "12px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
                   Judul Pekerjaan
                 </label>
                 <div style={{ fontWeight: "500", color: "#fff" }}>
@@ -404,7 +462,23 @@ const Take5History = ({ user }) => {
                 >
                   Potensi Bahaya
                 </label>
-                <div>{selectedReport.potensi_bahaya || "-"}</div>
+                <div>{formatPotensiBahaya(selectedReport.potensi_bahaya)}</div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "#9ca3af",
+                    fontSize: "12px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Kontrol Bahaya
+                </label>
+                <div style={{ color: "#fff", whiteSpace: "pre-wrap" }}>
+                  {selectedReport.kontrol_bahaya || "-"}
+                </div>
               </div>
 
               <div
@@ -434,7 +508,7 @@ const Take5History = ({ user }) => {
                     style={{ display: "flex", justifyContent: "space-between" }}
                   >
                     <span style={{ fontSize: "13px" }}>
-                      Mengerti pekerjaan?
+                      Sehat secara fisik?
                     </span>
                     <span
                       style={{
@@ -449,7 +523,7 @@ const Take5History = ({ user }) => {
                     style={{ display: "flex", justifyContent: "space-between" }}
                   >
                     <span style={{ fontSize: "13px" }}>
-                      Memiliki kompetensi?
+                      Mengerti pekerjaan?
                     </span>
                     <span
                       style={{
@@ -463,7 +537,7 @@ const Take5History = ({ user }) => {
                   <div
                     style={{ display: "flex", justifyContent: "space-between" }}
                   >
-                    <span style={{ fontSize: "13px" }}>Memiliki izin?</span>
+                    <span style={{ fontSize: "13px" }}>Mengerti potensi bahaya?</span>
                     <span
                       style={{
                         color: selectedReport.q3 ? "#4ade80" : "#f87171",
@@ -476,7 +550,7 @@ const Take5History = ({ user }) => {
                   <div
                     style={{ display: "flex", justifyContent: "space-between" }}
                   >
-                    <span style={{ fontSize: "13px" }}>Peralatan tepat?</span>
+                    <span style={{ fontSize: "13px" }}>Peralatan benar?</span>
                     <span
                       style={{
                         color: selectedReport.q4 ? "#4ade80" : "#f87171",
@@ -484,6 +558,19 @@ const Take5History = ({ user }) => {
                       }}
                     >
                       {selectedReport.q4 ? "Ya" : "Tidak"}
+                    </span>
+                  </div>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <span style={{ fontSize: "13px" }}>APD benar?</span>
+                    <span
+                      style={{
+                        color: (selectedReport.q5 || selectedReport.kontrol_bahaya === null) ? "#4ade80" : "#f87171",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {selectedReport.q5 || selectedReport.kontrol_bahaya === null ? "Ya" : "Tidak"}
                     </span>
                   </div>
                 </div>

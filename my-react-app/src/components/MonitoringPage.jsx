@@ -1781,32 +1781,16 @@ function MonitoringPage({ user }) {
     const recentReports = filteredData
       .sort(
         (a, b) =>
-          new Date(
-            (b.tanggal && String(b.tanggal).slice(0, 10)) ||
-              (b.created_at && String(b.created_at).slice(0, 10)) ||
-              "1970-01-01",
-          ) -
-          new Date(
-            (a.tanggal && String(a.tanggal).slice(0, 10)) ||
-              (a.created_at && String(a.created_at).slice(0, 10)) ||
-              "1970-01-01",
-          ),
+          new Date(b.created_at || "1970-01-01") -
+          new Date(a.created_at || "1970-01-01")
       )
       .slice(0, 10);
 
     // Semua data (untuk download/analisa lengkap)
     const listData = [...filteredData].sort(
       (a, b) =>
-        new Date(
-          (b.tanggal && String(b.tanggal).slice(0, 10)) ||
-            (b.created_at && String(b.created_at).slice(0, 10)) ||
-            "1970-01-01",
-        ) -
-        new Date(
-          (a.tanggal && String(a.tanggal).slice(0, 10)) ||
-            (a.created_at && String(a.created_at).slice(0, 10)) ||
-            "1970-01-01",
-        ),
+        new Date(b.created_at || "1970-01-01") -
+        new Date(a.created_at || "1970-01-01")
     );
 
     return {
@@ -2478,53 +2462,62 @@ function MonitoringPage({ user }) {
     // Data Lengkap - Custom Format sesuai permintaan user
     if (take5Stats.listData && take5Stats.listData.length > 0) {
       const customData = take5Stats.listData.map((item) => ({
-        Timestamp: item.created_at
+        "Timestamp": item.created_at
           ? new Date(item.created_at).toLocaleString("id-ID")
           : "",
-        Nama: item.pelapor_nama || "",
-        NRP: item.nrp || "",
-        Lokasi: item.site || "",
-        "Tanggal/Waktu": item.tanggal || "",
-        "Detail Lokasi": item.detail_lokasi || "",
-        "Judul Pekerjaan": item.judul_pekerjaan || "",
-        "Apakah saya sehat secara fisik untuk melakukan pekerjaan ini?":
-          item.q1 === true || item.q1 === "true" ? "Ya" : "Tidak", // Q1
-        "Apakah saya mengerti pekerjaan yang akan saya lakukan, memahami langkah pekerjaan yang benar?":
-          item.q1 === true || item.q1 === "true" ? "Ya" : "Tidak", // Q1
-        "Apakah saya mengerti potensi bahaya yang akan terjadi saat melakukan pekerjaan ini?":
-          item.q2 === true || item.q2 === "true" ? "Ya" : "Tidak", // Q2
-        "Sebutkan bahaya-bahaya yang mungkin bisa terjadi dari pekerjaan ini!":
-          item.potensi_bahaya || "",
-        "Apakah saya memiliki peralatan yang benar untuk melakukan pekerjaan ini?":
-          item.q4 === true || item.q4 === "true" ? "Ya" : "Tidak", // Q4
-        "Apakah saya memiliki APD yang benar untuk melakukan pekerjaan ini?":
-          item.q3 === true || item.q3 === "true" ? "Ya" : "Tidak", // Q3
-        "Apakah pekerjaan aman untuk dilakukan?":
+        "Nama (Name)": item.pelapor_nama || "",
+        "NRP": item.nrp || "",
+        "Lokasi (Location)": item.site || "",
+        "Tanggal/Waktu (Date/Time)": item.tanggal || "",
+        "Detail Lokasi (Detail Location)": item.detail_lokasi || "",
+        "Judul Pekerjaan (Job Title)": item.judul_pekerjaan || "",
+        "Apakah saya sehat secara fisik untuk melakukan pekerjaan ini? (Am I physically fit to perform this task)":
+          item.q1 === false || String(item.q1) === "false" || item.q1 === "Tidak" ? "Tidak" : "Ya",
+        "Apakah saya mengerti pekerjaan yang akan saya lakukan, memahami langkah pekerjaan yang benar? (Do I understand the task and understood the steps?)":
+          item.q2 === false || String(item.q2) === "false" || item.q2 === "Tidak" ? "Tidak" : "Ya",
+        "Apakah saya mengerti potensi bahaya yang akan terjadi saat melakukan pekerjaan ini? (Do I understand the hazard that I will be exposed when performing this taks?)":
+          item.q3 === false || String(item.q3) === "false" || item.q3 === "Tidak" ? "Tidak" : "Ya",
+        "Sebutkan bahaya-bahaya yang mungkin bisa terjadi dari pekerjaan ini! (What kind of hazard may occur from this task, describe it!)":
+          (() => {
+            if (!item.potensi_bahaya) return "";
+            try {
+              const parsed = JSON.parse(item.potensi_bahaya);
+              return Array.isArray(parsed) ? parsed.join(", ") : item.potensi_bahaya;
+            } catch (e) {
+              return item.potensi_bahaya;
+            }
+          })(),
+        "Apakah saya memiliki peralatan yang benar untuk melakukan pekerjaan ini? (Am I equipped with correct tools to do this task?)":
+          item.q4 === false || String(item.q4) === "false" || item.q4 === "Tidak" ? "Tidak" : "Ya",
+        "Apakah saya memiliki APD yang benar untuk melakukan pekerjaan ini? (Am I equipped with correct PPE for this task)":
+          item.q5 === false || String(item.q5) === "false" || item.q5 === "Tidak" ? "Tidak" : "Ya",
+        "Apakah pekerjaan aman untuk dilakukan? (Is it safe to perform this task?)":
           item.aman === "aman"
-            ? "Ya"
+            ? "Aman untuk melanjutkan pekerjaan"
             : item.aman === "stop"
-              ? "Tidak"
-              : item.aman || "",
+              ? "STOP pekerjaan, minta bantuan"
+              : item.aman === "perbaikan"
+                ? "Perlu perbaikan terlebih dahulu"
+                : item.aman || "",
       }));
 
       const rawSheet = XLSX.utils.json_to_sheet(customData);
 
-      // Atur lebar kolom agar lebih mudah dibaca
       const wscols = [
         { wch: 22 }, // Timestamp
-        { wch: 20 }, // Nama
-        { wch: 12 }, // NRP
-        { wch: 15 }, // Lokasi
-        { wch: 15 }, // Tanggal/Waktu
-        { wch: 25 }, // Detail Lokasi
-        { wch: 25 }, // Judul Pekerjaan
-        { wch: 40 }, // Sehat fisik
-        { wch: 50 }, // Mengerti pekerjaan
-        { wch: 50 }, // Mengerti potensi bahaya
-        { wch: 40 }, // Sebutkan bahaya
-        { wch: 40 }, // Peralatan
-        { wch: 40 }, // APD
-        { wch: 25 }, // Aman
+        { wch: 25 }, // Nama (Name)
+        { wch: 15 }, // NRP
+        { wch: 20 }, // Lokasi (Location)
+        { wch: 28 }, // Tanggal/Waktu (Date/Time)
+        { wch: 25 }, // Detail Lokasi (Detail Location)
+        { wch: 30 }, // Judul Pekerjaan (Job Title)
+        { wch: 15 }, // q1
+        { wch: 15 }, // q2
+        { wch: 15 }, // q3
+        { wch: 40 }, // potensi bahaya
+        { wch: 15 }, // q4
+        { wch: 15 }, // q5
+        { wch: 35 }, // status aman
       ];
       rawSheet["!cols"] = wscols;
 
@@ -7505,41 +7498,84 @@ function MonitoringPage({ user }) {
                 <>
                   <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", marginBottom: "8px" }}>
                     <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Detail Pekerjaan</h3>
-                     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
-                       <div>
-                         <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Tugas / Pekerjaan</label>
-                         <div style={{ fontWeight: 500, color: "#111827" }}>
-                           {selectedDetailData.judul_pekerjaan || selectedDetailData.tugas || selectedDetailData.pekerjaan || "-"}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                          <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Tugas / Pekerjaan</label>
+                            <div style={{ fontWeight: 500, color: "#111827" }}>
+                              {selectedDetailData.judul_pekerjaan || selectedDetailData.tugas || selectedDetailData.pekerjaan || "-"}
+                            </div>
+                          </div>
+                          <div>
+                           <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Detail Lokasi</label>
+                           <div style={{ fontWeight: 500, color: "#111827" }}>
+                             {selectedDetailData.detail_lokasi || "-"}
+                           </div>
                          </div>
                        </div>
-                       <div>
-                        <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Detail Lokasi</label>
-                        <div style={{ fontWeight: 500, color: "#111827" }}>
-                          {selectedDetailData.detail_lokasi || "-"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                          <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Pekerjaan Resiko Tinggi?</label>
+                            <div style={{ fontWeight: 600, color: (selectedDetailData.resiko_tinggi === true && selectedDetailData.kontrol_bahaya !== null) ? "#ef4444" : (selectedDetailData.resiko_tinggi === false && selectedDetailData.kontrol_bahaya !== null) ? "#059669" : "#9ca3af" }}>
+                              {(selectedDetailData.resiko_tinggi === true && selectedDetailData.kontrol_bahaya !== null) ? "Ya" : (selectedDetailData.resiko_tinggi === false && selectedDetailData.kontrol_bahaya !== null) ? "Tidak" : "-"}
+                            </div>
+                          </div>
+                          <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Kontrol Bahaya</label>
+                            <div style={{ fontWeight: 500, color: "#111827", whiteSpace: "pre-wrap" }}>
+                              {selectedDetailData.kontrol_bahaya || "-"}
+                            </div>
+                          </div>
+                       </div>
+                     </div>
+                   </div>
 
                   <div style={{ gridColumn: "1 / -1", backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px" }}>
                     <h3 style={{ fontSize: "14px", color: "#374151", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Checklist Keselamatan</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                        {[
-                         { label: "Sehat Fisik & Mental", key: "sehat_fisik" },
-                         { label: "Mengerti Pekerjaan", key: "mengerti_pekerjaan" },
-                         { label: "Mengerti Potensi Bahaya", key: "mengerti_potensi_bahaya" },
-                         { label: "Sebutkan Bahaya", key: "sebutkan_bahaya", isText: true },
-                         { label: "Peralatan Aman", key: "peralatan" },
-                         { label: "APD Sesuai", key: "apd" },
-                         { label: "Area Kerja Aman", key: "aman" },
-                       ].map(item => (
-                         <div key={item.key} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #e5e7eb", paddingBottom: "4px" }}>
-                           <span style={{ fontSize: "13px", color: "#4b5563" }}>{item.label}</span>
-                           <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827" }}>
-                             {item.isText ? (selectedDetailData[item.key] || "-") : (selectedDetailData[item.key] === true || selectedDetailData[item.key] === "Yes" || selectedDetailData[item.key] === "Ya" ? "Ya" : "Tidak")}
-                           </span>
-                         </div>
-                       ))}
+                         { label: "Sehat Fisik & Mental", key: "q1" },
+                         { label: "Mengerti Pekerjaan", key: "q2" },
+                         { label: "Mengerti Potensi Bahaya", key: "q3" },
+                         { label: "Sebutkan Bahaya", key: "potensi_bahaya", isText: true },
+                         { label: "Peralatan Aman", key: "q4" },
+                         { label: "APD Sesuai", key: "q5" },
+                         { label: "Kondisi Kerja", key: "aman", isStatus: true },
+                       ].map(item => {
+                         let valueDisplay = "-";
+                         if (item.isText) {
+                           try {
+                             const parsed = JSON.parse(selectedDetailData[item.key] || "null");
+                             if (Array.isArray(parsed)) {
+                               valueDisplay = parsed.join(", ");
+                             } else {
+                               valueDisplay = selectedDetailData[item.key] || "-";
+                             }
+                           } catch (e) {
+                             valueDisplay = selectedDetailData[item.key] || "-";
+                           }
+                         } else if (item.isStatus) {
+                            const amanVal = selectedDetailData[item.key];
+                            valueDisplay = amanVal === "aman" ? "Aman" : amanVal === "perbaikan" ? "Perbaikan" : amanVal === "stop" ? "Stop" : amanVal || "-";
+                         } else {
+                            const val = selectedDetailData[item.key];
+                            // Khusus APD (q5), jika form lama (kontrol_bahaya == null), paksa jadi Ya
+                            if (item.key === "q5" && selectedDetailData.kontrol_bahaya === null) {
+                              valueDisplay = "Ya";
+                            } else {
+                              valueDisplay = (val === false || String(val) === "false" || val === "Tidak") ? "Tidak" : "Ya";
+                            }
+                         }
+
+                         return (
+                           <div key={item.key} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #e5e7eb", paddingBottom: "6px" }}>
+                             <span style={{ fontSize: "13px", color: "#4b5563" }}>{item.label}</span>
+                             <span style={{ fontSize: "13px", fontWeight: "600", color: (valueDisplay === "Ya" || valueDisplay === "Aman") ? "#059669" : (valueDisplay === "Tidak" || valueDisplay === "Stop" || valueDisplay === "Perbaikan") ? "#ef4444" : "#111827", textAlign: "right", maxWidth: "65%" }}>
+                               {valueDisplay}
+                             </span>
+                           </div>
+                         );
+                       })}
                     </div>
                   </div>
                 </>
