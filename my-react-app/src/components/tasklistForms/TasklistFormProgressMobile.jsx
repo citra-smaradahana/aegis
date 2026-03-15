@@ -20,6 +20,8 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
   const cameraInputRef = React.useRef();
   const galleryInputRef = React.useRef();
 
+/* dipindah ke bawah */
+
   // Prefill form jika ada data hazard
   useEffect(() => {
     if (hazard) {
@@ -31,6 +33,14 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
       }
     }
   }, [hazard]);
+
+  if (!hazard) {
+    return (
+      <div style={{ color: "#ef4444", padding: 32 }}>
+        Data hazard tidak ditemukan.
+      </div>
+    );
+  }
 
   const handleChange = e => {
     const { name, value } = e.target;

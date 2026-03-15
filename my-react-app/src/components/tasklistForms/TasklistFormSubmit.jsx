@@ -2,6 +2,15 @@ import React, { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
 function TasklistFormSubmit({ hazard, onSuccess, readOnly, onClose }) {
+  const [actionPlan, setActionPlan] = useState(hazard?.action_plan || "");
+  const [dueDate, setDueDate] = useState(hazard?.due_date || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const minDueDate = hazard?.created_at
+    ? new Date(hazard.created_at).toISOString().slice(0, 10)
+    : undefined;
+
   if (!hazard) {
     return (
       <div style={{ color: "#ef4444", padding: 32 }}>
@@ -9,15 +18,7 @@ function TasklistFormSubmit({ hazard, onSuccess, readOnly, onClose }) {
       </div>
     );
   }
-  const [actionPlan, setActionPlan] = useState(hazard.action_plan || "");
-  const [dueDate, setDueDate] = useState(hazard.due_date || "");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const minDueDate = hazard.created_at
-    ? new Date(hazard.created_at).toISOString().slice(0, 10)
-    : undefined;
-
+/* dipindah ke atas */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");

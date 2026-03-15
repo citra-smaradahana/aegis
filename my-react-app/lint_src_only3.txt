@@ -1,0 +1,282 @@
+
+D:\Web Development\SAP_New\my-react-app\src\App.jsx
+    4:10  error    'supabase' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                  no-unused-vars
+  235:8   warning  React Hook useEffect has unnecessary dependencies: 'user.id', 'user.jabatan', and 'user.site'. Either exclude them or remove the dependency array. Outer scope values like 'user.id' aren't valid dependencies because mutating them doesn't re-render the component             react-hooks/exhaustive-deps
+  240:8   warning  React Hook useEffect has an unnecessary dependency: 'activeMenu'. Either exclude it or remove the dependency array. Outer scope values like 'activeMenu' aren't valid dependencies because mutating them doesn't re-render the component                                         react-hooks/exhaustive-deps
+  255:8   warning  React Hook useEffect has a missing dependency: 'canAccessFitToWorkValidation'. Either include it or remove the dependency array. Outer scope values like 'user.id' aren't valid dependencies because mutating them doesn't re-render the component                               react-hooks/exhaustive-deps
+  270:8   warning  React Hook useEffect has unnecessary dependencies: 'activeMenu', 'user.id', 'user.nrp', and 'user.site'. Either exclude them or remove the dependency array. Outer scope values like 'user.id' aren't valid dependencies because mutating them doesn't re-render the component   react-hooks/exhaustive-deps
+  285:8   warning  React Hook useEffect has unnecessary dependencies: 'activeMenu', 'user.id', 'user.nama', and 'user.site'. Either exclude them or remove the dependency array. Outer scope values like 'user.id' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+  292:8   warning  React Hook useEffect has an unnecessary dependency: 'user.id'. Either exclude it or remove the dependency array. Outer scope values like 'user.id' aren't valid dependencies because mutating them doesn't re-render the component                                               react-hooks/exhaustive-deps
+  325:8   warning  React Hook useEffect has an unnecessary dependency: 'activeMenu'. Either exclude it or remove the dependency array. Outer scope values like 'activeMenu' aren't valid dependencies because mutating them doesn't re-render the component                                         react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\AdminSettings\index.jsx
+   22:3   error    'fetchProsedurForAdmin' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                        no-unused-vars
+   25:3   error    'insertProsedur' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                               no-unused-vars
+   65:26  error    'user' is defined but never used                                                                                    no-unused-vars
+   65:32  error    'onBack' is defined but never used                                                                                  no-unused-vars
+  202:6   warning  React Hook useEffect has a missing dependency: 'loadParentItems'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  206:6   warning  React Hook useEffect has a missing dependency: 'loadItems'. Either include it or remove the dependency array        react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\Campaign\index.jsx
+  6:21  error  'user' is defined but never used    no-unused-vars
+  6:27  error  'onBack' is defined but never used  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\DailyAttendance\DailyAttendanceForm.jsx
+   36:10  error    'errorMsg' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                             no-unused-vars
+  152:6   warning  React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  722:34  error    '_' is defined but never used                                                                                        no-unused-vars
+  722:37  error    Empty block statement                                                                                                no-empty
+  864:36  error    '_' is defined but never used                                                                                        no-unused-vars
+  864:39  error    Empty block statement                                                                                                no-empty
+  911:36  error    '_' is defined but never used                                                                                        no-unused-vars
+  911:39  error    Empty block statement                                                                                                no-empty
+
+D:\Web Development\SAP_New\my-react-app\src\components\DailyAttendance\DailyAttendanceListMobile.jsx
+  21:6  warning  React Hook useEffect has a missing dependency: 'fetchMeetings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  76:9  error    'handleBack' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                        no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\DailyAttendance\DailyAttendancePrint.jsx
+  3:8  error  'aegisLogo' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\DailyAttendance\DailyAttendanceView.jsx
+  49:6   warning  React Hook useEffect has a missing dependency: 'fetchMeeting'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  74:18  error    '_' is defined but never used                                                                                    no-unused-vars
+  89:18  error    '_' is defined but never used                                                                                    no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\DailyAttendance\index.jsx
+  22:6  warning  React Hook useEffect has a missing dependency: 'fetchMeetings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\FatigueCheck\FatigueCheckForm.jsx
+    1:38  error    'useRef' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                        no-unused-vars
+  144:6   warning  React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\FatigueCheck\FatigueCheckList.jsx
+   58:6   warning  React Hook useEffect has a missing dependency: 'fetchReports'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  256:10  error    'isMobile' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                         no-unused-vars
+  260:6   warning  React Hook useEffect has a missing dependency: 'fetchReports'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  294:14  error    'err' is defined but never used                                                                                  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\FatigueCheck\FatigueCheckView.jsx
+  31:6  warning  React Hook useEffect has a missing dependency: 'fetchReport'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\FitToWorkForm\FitToWorkFormDesktop.jsx
+   99:6   warning  React Hook useEffect has a missing dependency: 'cekSudahIsi'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  260:21  error    'insertedRows' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                    no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\FitToWorkForm\FitToWorkFormMobile.jsx
+   26:12  error    'setSuccess' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                      no-unused-vars
+  138:6   warning  React Hook useEffect has a missing dependency: 'cekSudahIsi'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  337:9   error    'contentAreaStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                no-unused-vars
+  368:9   error    'cardHeaderMobileStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u           no-unused-vars
+  384:9   error    'titleStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                      no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\FitToWorkValidationNew\FitToWorkValidationFormNew.jsx
+    35:9   error    'validasiTahap2Options' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+   120:6   warning  React Hook useEffect has a missing dependency: 'validation'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   974:32  error    'error' is defined but never used                                                                              no-unused-vars
+  1021:32  error    'error' is defined but never used                                                                              no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\FitToWorkValidationNew\FitToWorkValidationListNew.jsx
+   10:3  error  'onValidationSelect' is defined but never used                                                       no-unused-vars
+   16:3  error  'onFilterChange' is defined but never used                                                           no-unused-vars
+   17:3  error  'onBack' is defined but never used                                                                   no-unused-vars
+  170:9  error  'handleUpdateSuccess' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\FitToWorkValidationNew\index.jsx
+   30:10  error    'selectedValidation' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                               no-unused-vars
+  235:6   warning  React Hook useEffect has missing dependencies: 'fetchUsersAttendance', 'fetchUsersMarkedOff', 'fetchUsersNotFilled', and 'fetchValidations'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  296:9   error    'handleCloseForm' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\HazardForm\HazardFormDesktop.jsx
+   60:10  error    'showCustomInput' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                           no-unused-vars
+  163:6   warning  React Hook useEffect has missing dependencies: 'evidencePreview' and 'subOptionsMap'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  288:16  error    '_' is defined but never used                                                                                                             no-unused-vars
+  801:35  error    Redundant double negation                                                                                                                 no-extra-boolean-cast
+  802:30  error    Redundant double negation                                                                                                                 no-extra-boolean-cast
+  803:31  error    Redundant double negation                                                                                                                 no-extra-boolean-cast
+  866:37  error    Redundant double negation                                                                                                                 no-extra-boolean-cast
+  867:32  error    Redundant double negation                                                                                                                 no-extra-boolean-cast
+
+D:\Web Development\SAP_New\my-react-app\src\components\HazardForm\HazardFormMobile.jsx
+     6:3   error    'useMemo' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                    no-unused-vars
+   155:6   warning  React Hook useEffect has a missing dependency: 'subOptionsMap'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   221:9   error    'handleDetailLokasiChange' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+   286:16  error    '_' is defined but never used                                                                                     no-unused-vars
+   451:15  error    Empty block statement                                                                                             no-empty
+  1020:31  error    Redundant double negation                                                                                         no-extra-boolean-cast
+  1093:40  error    Redundant double negation                                                                                         no-extra-boolean-cast
+  1094:30  error    Redundant double negation                                                                                         no-extra-boolean-cast
+
+D:\Web Development\SAP_New\my-react-app\src\components\HazardForm\PendingReportsList.jsx
+  14:10  error    'isMobile' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                no-unused-vars
+  29:6   warning  React Hook useEffect has a missing dependency: 'fetchPendingReports'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\HomeDesktop.jsx
+  257:39  error  'e' is defined but never used  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\HomeMobile.jsx
+  147:16  error    '_' is defined but never used                                                                               no-unused-vars
+  147:19  error    Empty block statement                                                                                       no-empty
+  261:6   warning  React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array     react-hooks/exhaustive-deps
+  273:11  error    'roleStr' is not defined                                                                                    no-undef
+  274:11  error    'roleStr' is not defined                                                                                    no-undef
+  438:6   warning  React Hook useEffect has a missing dependency: 'kpiType'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  995:25  error    'moved' is not defined                                                                                      no-undef
+  995:43  error    'dx' is not defined                                                                                         no-undef
+  996:27  error    'dx' is not defined                                                                                         no-undef
+
+D:\Web Development\SAP_New\my-react-app\src\components\MobileBottomNavigation.jsx
+  41:16  error  '_' is defined but never used  no-unused-vars
+  41:19  error  Empty block statement          no-empty
+
+D:\Web Development\SAP_New\my-react-app\src\components\MonitoringPage.jsx
+     1:38  error    'useRef' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                     no-unused-vars
+     6:8   error    'html2canvas' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                no-unused-vars
+    45:7   error    'getStatusColor' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                    no-unused-vars
+    59:10  error    'dateFromPreset' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                    no-unused-vars
+    60:10  error    'dateToPreset' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                      no-unused-vars
+    61:10  error    'showCustomDateFrom' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                no-unused-vars
+    62:10  error    'showCustomDateTo' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                  no-unused-vars
+    64:16  error    'setNama' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                           no-unused-vars
+    65:18  error    'setStatus' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                         no-unused-vars
+   195:10  error    'isMobile' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                          no-unused-vars
+   207:10  error    'take5ChartAggregatedData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                          no-unused-vars
+   208:10  error    'ptoChartAggregatedData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                            no-unused-vars
+   223:6   warning  React Hook useEffect has missing dependencies: 'fetchFitToWorkStats', 'fetchHazardStats', 'fetchPtoStats', 'fetchTake5Stats', and 'fetchTargetMonthlyStats'. Either include them or remove the dependency array                   react-hooks/exhaustive-deps
+   258:6   warning  React Hook useEffect has missing dependencies: 'fetchFitToWorkStats', 'fetchHazardStats', 'fetchPtoStats', 'fetchTake5Stats', 'fetchTargetMonthlyStats', and 'selectedTable'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+   285:9   error    'handleDateFromPresetChange' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                        no-unused-vars
+   298:9   error    'handleDateToPresetChange' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                          no-unused-vars
+   318:9   error    'siteOptions' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                       no-unused-vars
+   336:9   error    'namaOptions' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                       no-unused-vars
+   339:9   error    'statusOptions' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                     no-unused-vars
+  1207:13  error    'startDateStr' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                      no-unused-vars
+  1212:13  error    'endDateStr' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                        no-unused-vars
+  2216:9   error    'columns' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                           no-unused-vars
+  2231:12  error    'handleDownloadExcel' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                        no-unused-vars
+  2301:12  error    'id' is defined but never used                                                                                                                                                                                                    no-unused-vars
+  2301:16  error    'user_id' is defined but never used                                                                                                                                                                                               no-unused-vars
+  2486:22  error    'e' is defined but never used                                                                                                                                                                                                     no-unused-vars
+  3308:9   error    'matchStatus' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                       no-unused-vars
+  3836:32  error    'index' is defined but never used                                                                                                                                                                                                 no-unused-vars
+  6666:9   error    'renderIndividualStatsTable' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                        no-unused-vars
+  7554:37  error    'e' is defined but never used                                                                                                                                                                                                     no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\MultiSelectModalWithSearch.jsx
+  49:14  error    '_' is defined but never used                                                                                                                                                                                                                                  no-unused-vars
+  52:38  warning  The ref value 'rootRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'rootRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\OfflineStatus.jsx
+  30:6  warning  React Hook useEffect has a missing dependency: 'syncPendingForms'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\PTOForm\PTOFormDesktop.jsx
+   50:7   error    'prosedurFallback' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                        no-unused-vars
+  116:16  error    'e' is defined but never used                                                                                                                           no-unused-vars
+  126:6   warning  React Hook useEffect has missing dependencies: 'fetchObservees', 'fetchObservers', and 'fetchPICs'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  400:9   error    'shouldShowPage4' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                         no-unused-vars
+  429:25  error    'uploadData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                              no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\PTOForm\PTOFormMobile.jsx
+   33:7   error  'prosedurFallback' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   44:7   error  'isValidUUID' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+   57:3   error  'value' is defined but never used                                                                 no-unused-vars
+  202:10  error  'sites' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u             no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\PTOForm\PTORiwayatMobile.jsx
+  27:9  error  'cardStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\Profile\MandatSection.jsx
+  117:6  warning  React Hook useEffect has missing dependencies: 'loadMandates', 'loadRecipients', and 'user'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  139:6  warning  React Hook useEffect has a missing dependency: 'activeFrom'. Either include it or remove the dependency array                                    react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\Profile\ProfileDesktop.jsx
+   6:33  error    'onClose' is defined but never used                                                                                  no-unused-vars
+  12:6   warning  React Hook useEffect has a missing dependency: 'fetchProfileData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\Profile\ProfileMobile.jsx
+   6:32  error    'onClose' is defined but never used                                                                                  no-unused-vars
+  13:6   warning  React Hook useEffect has a missing dependency: 'fetchProfileData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\SelectModalWithSearch.jsx
+  47:14  error    '_' is defined but never used                                                                                                                                                                                                                                  no-unused-vars
+  50:38  warning  The ref value 'rootRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'rootRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\Take5Form\Take5FormDesktop.jsx
+  7:3  error  'shouldUseLocationSelector' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\Take5Form\Take5FormMobile.jsx
+  341:13  error  'selectedJudul' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  490:9   error  'cardHeaderMobileStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  499:9   error  'headerStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u            no-unused-vars
+  588:9   error  'submitButtonStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u      no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\Take5Form\Take5History.jsx
+  18:14  error  'e' is defined but never used  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\TargetSettings.jsx
+   37:6  warning  React Hook useEffect has a missing dependency: 'fetchTargets'. Either include it or remove the dependency array                          react-hooks/exhaustive-deps
+  103:6  warning  React Hook useEffect has missing dependencies: 'fetchJabatanList' and 'formJabatan'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\TasklistPage\TasklistPageDesktop.jsx
+   58:34  error    'role' is defined but never used                                                                                                  no-unused-vars
+  127:24  error    'status' is defined but never used                                                                                                no-unused-vars
+  266:14  error    'e' is defined but never used                                                                                                     no-unused-vars
+  271:21  error    'setActiveTab' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                      no-unused-vars
+  428:6   warning  React Hook useEffect has missing dependencies: 'user?.nama' and 'user?.user'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\TasklistPage\TasklistPageMobile.jsx
+  224:6  warning  React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\UserManagement\UserForm.jsx
+   52:10  error  'uploadingPhoto' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  550:9   error  'photoPreviewStyle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\UserManagement\index.jsx
+  247:21  error  'testData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  266:15  error  'data' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u      no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\VersionCheck.jsx
+  14:10  error    'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                          no-unused-vars
+  18:6   warning  React Hook useEffect has a missing dependency: 'checkVersion'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Web Development\SAP_New\my-react-app\src\components\tasklistForms\TasklistFormDone.jsx
+   5:10  error  'catatan' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+   5:19  error  'setCatatan' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+   6:10  error  'isSubmitting' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+   6:24  error  'setIsSubmitting' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   7:10  error  'success' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+   7:19  error  'setSuccess' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+   8:10  error  'errorMsgs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u        no-unused-vars
+   8:21  error  'setErrorMsgs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  61:11  error  'onSuccess' is not defined                                                                       no-undef
+  61:22  error  'onSuccess' is not defined                                                                       no-undef
+
+D:\Web Development\SAP_New\my-react-app\src\components\tasklistForms\TasklistFormProgress.jsx
+  33:3   error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+  70:14  error  'err' is defined but never used                                                                                               no-unused-vars
+  86:13  error  'data' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                          no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\tasklistForms\TasklistFormProgressMobile.jsx
+   31:3   error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+   68:14  error  'err' is defined but never used                                                                                               no-unused-vars
+   84:13  error  'data' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                          no-unused-vars
+  427:32  error  'setShowImagePopup' is not defined                                                                                            no-undef
+  632:8   error  'showImagePopup' is not defined                                                                                               no-undef
+  647:26  error  'setShowImagePopup' is not defined                                                                                            no-undef
+  657:30  error  'setShowImagePopup' is not defined                                                                                            no-undef
+
+D:\Web Development\SAP_New\my-react-app\src\components\tasklistForms\TasklistFormRejectAtDone.jsx
+  47:14  error  'err' is defined but never used                                                       no-unused-vars
+  63:13  error  'data' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\components\tasklistForms\TasklistFormRejectAtDoneMobile.jsx
+  35:3   error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+  71:14  error  'err' is defined but never used                                                                                               no-unused-vars
+  87:13  error  'data' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                          no-unused-vars
+
+D:\Web Development\SAP_New\my-react-app\src\utils\pushNotificationHelpers.js
+  123:18  error  '_' is defined but never used  no-unused-vars
+  123:21  error  Empty block statement          no-empty
+
+Γ£û 184 problems (143 errors, 41 warnings)
+  8 errors and 0 warnings potentially fixable with the `--fix` option.
+

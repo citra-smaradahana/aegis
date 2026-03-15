@@ -244,20 +244,26 @@ button.pto-nav-button:hover {
   transform: none !important;
 }
 
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Global Scrollbar Hide (Transparent Scrollbars) */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+
+* {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+
+/* .hide-scrollbar class specifically for older legacy logic */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.hide-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 /* Mobile-specific styles to prevent zoom */

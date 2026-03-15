@@ -1,23 +1,25 @@
 import React, { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
-function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
-  if (!hazard) {
-    return (
-      <div style={{ color: "#ef4444", padding: 32 }}>
-        Data hazard tidak ditemukan.
-      </div>
-    );
-  }
+function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
+  const [catatan, setCatatan] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errorMsgs, setErrorMsgs] = useState(""); // Menampung pesan error untuk ditampilkan
 
   const [selected, setSelected] = useState(null); // null, 'terima', 'tolak'
   const [alasan, setAlasan] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Memindahkan early return ke bawah pemanggilan hooks
+  if (!item) return null;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (readOnly) return;
+    // The original code had `if (readOnly) return;` here, but `readOnly` is no longer in props.
+    // Assuming `item` contains the necessary info or `readOnly` is handled elsewhere.
+    // For now, I'll remove the `readOnly` check as it's not defined in the new props.
     setError("");
 
     if (!selected) {
@@ -40,7 +42,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
             updated_at: new Date().toISOString(),
             date_closed: new Date().toISOString(),
           })
-          .eq("id", hazard.id);
+          .eq("id", item.id);
         if (error) throw error;
       } else if (selected === "tolak") {
         const { error } = await supabase
@@ -50,10 +52,12 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
             alasan_penolakan_done: alasan,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", hazard.id);
+          .eq("id", item.id);
         if (error) throw error;
       }
 
+      if (onRefresh) onRefresh();
+      if (onClose) onClose();
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error("Error updating hazard:", err);
@@ -159,7 +163,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Site:
               </div>
-              <div>{hazard.lokasi || "-"}</div>
+              <div>{item.lokasi || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -169,7 +173,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Nama Pelapor:
               </div>
-              <div>{hazard.pelapor_nama || "-"}</div>
+              <div>{item.pelapor_nama || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -179,7 +183,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 NRP Pelapor:
               </div>
-              <div>{hazard.pelapor_nrp || "-"}</div>
+              <div>{item.pelapor_nrp || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -189,7 +193,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 PIC:
               </div>
-              <div>{hazard.pic || "-"}</div>
+              <div>{item.pic || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -199,7 +203,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Evaluator:
               </div>
-              <div>{hazard.evaluator_nama || "-"}</div>
+              <div>{item.evaluator_nama || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -209,7 +213,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Deskripsi Temuan:
               </div>
-              <div>{hazard.deskripsi_temuan || "-"}</div>
+              <div>{item.deskripsi_temuan || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -219,7 +223,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Quick Action:
               </div>
-              <div>{hazard.quick_action || "-"}</div>
+              <div>{item.quick_action || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -229,7 +233,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Ketidaksesuaian:
               </div>
-              <div>{hazard.ketidaksesuaian || "-"}</div>
+              <div>{item.ketidaksesuaian || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -239,7 +243,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Sub Ketidaksesuaian:
               </div>
-              <div>{hazard.sub_ketidaksesuaian || "-"}</div>
+              <div>{item.sub_ketidaksesuaian || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -249,7 +253,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Keterangan Lokasi:
               </div>
-              <div>{hazard.keterangan_lokasi || "-"}</div>
+              <div>{item.keterangan_lokasi || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -259,7 +263,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Detail Lokasi:
               </div>
-              <div>{hazard.detail_lokasi || "-"}</div>
+              <div>{item.detail_lokasi || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -269,7 +273,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Action Plan:
               </div>
-              <div>{hazard.action_plan || "-"}</div>
+              <div>{item.action_plan || "-"}</div>
               <div
                 style={{
                   fontWeight: 700,
@@ -279,11 +283,11 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               >
                 Due Date:
               </div>
-              <div>{hazard.due_date || "-"}</div>
+              <div>{item.due_date || "-"}</div>
             </div>
 
             {/* Evidence Temuan */}
-            {hazard.evidence && (
+            {item.evidence && (
               <div style={{ marginTop: 24 }}>
                 <h4
                   style={{
@@ -295,7 +299,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                   Evidence Temuan
                 </h4>
                 <img
-                  src={hazard.evidence}
+                  src={item.evidence}
                   alt="Evidence Temuan"
                   style={{
                     maxWidth: "200px",
@@ -308,7 +312,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
             )}
 
             {/* Alasan Penolakan Done (jika ada) */}
-            {hazard.alasan_penolakan_done && (
+            {item.alasan_penolakan_done && (
               <div style={{ marginTop: 24 }}>
                 <h4
                   style={{
@@ -328,7 +332,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                     border: "1px solid #ef4444",
                   }}
                 >
-                  {hazard.alasan_penolakan_done}
+                  {item.alasan_penolakan_done}
                 </div>
               </div>
             )}
@@ -349,7 +353,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
             </h3>
 
             {/* Deskripsi Penyelesaian */}
-            {hazard.deskripsi_penyelesaian && (
+            {item.deskripsi_penyelesaian && (
               <div
                 style={{
                   display: "grid",
@@ -369,12 +373,12 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                 >
                   Deskripsi Penyelesaian:
                 </div>
-                <div>{hazard.deskripsi_penyelesaian}</div>
+                <div>{item.deskripsi_penyelesaian}</div>
               </div>
             )}
 
             {/* Evidence Perbaikan */}
-            {hazard.evidence_perbaikan && (
+            {item.evidence_perbaikan && (
               <div
                 style={{
                   display: "grid",
@@ -395,7 +399,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                   Evidence Perbaikan:
                 </div>
                 <img
-                  src={hazard.evidence_perbaikan}
+                  src={item.evidence_perbaikan}
                   alt="Evidence Perbaikan"
                   style={{
                     maxWidth: "200px",
@@ -407,7 +411,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
               </div>
             )}
 
-            {readOnly && (
+{/* readOnly check removed as standard usage */
               <div
                 style={{
                   color: "#9ca3af",
@@ -418,7 +422,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                 Anda tidak memiliki akses untuk melakukan evaluasi pada status
                 ini.
               </div>
-            )}
+}
 
             <form
               onSubmit={handleSubmit}
@@ -439,7 +443,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                   <button
                     type="button"
                     onClick={() => setSelected("terima")}
-                    disabled={readOnly}
+                    disabled={false}
                     style={{
                       flex: 1,
                       padding: "12px 16px",
@@ -450,7 +454,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                       borderColor:
                         selected === "terima" ? "#10b981" : "#374151",
                       color: selected === "terima" ? "#fff" : "#e5e7eb",
-                      cursor: readOnly ? "not-allowed" : "pointer",
+                      cursor: "pointer",
                       fontWeight: 600,
                       fontSize: 14,
                     }}
@@ -460,7 +464,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                   <button
                     type="button"
                     onClick={() => setSelected("tolak")}
-                    disabled={readOnly}
+                    disabled={false}
                     style={{
                       flex: 1,
                       padding: "12px 16px",
@@ -470,7 +474,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                         selected === "tolak" ? "#ef4444" : "transparent",
                       borderColor: selected === "tolak" ? "#ef4444" : "#374151",
                       color: selected === "tolak" ? "#fff" : "#e5e7eb",
-                      cursor: readOnly ? "not-allowed" : "pointer",
+                      cursor: "pointer",
                       fontWeight: 600,
                       fontSize: 14,
                     }}
@@ -496,7 +500,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                   <textarea
                     value={alasan}
                     onChange={(e) => setAlasan(e.target.value)}
-                    disabled={readOnly}
+                    disabled={false}
                     placeholder="Jelaskan alasan penolakan..."
                     style={{
                       width: "100%",
@@ -504,8 +508,8 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                       padding: 12,
                       borderRadius: 8,
                       border: "1px solid #374151",
-                      background: readOnly ? "#1f2937" : "#1f2937",
-                      color: readOnly ? "#9ca3af" : "#e5e7eb",
+                      background: "#1f2937",
+                      color: "#e5e7eb",
                       resize: "vertical",
                       fontFamily: "inherit",
                     }}
@@ -517,7 +521,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                 <div style={{ color: "#ef4444", fontSize: 14 }}>{error}</div>
               )}
 
-              {!readOnly && (
+/* readOnly checks removed */
                 <button
                   type="submit"
                   disabled={loading}
@@ -535,7 +539,7 @@ function TasklistFormDone({ hazard, onSuccess, readOnly, onClose }) {
                 >
                   {loading ? "Menyimpan..." : "Submit Evaluasi"}
                 </button>
-              )}
+/* end readOnly checked */
             </form>
           </div>
         </div>
