@@ -5580,6 +5580,9 @@ function MonitoringPage({ user }) {
         return a.nama.localeCompare(b.nama);
       });
 
+      let totalTarget = 0;
+      let totalClampedActual = 0;
+
       sortedUsers.forEach((user) => {
         let target = 0;
         let actual = 0;
@@ -5596,6 +5599,9 @@ function MonitoringPage({ user }) {
 
         const percentage =
           target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : 0;
+          
+        totalTarget += target;
+        totalClampedActual += Math.min(actual, target);
 
         // Push data row with NRP
         data.push([
@@ -5607,6 +5613,17 @@ function MonitoringPage({ user }) {
           `${percentage}%`,
         ]);
       });
+      
+      const totalPercentage = totalTarget > 0 ? Math.min(Math.round((totalClampedActual / totalTarget) * 100), 100) : 0;
+      data.push([
+        "",
+        "TOTAL",
+        "",
+        totalTarget,
+        totalClampedActual,
+        `${totalPercentage}%`
+      ]);
+
       return data;
     };
 
@@ -5651,6 +5668,9 @@ function MonitoringPage({ user }) {
       return a.nama.localeCompare(b.nama);
     });
 
+    let totalTarget = 0;
+    let totalClampedActual = 0;
+
     sortedUsers.forEach((user) => {
       let target = 0;
       let actual = 0;
@@ -5667,6 +5687,9 @@ function MonitoringPage({ user }) {
 
       const percentage =
         target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : 0;
+        
+      totalTarget += target;
+      totalClampedActual += Math.min(actual, target);
 
       tableRows.push([
         user.nama,
@@ -5676,6 +5699,15 @@ function MonitoringPage({ user }) {
         `${percentage}%`,
       ]);
     });
+    
+    const totalPercentage = totalTarget > 0 ? Math.min(Math.round((totalClampedActual / totalTarget) * 100), 100) : 0;
+    tableRows.push([
+      "TOTAL",
+      "",
+      totalTarget,
+      totalClampedActual,
+      `${totalPercentage}%`
+    ]);
 
     autoTable(doc, {
       head: [tableColumn],
@@ -5762,21 +5794,21 @@ function MonitoringPage({ user }) {
       const hazardStats = processedData.reduce(
         (acc, curr) => ({
           target: acc.target + curr.hazardTarget,
-          actual: acc.actual + curr.hazardActual,
+          actual: acc.actual + Math.min(curr.hazardActual, curr.hazardTarget),
         }),
         { target: 0, actual: 0 },
       );
       const take5Stats = processedData.reduce(
         (acc, curr) => ({
           target: acc.target + curr.take5Target,
-          actual: acc.actual + curr.take5Actual,
+          actual: acc.actual + Math.min(curr.take5Actual, curr.take5Target),
         }),
         { target: 0, actual: 0 },
       );
       const ptoStats = processedData.reduce(
         (acc, curr) => ({
           target: acc.target + curr.ptoTarget,
-          actual: acc.actual + curr.ptoActual,
+          actual: acc.actual + Math.min(curr.ptoActual, curr.ptoTarget),
         }),
         { target: 0, actual: 0 },
       );
@@ -5803,7 +5835,7 @@ function MonitoringPage({ user }) {
       const stats = processedData.reduce(
         (acc, curr) => ({
           target: acc.target + curr.displayTarget,
-          actual: acc.actual + curr.displayActual,
+          actual: acc.actual + Math.min(curr.displayActual, curr.displayTarget),
         }),
         { target: 0, actual: 0 },
       );

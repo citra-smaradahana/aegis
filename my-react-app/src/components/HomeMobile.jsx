@@ -269,6 +269,7 @@ function HomeMobile({
           return;
         }
 
+        const roleStr = (user?.role || "").toLowerCase();
         const isEvaluator =
           roleStr.includes("evaluator") ||
           roleStr.includes("admin") ||
@@ -289,36 +290,41 @@ function HomeMobile({
           999,
         );
 
+        const pad = (n) => String(n).padStart(2, "0");
+        const startStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+        const endStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(end.getDate())}`;
+
         // Query dasar
         let hzQuery = supabase
           .from("hazard_report")
-          .select("id", { count: "exact" })
+          .select(effectiveShowPersonal ? "id" : "pelapor_nrp, pelapor_nama", effectiveShowPersonal ? { count: "exact" } : undefined)
           .eq("lokasi", user.site)
-          .ilike("status", "closed")
-          .gte("created_at", start.toISOString())
-          .lte("created_at", end.toISOString());
+          .gte("created_at", `${startStr}T00:00:00+08:00`)
+          .lte("created_at", `${endStr}T23:59:59+08:00`);
 
         let t5Query = supabase
           .from("take_5")
-          .select("id", { count: "exact" })
+          .select(effectiveShowPersonal ? "id" : "nrp, pelapor_nama, user_id", effectiveShowPersonal ? { count: "exact" } : undefined)
           .eq("site", user.site)
-          .ilike("status", "closed")
-          .gte("created_at", start.toISOString())
-          .lte("created_at", end.toISOString());
+          .gte("tanggal", startStr)
+          .lte("tanggal", endStr);
 
         let ptoQuery = supabase
           .from("planned_task_observation")
-          .select("id", { count: "exact" })
+          .select(effectiveShowPersonal ? "id" : "nrp_pelapor, observer_id, created_by", effectiveShowPersonal ? { count: "exact" } : undefined)
           .eq("site", user.site)
-          .eq("status", "closed")
-          .gte("created_at", start.toISOString())
-          .lte("created_at", end.toISOString());
+          .gte("tanggal", startStr)
+          .lte("tanggal", endStr);
 
-        // Jika mode personal, filter berdasarkan NRP
+        // Jika mode personal, filter berdasarkan NRP (dan ID untuk PTO)
         if (effectiveShowPersonal) {
           hzQuery = hzQuery.eq("pelapor_nrp", user.nrp);
           t5Query = t5Query.eq("nrp", user.nrp);
-          ptoQuery = ptoQuery.eq("nrp_pelapor", user.nrp);
+          if (user.id) {
+             ptoQuery = ptoQuery.or(`observer_id.eq.${user.id},created_by.eq.${user.id}`);
+          } else {
+             ptoQuery = ptoQuery.eq("nrp_pelapor", user.nrp); 
+          }
         }
 
         const [hzRes, t5Res, ptoRes] = await Promise.all([
@@ -327,16 +333,19 @@ function HomeMobile({
           ptoQuery,
         ]);
 
-        const closedHazard = hzRes.count || 0;
-        const closedTake5 = t5Res.count || 0;
-        const closedPto = ptoRes.count || 0;
+        let closedHazard = 0;
+        let closedTake5 = 0;
+        let closedPto = 0;
 
         let targetHazard = 0;
         let targetTake5 = 0;
         let targetPto = 0;
 
         if (!effectiveShowPersonal) {
-          // Ambil target agregat per site (Mode Site)
+          // --- MODE SITE (Perlu Capping Individual) ---
+          
+          const cleanNrp = (val) => val ? String(val).replace(/[^a-zA-Z0-9]/g, "") : "";
+
           const { data: targetRows } = await supabase
             .from("target_per_jabatan_site")
             .select("module, target_per_bulan, jabatan")
@@ -345,30 +354,64 @@ function HomeMobile({
 
           const { data: siteUsers } = await supabase
             .from("users")
-            .select("jabatan")
+            .select("id, nrp, jabatan, nama")
             .eq("site", user.site)
             .not("jabatan", "is", null);
 
-          const usersPerJabatan = {};
-          (siteUsers || []).forEach((u) => {
-            const j = (u.jabatan || "").trim();
-            if (!j) return;
-            usersPerJabatan[j] = (usersPerJabatan[j] || 0) + 1;
+          // Build dictionary of targets per user
+          const targetedUsers = (siteUsers || []).map(u => {
+            const userTargets = (targetRows || []).filter(t => t.jabatan === u.jabatan);
+            return {
+              ...u,
+              targets: {
+                hazard: userTargets.find(t => t.module === 'hazard')?.target_per_bulan || 0,
+                take_5: userTargets.find(t => t.module === 'take_5')?.target_per_bulan || 0,
+                pto: userTargets.find(t => t.module === 'pto')?.target_per_bulan || 0,
+              },
+              actuals: { hazard: 0, take_5: 0, pto: 0 }
+            };
+          }).filter(u => u.targets.hazard > 0 || u.targets.take_5 > 0 || u.targets.pto > 0);
+
+          // Helper maps
+          const hazardNrpMap = new Map();
+          const take5NrpMap = new Map();
+          const ptoIdMap = new Map();
+
+          (hzRes.data || []).forEach(h => {
+             const nrp = cleanNrp(h.pelapor_nrp);
+             if (nrp) hazardNrpMap.set(nrp, (hazardNrpMap.get(nrp) || 0) + 1);
+          });
+          (t5Res.data || []).forEach(t => {
+             const nrp = cleanNrp(t.nrp);
+             if (nrp) take5NrpMap.set(nrp, (take5NrpMap.get(nrp) || 0) + 1);
+          });
+          (ptoRes.data || []).forEach(p => {
+             const uid = p.user_id || p.observer_id || p.created_by;
+             if (uid) ptoIdMap.set(uid, (ptoIdMap.get(uid) || 0) + 1);
           });
 
-          const sumTargetWithJabatan = (mod) =>
-            (targetRows || [])
-              .filter((r) => r.module === mod)
-              .reduce((acc, r) => {
-                const t = Number(r.target_per_bulan) || 0;
-                const count = usersPerJabatan[(r.jabatan || "").trim()] || 0;
-                return acc + t * count;
-              }, 0);
+          // Accumulate Clamped Totals
+          targetedUsers.forEach(u => {
+             const uNrp = cleanNrp(u.nrp);
+             const actHazard = hazardNrpMap.get(uNrp) || 0;
+             const actTake5 = take5NrpMap.get(uNrp) || 0;
+             const actPto = ptoIdMap.get(u.id) || 0;
 
-          targetHazard = sumTargetWithJabatan("hazard");
-          targetTake5 = sumTargetWithJabatan("take_5");
-          targetPto = sumTargetWithJabatan("pto");
+             targetHazard += u.targets.hazard;
+             targetTake5 += u.targets.take_5;
+             targetPto += u.targets.pto;
+
+             closedHazard += Math.min(actHazard, u.targets.hazard);
+             closedTake5 += Math.min(actTake5, u.targets.take_5);
+             closedPto += Math.min(actPto, u.targets.pto);
+          });
+
         } else {
+          // --- MODE PERSONAL ---
+          closedHazard = hzRes.count || 0;
+          closedTake5 = t5Res.count || 0;
+          closedPto = ptoRes.count || 0;
+
           // Ambil target individu (Mode Pribadi)
           const { data: targetRows } = await supabase
             .from("target_per_jabatan_site")
@@ -991,6 +1034,7 @@ function HomeMobile({
                         ? kpiData.activeMetrics
                         : kpiMetrics;
 
+                    const { dx, moved } = kpiTouchRef.current;
                     const threshold = 40;
                     if (moved && Math.abs(dx) > threshold) {
                       if (dx < 0) {
@@ -1001,6 +1045,7 @@ function HomeMobile({
                         if (prev >= 0) setKpiType(metrics[prev]);
                       }
                     }
+                    kpiTouchRef.current.moved = false;
                   }}
                   style={{ overflow: "hidden" }}
                 >
@@ -1053,10 +1098,10 @@ function HomeMobile({
                           <span>{kpiData.percent[metric]}% tercapai</span>
                           <span>
                             {metric === "hazard"
-                              ? "Closed Hazard"
+                              ? "Hazard"
                               : metric === "take5"
-                                ? "Closed Take 5"
-                                : "Closed PTO"}
+                                ? "Take 5"
+                                : "PTO"}
                             : {kpiData.count[metric]}/{kpiData.target[metric]}
                           </span>
                         </div>
