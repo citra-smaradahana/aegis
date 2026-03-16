@@ -7333,6 +7333,47 @@ function MonitoringPage({ user }) {
                     ))}
                   </select>
                 </div>
+                {/* Tambahan Filter Nama User */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    User:
+                  </label>
+                  <select
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    disabled={!site}
+                    style={{
+                      padding: "8px 12px",
+                      height: 38,
+                      boxSizing: "border-box",
+                      borderRadius: "6px",
+                      border: "1px solid #ddd",
+                      fontSize: "14px",
+                      minWidth: "150px",
+                      backgroundColor: !site ? "#f3f4f6" : "white",
+                      cursor: !site ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    <option value="">Semua User</option>
+                    {namaOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div
                 style={{ display: "flex", gap: "8px", alignItems: "center" }}
@@ -7342,6 +7383,7 @@ function MonitoringPage({ user }) {
                     setDateFrom("");
                     setDateTo("");
                     setSite("");
+                    setNama("");
                   }}
                   style={{
                     padding: "8px 16px",
