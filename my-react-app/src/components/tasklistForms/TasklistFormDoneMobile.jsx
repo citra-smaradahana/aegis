@@ -28,14 +28,12 @@ function TasklistFormDoneMobile({ hazard, onClose, onSuccess, readOnly, embedded
       if (approveSelected === 'ya') {
         updateData = {
           status: 'Closed',
-          updated_at: new Date().toISOString(),
           date_closed: new Date().toISOString(),
         };
       } else {
         updateData = {
           alasan_penolakan_done: alasanPenolakan,
           status: 'Reject at Done',
-          updated_at: new Date().toISOString(),
         };
       }
 

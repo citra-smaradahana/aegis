@@ -39,7 +39,6 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
           .from("hazard_report")
           .update({
             status: "Closed",
-            updated_at: new Date().toISOString(),
             date_closed: new Date().toISOString(),
           })
           .eq("id", item.id);
@@ -50,7 +49,6 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
           .update({
             status: "Reject at Done",
             alasan_penolakan_done: alasan,
-            updated_at: new Date().toISOString(),
           })
           .eq("id", item.id);
         if (error) throw error;
