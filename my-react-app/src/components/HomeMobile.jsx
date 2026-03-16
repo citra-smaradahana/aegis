@@ -792,16 +792,13 @@ function HomeMobile({
           <div
             className="mobile-home-menu-grid"
             style={{
-              display: useListLayout ? "flex" : "grid",
-              flexDirection: useListLayout ? "column" : undefined,
-              gridTemplateColumns: useListLayout
-                ? undefined
-                : menuItems.length > 5
-                  ? "repeat(4, 1fr)"
-                  : "repeat(3, 1fr)",
+              width: "100%",
+              display: "flex",
+              flexDirection: useListLayout ? "column" : "row",
+              flexWrap: useListLayout ? "nowrap" : "wrap",
+              justifyContent: useListLayout ? "flex-start" : "center",
               gap: useListLayout ? 8 : 10,
               flexShrink: 0,
-              paddingRight: 8,
               boxSizing: "border-box",
             }}
           >
@@ -814,6 +811,7 @@ function HomeMobile({
                 disabled={item.placeholder}
                 className="mobile-home-menu-item"
                 style={{
+                  width: useListLayout ? "100%" : "calc(25% - 7.5px)",
                   background: item.placeholder ? "#f1f5f9" : "white",
                   border: "none",
                   borderRadius: 12,

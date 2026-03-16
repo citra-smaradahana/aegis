@@ -241,7 +241,6 @@ function MonitoringPage({ user }) {
     selectedTable,
   ]);
 
-  // Fetch data when filters change (kecuali tab Pengaturan Target)
   useEffect(() => {
     if (selectedTable === "target_settings") return;
     if (selectedTable === "fit_to_work_stats") {
@@ -255,7 +254,7 @@ function MonitoringPage({ user }) {
     } else if (selectedTable === "target_monthly") {
       fetchTargetMonthlyStats();
     }
-  }, [dateFrom, dateTo, site, targetMonth, targetYear]);
+  }, [dateFrom, dateTo, site, nama, targetMonth, targetYear]);
 
   // Helper function untuk generate date dari preset (WITA)
   const getDateFromPreset = (preset) => {
@@ -333,9 +332,29 @@ function MonitoringPage({ user }) {
     "RMTU",
     "PMTU",
   ];
-  const namaOptions = site
-    ? ["Nama 1", "Nama 2", "Nama 3"].filter((n) => n.includes(site[0]))
-    : ["Nama 1", "Nama 2", "Nama 3"];
+  const [namaOptions, setNamaOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchUsersForSite = async () => {
+      setNamaOptions([]);
+      setNama("");
+      if (!site) return;
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("nama")
+          .eq("site", site)
+          .order("nama", { ascending: true });
+        if (!error && data) {
+          const uniqueNames = Array.from(new Set(data.filter(d => Boolean(d.nama)).map(d => d.nama)));
+          setNamaOptions(uniqueNames);
+        }
+      } catch (err) {
+        console.error("Error fetching users for site:", err);
+      }
+    };
+    fetchUsersForSite();
+  }, [site]);
   const statusOptions =
     selectedTable === "fit_to_work"
       ? ["Fit To Work", "Not Fit To Work", "Pending"]
@@ -359,6 +378,7 @@ function MonitoringPage({ user }) {
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
+      if (nama) query = query.eq("nama", nama);
       query = query.order("created_at", { ascending: false }).limit(50000);
 
       const startDt = dateFrom || getDateWITARelative(-6);
@@ -864,6 +884,7 @@ function MonitoringPage({ user }) {
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
+      if (nama) query = query.eq("pelapor_nama", nama);
       query = query.order("tanggal", { ascending: true });
 
       console.log("=== TAKE 5 QUERY DEBUG ===");
@@ -958,6 +979,7 @@ function MonitoringPage({ user }) {
       if (dateTo)
         hazardQuery = hazardQuery.lte("created_at", `${dateTo}T23:59:59+08:00`);
       if (site) hazardQuery = hazardQuery.eq("lokasi", site);
+      if (nama) hazardQuery = hazardQuery.eq("pelapor_nama", nama);
       hazardQuery = hazardQuery.order("created_at", { ascending: true });
 
       const { data: hazardData, error: hazardError } = await hazardQuery;
@@ -1051,6 +1073,7 @@ function MonitoringPage({ user }) {
       if (dateFrom) tanggalQuery = tanggalQuery.gte("tanggal", dateFrom);
       if (dateTo) tanggalQuery = tanggalQuery.lte("tanggal", dateTo);
       if (site) tanggalQuery = tanggalQuery.eq("site", site);
+      if (nama) tanggalQuery = tanggalQuery.eq("nama_observer", nama);
       tanggalQuery = tanggalQuery.order("tanggal", { ascending: true });
 
       // Fallback: ambil berdasarkan created_at dengan batas hari WITA untuk menangkap data yang belum mengisi 'tanggal'
@@ -1068,6 +1091,7 @@ function MonitoringPage({ user }) {
           `${dateTo}T23:59:59+08:00`,
         );
       if (site) createdAtQuery = createdAtQuery.eq("site", site);
+      if (nama) createdAtQuery = createdAtQuery.eq("nama_observer", nama);
       createdAtQuery = createdAtQuery.order("created_at", { ascending: true });
 
       // Fetch users untuk mapping NRP jika tidak ada di tabel PTO
@@ -1646,6 +1670,9 @@ function MonitoringPage({ user }) {
         return itemSite === site;
       });
     }
+    if (nama) {
+      filteredData = filteredData.filter((item) => item.pelapor_nama === nama);
+    }
 
     const totalReports = filteredData.length;
     const openReports = filteredData.filter(
@@ -1826,6 +1853,9 @@ function MonitoringPage({ user }) {
     }
     if (site) {
       filteredData = filteredData.filter((item) => item.lokasi === site);
+    }
+    if (nama) {
+      filteredData = filteredData.filter((item) => item.pelapor_nama === nama);
     }
 
     console.log("calculateHazardStats - Filtered data:", filteredData);
@@ -2082,6 +2112,9 @@ function MonitoringPage({ user }) {
     }
     if (site) {
       filteredData = filteredData.filter((item) => item.site === site);
+    }
+    if (nama) {
+      filteredData = filteredData.filter((item) => item.nama_observer === nama);
     }
 
     const totalReports = filteredData.length;
