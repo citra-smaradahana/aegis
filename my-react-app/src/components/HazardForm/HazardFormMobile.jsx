@@ -246,10 +246,11 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
         .from("users")
         .select("nama")
         .eq("site", form.lokasi)
-        .eq("role", "evaluator");
+        .ilike("role", "%evaluator%");
       if (!error && data && data.length > 0) {
         setEvaluatorOptions(data.map((u) => u.nama).filter(Boolean));
-        setEvaluatorNama(data[0].nama);
+        // We do not set a single setEvaluatorNama anymore, the mapping happens at submit
+
       } else {
         setEvaluatorOptions([]);
         setEvaluatorNama("");
@@ -488,89 +489,11 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
         evidenceUrl = selectedReport.foto_temuan;
       }
 
-      // Jika ada multiple evaluator, buat hazard report untuk setiap evaluator (skip bila duplikat)
-      if (evaluatorOptions.length > 1) {
-        const evaluatorsToInsert = [];
-        for (const ev of evaluatorOptions) {
-          const lk = `hazard_lock_${makeFp(ev)}`;
-          const exist = lockGet(lk);
-          let dup = false;
-          if (exist && nowTs - exist.ts < lockTtlMs) dup = true;
-          if (!dup) {
-            const onlineDup = await checkDuplicateHazard({ evaluatorNama: ev });
-            if (!onlineDup) {
-              evaluatorsToInsert.push(ev);
-              lockSet(lk);
-            }
-          }
-        }
-        if (evaluatorsToInsert.length === 0) {
-          setSubmitSuccess(true);
-          setSubmittedToMultipleEvaluators(false);
-          return;
-        }
-        const hazardPromises = evaluatorsToInsert.map((evaluatorNama) =>
-          supabase.from("hazard_report").insert({
-            user_id: user.id,
-            user_perusahaan: user.perusahaan,
-            pelapor_nama: user.nama,
-            pelapor_nrp: user.nrp,
-            lokasi: form.lokasi,
-            detail_lokasi: form.detailLokasi,
-            keterangan_lokasi: form.keteranganLokasi,
-            pic: form.pic,
-            ketidaksesuaian: form.ketidaksesuaian,
-            sub_ketidaksesuaian: form.subKetidaksesuaian,
-            quick_action: form.quickAction,
-            deskripsi_temuan: form.deskripsiTemuan,
-            evidence: evidenceUrl,
-            created_at: getNowWITAISO(),
-            status: "Submit",
-            action_plan: null,
-            due_date: null,
-            evaluator_nama: evaluatorNama,
-            client_nonce: getOrCreateNonce(makeFp(evaluatorNama)),
-            take_5_id:
-              selectedReport?.sumber_laporan === "Take5"
-                ? selectedReport?.id
-                : null,
-            pto_id:
-              selectedReport?.sumber_laporan === "PTO"
-                ? selectedReport?.id
-                : null,
-            sumber_laporan: selectedReport?.sumber_laporan || null,
-            id_sumber_laporan: selectedReport?.id || null, // Keep for backward compatibility
-          }),
-        );
-
-        const results = await Promise.all(hazardPromises);
-        const errors = results.filter((result) => result.error);
-
-        if (errors.length > 0) {
-          throw new Error(`Gagal membuat ${errors.length} hazard report`);
-        }
-
-        console.log(
-          `Berhasil membuat ${evaluatorsToInsert.length} hazard report`,
-          evaluatorsToInsert,
-        );
-        evaluatorsToInsert.forEach((ev) => clearGuards(makeFp(ev)));
-        setSubmittedToMultipleEvaluators(true);
-      } else {
-        // Jika hanya satu evaluator, buat hazard report seperti biasa
-        const lk = `hazard_lock_${makeFp(evaluatorNama)}`;
-        const exist = lockGet(lk);
-        if (exist && nowTs - exist.ts < lockTtlMs) {
-          setSubmittedToMultipleEvaluators(false);
-          setSubmitSuccess(true);
-          return;
-        }
-        lockSet(lk);
-        const hazardData = {
+        const hazardDataDraft = {
           user_id: user.id,
-          user_perusahaan: user.perusahaan || null,
+          user_perusahaan: user.perusahaan,
           pelapor_nama: user.nama,
-          pelapor_nrp: user.nrp || null,
+          pelapor_nrp: user.nrp,
           lokasi: form.lokasi,
           detail_lokasi: form.detailLokasi,
           keterangan_lokasi: form.keteranganLokasi,
@@ -584,8 +507,10 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           status: "Submit",
           action_plan: null,
           due_date: null,
-          evaluator_nama: evaluatorNama,
-          client_nonce: getOrCreateNonce(makeFp(evaluatorNama)),
+          evaluator_nama: evaluatorOptions[0] || null,
+          evaluator_nama_2: evaluatorOptions[1] || null,
+          evaluator_nama_3: evaluatorOptions[2] || null,
+          client_nonce: getOrCreateNonce(makeFp(evaluatorOptions[0] || "")),
           take_5_id:
             selectedReport?.sumber_laporan === "Take5"
               ? selectedReport?.id
@@ -598,32 +523,50 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           id_sumber_laporan: selectedReport?.id || null, // Keep for backward compatibility
         };
 
-        console.log("Hazard data to insert:", hazardData);
+        const hazardPromises = [
+          supabase.from("hazard_report").insert(hazardDataDraft)
+        ];
+
+        const results = await Promise.all(hazardPromises);
+        const errors = results.filter((result) => result.error);
+
+        if (errors.length > 0) {
+          throw new Error(`Gagal membuat ${errors.length} hazard report`);
+        }
+
+        const evaluatorsToInsert = evaluatorOptions.length ? evaluatorOptions : [];
+        console.log(
+          `Berhasil menyiapkan hazard report dengan assignee(s):`,
+          evaluatorsToInsert,
+        );
+        evaluatorsToInsert.forEach((ev) => clearGuards(makeFp(ev)));
 
         // Cek duplikasi sebelum insert
-        const isDup = await checkDuplicateHazard({ evaluatorNama });
+        const isDup = await checkDuplicateHazard({ evaluatorNama: evaluatorOptions[0] || "" });
         if (isDup) {
           setSubmittedToMultipleEvaluators(false);
           setSubmitSuccess(true);
           return;
         }
 
-        const { data: hazardDataResult, error } = await supabase
+        const { data: hazardDataResult, insertError } = await supabase
           .from("hazard_report")
-          .insert(hazardData);
+          .insert(hazardDataDraft);
 
+        if (insertError) {
+          console.error("Supabase error:", insertError);
+          throw insertError;
+        }
+
+        setSubmittedToMultipleEvaluators(true);
         console.log("Hazard Report insert result:", {
           hazardDataResult,
-          error,
+          insertError,
         });
 
-        if (error) {
-          console.error("Supabase error:", error);
-          throw error;
-        }
-        setSubmittedToMultipleEvaluators(false);
-        clearGuards(makeFp(evaluatorNama));
-      }
+        // setTimeout(() => setSubmittedToMultipleEvaluators(false), 3000);
+        const singleEvaluator = evaluatorOptions[0] || "";
+        clearGuards(makeFp(singleEvaluator));
 
       // Jika ada report dari Take 5: update status, potensi_bahaya, deskripsi_kondisi (hazard_id diisi trigger)
       if (selectedReport?.sumber_laporan === "Take5" && selectedReport?.id) {
@@ -1017,7 +960,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                         {form.detailLokasi ||
                           (!form.lokasi
                             ? "Pilih lokasi terlebih dahulu"
-                            : !!selectedReport
+                            : selectedReport
                               ? "Diisi otomatis dari report"
                               : "Pilih Detail Lokasi")}
                       </span>
@@ -1090,8 +1033,8 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
                       borderRadius: 8,
                       padding: "12px 16px",
                       fontSize: 13,
-                      backgroundColor: !!selectedReport ? "#f3f4f6" : "#fff",
-                      color: !!selectedReport ? "#9ca3af" : "#000",
+                      backgroundColor: selectedReport ? "#f3f4f6" : "#fff",
+                      color: selectedReport ? "#9ca3af" : "#000",
                       ...getFieldBorderStyle("detailLokasi"),
                     }}
                   />

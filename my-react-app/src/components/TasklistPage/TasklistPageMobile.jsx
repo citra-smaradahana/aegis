@@ -3,6 +3,7 @@ import { supabase } from "../../supabaseClient";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import TasklistForm from "../tasklistForms";
+import { fetchActiveEvaluatorMandatesForUser } from "../../utils/evaluatorMandateHelpers";
 
 function TasklistPageMobile({
   user,
@@ -20,17 +21,21 @@ function TasklistPageMobile({
   const [showEvidencePopup, setShowEvidencePopup] = useState(false);
 
   // User punya aksi pada hazard ini? (PIC, Pelapor, atau Evaluator)
-  const userHasAction = (report) => {
+  const userHasAction = (report, activeMandateDelegators = []) => {
     const currentName = (user?.nama || user?.user || "")
       .toString()
       .trim()
       .toLowerCase();
     const pic = (report.pic || "").toString().trim().toLowerCase();
     const pelapor = (report.pelapor_nama || "").toString().trim().toLowerCase();
-    const evaluator = (report.evaluator_nama || "")
-      .toString()
-      .trim()
-      .toLowerCase();
+    const evaluators = [
+      (report.evaluator_nama || "").toString().trim().toLowerCase(),
+      (report.evaluator_nama_2 || "").toString().trim().toLowerCase(),
+      (report.evaluator_nama_3 || "").toString().trim().toLowerCase(),
+    ].filter(Boolean);
+    const mandateDelegatorNames = activeMandateDelegators.map((m) =>
+      (m.delegated_by?.nama || "").toLowerCase().trim()
+    );
     const status = (report.status || "").trim();
 
     // PIC: Submit, Progress, Reject at Open, Reject at Done
@@ -43,8 +48,12 @@ function TasklistPageMobile({
       return true;
     // Pelapor: Open (terima/tolak)
     if (currentName === pelapor && status === "Open") return true;
+    
     // Evaluator: Done (evaluasi)
-    if (currentName === evaluator && status === "Done") return true;
+    const isDirectEvaluator = evaluators.includes(currentName);
+    const isMandatedEvaluator = evaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
+    if ((isDirectEvaluator || isMandatedEvaluator) && status === "Done") return true;
     return false;
   };
 
@@ -57,6 +66,7 @@ function TasklistPageMobile({
 
     try {
       let hazardReports = [];
+      const activeMandates = await fetchActiveEvaluatorMandatesForUser(user?.id, user?.site);
 
       if (activeTab === "todo") {
         // To Do: hazard non-closed di site user, FILTER hanya yang user punya aksi (PIC/Pelapor/Evaluator)
@@ -68,7 +78,7 @@ function TasklistPageMobile({
           .order("created_at", { ascending: false });
 
         if (hazardError) throw hazardError;
-        hazardReports = (hazardData || []).filter(userHasAction);
+        hazardReports = (hazardData || []).filter((r) => userHasAction(r, activeMandates));
       } else if (activeTab === "monitoring") {
         const { data: hazardData, error: hazardError } = await supabase
           .from("hazard_report")
@@ -82,21 +92,32 @@ function TasklistPageMobile({
           .toString()
           .trim()
           .toLowerCase();
+
+        const mandateDelegatorNames = activeMandates.map((m) =>
+          (m.delegated_by?.nama || "").toLowerCase().trim()
+        );
+
         hazardReports = (hazardData || []).filter((r) => {
           const pic = (r.pic || "").toString().trim().toLowerCase();
           const pelapor = (r.pelapor_nama || "")
             .toString()
             .trim()
             .toLowerCase();
-          const evaluator = (r.evaluator_nama || "")
-            .toString()
-            .trim()
-            .toLowerCase();
+          const evaluators = [
+            (r.evaluator_nama || "").toString().trim().toLowerCase(),
+            (r.evaluator_nama_2 || "").toString().trim().toLowerCase(),
+            (r.evaluator_nama_3 || "").toString().trim().toLowerCase(),
+          ].filter(Boolean);
+
+          const isDirectEvaluator = evaluators.includes(currentName);
+          const isMandatedEvaluator = evaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
           const involved =
             currentName === pic ||
             currentName === pelapor ||
-            currentName === evaluator;
-          return involved && !userHasAction(r);
+            isDirectEvaluator ||
+            isMandatedEvaluator;
+          return involved && !userHasAction(r, activeMandates);
         });
       } else if (activeTab === "riwayat") {
         // Riwayat: data all-time yang dibuat user sebagai pelapor, max 50, terbaru di atas
@@ -133,6 +154,7 @@ function TasklistPageMobile({
         assignee: report.pic,
         color: getPriorityColor(report.prioritas || "Medium"),
         rawReport: report,
+        activeMandateDelegators: activeMandates,
       }));
 
       setTasks(allTasks);
@@ -178,10 +200,18 @@ function TasklistPageMobile({
       .toLowerCase();
     const pic = (report.pic || "").toString().trim().toLowerCase();
     const pelapor = (report.pelapor_nama || "").toString().trim().toLowerCase();
-    const evaluator = (report.evaluator_nama || "")
-      .toString()
-      .trim()
-      .toLowerCase();
+    const evaluators = [
+      (report.evaluator_nama || "").toString().trim().toLowerCase(),
+      (report.evaluator_nama_2 || "").toString().trim().toLowerCase(),
+      (report.evaluator_nama_3 || "").toString().trim().toLowerCase(),
+    ].filter(Boolean);
+    const mandateDelegatorNames = (task.activeMandateDelegators || []).map((m) =>
+      (m.delegated_by?.nama || "").toLowerCase().trim()
+    );
+
+    const isDirectEvaluator = evaluators.includes(currentName);
+    const isMandatedEvaluator = evaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
     const status = (report.status || "").trim();
 
     if (currentName === pic && status === "Submit") return "Submit";
@@ -189,7 +219,7 @@ function TasklistPageMobile({
     if (currentName === pic && status === "Reject at Open")
       return "Reject at Open";
     if (currentName === pic && status === "Progress") return "Progress";
-    if (currentName === evaluator && status === "Done") return "Done";
+    if ((isDirectEvaluator || isMandatedEvaluator) && status === "Done") return "Done";
     if (currentName === pic && status === "Reject at Done")
       return "Reject at Done";
     return null;

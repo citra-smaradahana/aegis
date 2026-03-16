@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 import { canGiveMandate } from "../../utils/mandateHelpers";
+import { canGiveEvaluatorMandate } from "../../utils/evaluatorMandateHelpers";
 import MandatSection from "./MandatSection";
+import MandatEvaluatorSection from "./MandatEvaluatorSection";
 
 function ProfileDesktop({ user, onClose, onLogout }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("profil"); // "profil" | "mandat"
 
   useEffect(() => {
     fetchProfileData();
@@ -118,16 +121,64 @@ function ProfileDesktop({ user, onClose, onLogout }) {
           Profile
         </h2>
 
-        {/* 3 Kolom: Profile | Informasi Profile | Mandat Validasi */}
+        {/* Tab Navigation */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 16,
+            marginBottom: 32,
+            borderBottom: "1px solid #374151",
+            paddingBottom: 16,
+          }}
+        >
+          <button
+            onClick={() => setActiveTab("profil")}
+            style={{
+              background: activeTab === "profil" ? "#3b82f6" : "transparent",
+              color: activeTab === "profil" ? "#ffffff" : "#9ca3af",
+              border: "none",
+              padding: "10px 24px",
+              borderRadius: "8px",
+              fontWeight: 600,
+              fontSize: 16,
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Profil
+          </button>
+          <button
+            onClick={() => setActiveTab("mandat")}
+            style={{
+              background: activeTab === "mandat" ? "#3b82f6" : "transparent",
+              color: activeTab === "mandat" ? "#ffffff" : "#9ca3af",
+              border: "none",
+              padding: "10px 24px",
+              borderRadius: "8px",
+              fontWeight: 600,
+              fontSize: 16,
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Mandat
+          </button>
+        </div>
+
+        {/* Kolom-kolom: Profile | Informasi Profile | Mandat Validasi | Mandat Evaluator */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
             gap: 24,
             alignItems: "start",
           }}
         >
-          {/* Kolom 1: Profile */}
+          {/* Bagian Tab Profil */}
+          {activeTab === "profil" && (
+            <>
+              {/* Kolom 1: Profile */}
           <div style={columnCardStyle}>
             <h3 style={{ margin: "0 0 24px 0", color: "#e5e7eb", fontSize: 18 }}>
               Profile
@@ -279,7 +330,12 @@ function ProfileDesktop({ user, onClose, onLogout }) {
               </div>
             </div>
           </div>
+            </>
+          )}
 
+          {/* Bagian Tab Mandat */}
+          {activeTab === "mandat" && (
+            <>
           {/* Kolom 3: Mandat Validasi */}
           <div style={{ ...columnCardStyle, minHeight: 200 }}>
             <h3 style={{ margin: "0 0 24px 0", color: "#e5e7eb", fontSize: 18 }}>
@@ -293,6 +349,18 @@ function ProfileDesktop({ user, onClose, onLogout }) {
               </p>
             )}
           </div>
+
+          {/* Kolom Tambahan: Mandat Evaluator */}
+          {canGiveEvaluatorMandate(user) && (
+            <div style={{ ...columnCardStyle, minHeight: 200 }}>
+              <h3 style={{ margin: "0 0 24px 0", color: "#e5e7eb", fontSize: 18 }}>
+                Mandat Evaluator
+              </h3>
+              <MandatEvaluatorSection user={user} isMobile={false} embedded={true} />
+            </div>
+          )}
+            </>
+          )}
         </div>
       </div>
     </div>

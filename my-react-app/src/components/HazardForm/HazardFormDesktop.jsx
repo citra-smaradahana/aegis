@@ -372,58 +372,18 @@ function HazardFormDesktop({ user }) {
       }
 
       // Cari evaluator berdasarkan site pelaporan
-      let evaluatorNama = null;
+      let evaluatorNama1 = null;
+      let evaluatorNama2 = null;
+      let evaluatorNama3 = null;
       console.log("Searching for evaluator with site:", form.lokasi);
 
       if (form.lokasi) {
-        // Coba dengan berbagai kemungkinan case untuk role evaluator
-        let evaluatorData = null;
-        let evaluatorError = null;
-
-        // Coba "Evaluator" (capital E)
-        const { data: data1, error: error1 } = await supabase
+        // Coba dengan ilike untuk mengambil semua user dengan role mengandung "evaluator" di site ini
+        const { data: evaluatorData, error: evaluatorError } = await supabase
           .from("users")
           .select("nama")
           .eq("site", form.lokasi)
-          .eq("role", "Evaluator")
-          .limit(1);
-
-        if (!error1 && data1 && data1.length > 0) {
-          evaluatorData = data1;
-          evaluatorError = error1;
-          console.log("Evaluator found with role 'Evaluator'");
-        } else {
-          // Coba "evaluator" (lowercase)
-          const { data: data2, error: error2 } = await supabase
-            .from("users")
-            .select("nama")
-            .eq("site", form.lokasi)
-            .eq("role", "evaluator")
-            .limit(1);
-
-          if (!error2 && data2 && data2.length > 0) {
-            evaluatorData = data2;
-            evaluatorError = error2;
-            console.log("Evaluator found with role 'evaluator'");
-          } else {
-            // Coba dengan ilike untuk case-insensitive search
-            const { data: data3, error: error3 } = await supabase
-              .from("users")
-              .select("nama")
-              .eq("site", form.lokasi)
-              .ilike("role", "%evaluator%")
-              .limit(1);
-
-            if (!error3 && data3 && data3.length > 0) {
-              evaluatorData = data3;
-              evaluatorError = error3;
-              console.log("Evaluator found with case-insensitive search");
-            } else {
-              evaluatorError = error3;
-              console.log("No evaluator found with any case variation");
-            }
-          }
-        }
+          .ilike("role", "%evaluator%");
 
         console.log("Evaluator search result:", {
           evaluatorData,
@@ -431,8 +391,11 @@ function HazardFormDesktop({ user }) {
         });
 
         if (!evaluatorError && evaluatorData && evaluatorData.length > 0) {
-          evaluatorNama = evaluatorData[0].nama;
-          console.log("Evaluator found:", evaluatorNama);
+          // Sort or distribute up to 3 evaluators
+          evaluatorNama1 = evaluatorData[0]?.nama || null;
+          evaluatorNama2 = evaluatorData[1]?.nama || null;
+          evaluatorNama3 = evaluatorData[2]?.nama || null;
+          console.log("Evaluators assigned:", evaluatorNama1, evaluatorNama2, evaluatorNama3);
         } else {
           console.log("No evaluator found for site:", form.lokasi);
         }
@@ -456,7 +419,10 @@ function HazardFormDesktop({ user }) {
         evidence: evidenceUrl,
         created_at: getNowWITAISO(),
         status: "Submit",
-        evaluator_nama: evaluatorNama,
+        evaluator_nama: evaluatorNama1,
+        evaluator_nama_2: evaluatorNama2,
+        evaluator_nama_3: evaluatorNama3,
+
         take_5_id:
           selectedReport?.sumber_laporan === "Take5"
             ? selectedReport?.id

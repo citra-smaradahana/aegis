@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 import MobileBottomNavigation from "../MobileBottomNavigation";
+import { canGiveEvaluatorMandate } from "../../utils/evaluatorMandateHelpers";
 import MandatSection from "./MandatSection";
+import MandatEvaluatorSection from "./MandatEvaluatorSection";
 
 function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTodoCount = 0 }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState("profil"); // "profil" | "mandat"
 
   useEffect(() => {
     fetchProfileData();
@@ -166,6 +169,52 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
         </button>
       )}
 
+      {/* Tab Navigation */}
+      <div
+        style={{
+          display: "flex",
+          background: "#fff",
+          borderBottom: "1px solid #e5e7eb",
+          padding: "12px 16px 0",
+          zIndex: 10,
+        }}
+      >
+        <button
+          onClick={() => setActiveTab("profil")}
+          style={{
+            flex: 1,
+            background: "none",
+            border: "none",
+            padding: "12px 0",
+            fontWeight: 600,
+            fontSize: 15,
+            color: activeTab === "profil" ? "#ea580c" : "#6b7280",
+            borderBottom: activeTab === "profil" ? "3px solid #ea580c" : "3px solid transparent",
+            transition: "all 0.2s",
+            cursor: "pointer",
+          }}
+        >
+          Profil
+        </button>
+        <button
+          onClick={() => setActiveTab("mandat")}
+          style={{
+            flex: 1,
+            background: "none",
+            border: "none",
+            padding: "12px 0",
+            fontWeight: 600,
+            fontSize: 15,
+            color: activeTab === "mandat" ? "#ea580c" : "#6b7280",
+            borderBottom: activeTab === "mandat" ? "3px solid #ea580c" : "3px solid transparent",
+            transition: "all 0.2s",
+            cursor: "pointer",
+          }}
+        >
+          Mandat
+        </button>
+      </div>
+
       {/* Profile Content */}
       <div
         style={{
@@ -173,9 +222,11 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
           padding: "20px",
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          paddingBottom: "240px", // Ruang untuk fixed buttons (Ganti Password, Logout) + navbar agar Mandat Aktif & Nonaktifkan bisa di-scroll
+          paddingBottom: activeTab === "profil" ? "240px" : "100px", // Ruang lebih lega jika di tab mandat
         }}
       >
+        {activeTab === "profil" && (
+          <>
         {/* Profile Photo */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           {profileData?.foto ? (
@@ -342,14 +393,28 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
             </div>
           </div>
         </div>
+          </>
+        )}
 
+        {activeTab === "mandat" && (
+          <>
         {/* Mandat Validasi Section */}
         <div style={{ marginBottom: 24 }}>
           <MandatSection user={user} isMobile={true} />
         </div>
+
+        {/* Mandat Evaluator Section */}
+        {canGiveEvaluatorMandate(user) && (
+          <div style={{ marginBottom: 24 }}>
+            <MandatEvaluatorSection user={user} isMobile={true} />
+          </div>
+        )}
+          </>
+        )}
       </div>
 
       {/* Fixed Buttons Container */}
+      {activeTab === "profil" && (
       <div
         style={{
           background: "#fff",
@@ -437,6 +502,7 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
           Logout
         </button>
       </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (

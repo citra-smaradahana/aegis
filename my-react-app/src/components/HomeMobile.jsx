@@ -796,8 +796,9 @@ function HomeMobile({
               display: "flex",
               flexDirection: useListLayout ? "column" : "row",
               flexWrap: useListLayout ? "nowrap" : "wrap",
-              justifyContent: useListLayout ? "flex-start" : "center",
-              gap: useListLayout ? 8 : 10,
+              justifyContent: "flex-start",
+              gap: useListLayout ? 8 : 8,
+              paddingTop: 16,
               flexShrink: 0,
               boxSizing: "border-box",
             }}
@@ -811,22 +812,22 @@ function HomeMobile({
                 disabled={item.placeholder}
                 className="mobile-home-menu-item"
                 style={{
-                  width: useListLayout ? "100%" : "calc(25% - 7.5px)",
+                  width: useListLayout ? "100%" : "calc(25% - 6px)",
                   background: item.placeholder ? "#f1f5f9" : "white",
                   border: "none",
-                  borderRadius: 12,
-                  padding: useListLayout ? "12px 16px" : "10px 8px",
+                  borderRadius: 10,
+                  padding: useListLayout ? "12px 16px" : "8px 4px",
                   cursor: item.placeholder ? "default" : "pointer",
                   boxShadow: item.placeholder
                     ? "none"
-                    : "0 4px 12px rgba(0,0,0,0.1)",
+                    : "0 2px 8px rgba(0,0,0,0.06)",
                   transition: "all 0.2s ease",
                   textAlign: useListLayout ? "left" : "center",
                   display: "flex",
                   flexDirection: useListLayout ? "row" : "column",
                   alignItems: "center",
-                  gap: useListLayout ? 14 : 6,
-                  minHeight: useListLayout ? 56 : 72,
+                  gap: useListLayout ? 14 : 4,
+                  minHeight: useListLayout ? 56 : 64,
                   transform:
                     pressedMenu === item.key ? "scale(0.98)" : "scale(1)",
                   backgroundColor:
@@ -875,14 +876,14 @@ function HomeMobile({
                 <div
                   className="mobile-home-menu-icon"
                   style={{
-                    width: useListLayout ? 40 : 36,
-                    height: useListLayout ? 40 : 36,
+                    width: useListLayout ? 40 : 32,
+                    height: useListLayout ? 40 : 32,
                     borderRadius: "10px",
                     background: `${item.color}20`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: useListLayout ? 20 : 18,
+                    fontSize: useListLayout ? 20 : 16,
                     flexShrink: 0,
                   }}
                 >
@@ -890,7 +891,7 @@ function HomeMobile({
                 </div>
                 <span
                   style={{
-                    fontSize: useListLayout ? 15 : 11,
+                    fontSize: useListLayout ? 15 : 10,
                     fontWeight: 600,
                     color:
                       pressedMenu === item.key
@@ -898,7 +899,7 @@ function HomeMobile({
                         : item.placeholder
                           ? "#94a3b8"
                           : "#1f2937",
-                    lineHeight: 1.2,
+                    lineHeight: 1.1,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     display: "-webkit-box",

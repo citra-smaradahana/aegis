@@ -7,6 +7,7 @@ import TasklistFormRejectAtOpen from "../tasklistForms/TasklistFormRejectAtOpen"
 import TasklistFormProgress from "../tasklistForms/TasklistFormProgress";
 import TasklistFormDone from "../tasklistForms/TasklistFormDone";
 import TasklistFormRejectAtDone from "../tasklistForms/TasklistFormRejectAtDone";
+import { fetchActiveEvaluatorMandatesForUser } from "../../utils/evaluatorMandateHelpers";
 
 const STATUS_TABS = [];
 
@@ -112,10 +113,24 @@ function Table({ rows, onAction, role, onView, formatDateOnly, user }) {
       }
     }
 
-    // Cek Evaluator - user adalah evaluator dari hazard ini
-    if (currentUserName === rowEvaluator) {
-      if (status === "Done") {
-        console.log("User is Evaluator for this hazard");
+    // Periksa jika user adalah Evaluator (termasuk evaluator 2, 3 atau Mandat Rekan Evaluator)
+    if (status === "Done") {
+      const rowEvaluators = [
+        (row.evaluator_nama || "").toLowerCase().trim(),
+        (row.evaluator_nama_2 || "").toLowerCase().trim(),
+        (row.evaluator_nama_3 || "").toLowerCase().trim(),
+      ].filter(Boolean);
+
+      // Pastikan ada `activeMandateDelegators` yang dikirim dari TasklistPageDesktop ke Table prop
+      const mandateDelegatorNames = (row.activeMandateDelegators || []).map((m) =>
+        (m.delegated_by?.nama || "").toLowerCase().trim()
+      );
+
+      const isEvaluator = rowEvaluators.includes(currentUserName);
+      const isMandatedEvaluator = rowEvaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
+      if (isEvaluator || isMandatedEvaluator) {
+        console.log("User is Evaluator (or Mandated) for this hazard");
         return true;
       }
     }
@@ -297,9 +312,13 @@ function TasklistPageDesktop({ user }) {
         )
         .ilike("status", "closed")
         .order("created_at", { ascending: false });
-      const [{ data: todo }, { data: history }] = await Promise.all([
+
+      const pMandates = fetchActiveEvaluatorMandatesForUser(user?.id, user?.site);
+
+      const [{ data: todo }, { data: history }, activeMandates] = await Promise.all([
         qTodo,
         qHistory,
+        pMandates
       ]);
 
       // Debug: cek semua status yang ada
@@ -364,6 +383,9 @@ function TasklistPageDesktop({ user }) {
         deskripsi_penyelesaian: o.deskripsi_penyelesaian || "",
         evidence_perbaikan: o.evidence_perbaikan || "",
         alasan_penolakan_done: o.alasan_penolakan_done || "",
+        evaluator_nama_2: o.evaluator_nama_2 || "",
+        evaluator_nama_3: o.evaluator_nama_3 || "",
+        activeMandateDelegators: activeMandates || [],
       });
       const normalizedTodo = (todo || []).map(normalizeTodo);
       console.log(
@@ -378,20 +400,27 @@ function TasklistPageDesktop({ user }) {
         const name = currentNameTodo;
         const pic = (r.pic || "").toString().trim().toLowerCase();
         const pelapor = (r.pelapor_nama || "").toString().trim().toLowerCase();
-        const evaluator = (r.evaluator_nama || "")
-          .toString()
-          .trim()
-          .toLowerCase();
+        const evaluators = [
+          (r.evaluator_nama || "").toString().trim().toLowerCase(),
+          (r.evaluator_nama_2 || "").toString().trim().toLowerCase(),
+          (r.evaluator_nama_3 || "").toString().trim().toLowerCase(),
+        ].filter(Boolean);
+
+        const mandateDelegatorNames = (activeMandates || []).map((m) =>
+          (m.delegated_by?.nama || "").toLowerCase().trim()
+        );
+
+        const isDirectEvaluator = evaluators.includes(name);
+        const isMandatedEvaluator = evaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
         const status = (r.status || "").trim();
         if (
           name === pic &&
-          ["Submit", "Progress", "Reject at Open", "Reject at Done"].includes(
-            status,
-          )
+          ["Submit", "Progress", "Reject at Open", "Reject at Done"].includes(status)
         )
           return true;
         if (name === pelapor && status === "Open") return true;
-        if (name === evaluator && status === "Done") return true;
+        if ((isDirectEvaluator || isMandatedEvaluator) && status === "Done") return true;
         return false;
       };
       const todoFiltered = normalizedTodo.filter(hasAction);
@@ -400,11 +429,20 @@ function TasklistPageDesktop({ user }) {
         const name = currentNameTodo;
         const pic = (r.pic || "").toString().trim().toLowerCase();
         const pelapor = (r.pelapor_nama || "").toString().trim().toLowerCase();
-        const evaluator = (r.evaluator_nama || "")
-          .toString()
-          .trim()
-          .toLowerCase();
-        return name === pic || name === pelapor || name === evaluator;
+        const evaluators = [
+          (r.evaluator_nama || "").toString().trim().toLowerCase(),
+          (r.evaluator_nama_2 || "").toString().trim().toLowerCase(),
+          (r.evaluator_nama_3 || "").toString().trim().toLowerCase(),
+        ].filter(Boolean);
+
+        const mandateDelegatorNames = (activeMandates || []).map((m) =>
+          (m.delegated_by?.nama || "").toLowerCase().trim()
+        );
+
+        const isDirectEvaluator = evaluators.includes(name);
+        const isMandatedEvaluator = evaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
+        return name === pic || name === pelapor || isDirectEvaluator || isMandatedEvaluator;
       };
       const monitoringFiltered = normalizedTodo.filter(
         (r) => involved(r) && !hasAction(r),
@@ -483,10 +521,20 @@ function TasklistPageDesktop({ user }) {
 
     // Khusus Evaluator pada status Done: buka form untuk evaluasi
     if (row.status === "Done") {
-      const rowEvaluator = (row.evaluator_nama || "").toLowerCase().trim();
-      const isEvaluator = currentUserName === rowEvaluator;
+      const rowEvaluators = [
+        (row.evaluator_nama || "").toLowerCase().trim(),
+        (row.evaluator_nama_2 || "").toLowerCase().trim(),
+        (row.evaluator_nama_3 || "").toLowerCase().trim(),
+      ].filter(Boolean);
 
-      if (isEvaluator) {
+      const mandateDelegatorNames = (row.activeMandateDelegators || []).map((m) =>
+        (m.delegated_by?.nama || "").toLowerCase().trim()
+      );
+
+      const isEvaluator = rowEvaluators.includes(currentUserName);
+      const isMandatedEvaluator = rowEvaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
+      if (isEvaluator || isMandatedEvaluator) {
         setSelectedRow(row);
         setIsViewOnly(false);
         setCurrentPage("done-form");
