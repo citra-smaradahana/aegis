@@ -1032,9 +1032,7 @@ function App() {
                 ))}
 
                 {/* Menu Monitoring - untuk evaluator dan admin (dengan tab di dalam) */}
-                {(user?.role === "evaluator" ||
-                  user?.role === "admin" ||
-                  user?.jabatan === "Admin Site Project") && (
+                {canAccessMonitoring && (
                   <button
                     onClick={() => handleMenuChange("monitoring")}
                     style={{

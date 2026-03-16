@@ -292,6 +292,7 @@ function TasklistPageDesktop({ user }) {
   const [selectedRow, setSelectedRow] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [hasEvaluatorMandates, setHasEvaluatorMandates] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -320,6 +321,8 @@ function TasklistPageDesktop({ user }) {
         qHistory,
         pMandates
       ]);
+
+      setHasEvaluatorMandates((activeMandates || []).length > 0);
 
       // Debug: cek semua status yang ada
       const { data: allStatuses } = await supabase
@@ -675,7 +678,7 @@ function TasklistPageDesktop({ user }) {
                 formatDateOnly={formatDateOnly}
                 user={user}
               />
-              {role === "Evaluator" && (
+              {(role === "Evaluator" || hasEvaluatorMandates) && (
                 <>
                   <h3 style={{ color: "#e5e7eb", margin: "16px 0 8px" }}>
                     Monitoring
