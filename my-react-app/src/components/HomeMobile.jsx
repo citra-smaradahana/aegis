@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import { fetchAllowedMenusForUser } from "../utils/menuAccessHelpers";
+import { fetchActiveEvaluatorMandatesForUser } from "../utils/evaluatorMandateHelpers";
 import { Capacitor } from "@capacitor/core";
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -110,6 +111,8 @@ function HomeMobile({
   const kpiTouchRef = useRef({ startX: 0, dx: 0, moved: false });
   const [pressedMenu, setPressedMenu] = useState(null);
   const [menuRipples, setMenuRipples] = useState({});
+  const [hasActiveEvaluatorMandate, setHasActiveEvaluatorMandate] = useState(false);
+
   const isAndroid =
     Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
   const triggerMenuRipple = (e, key) => {
@@ -260,6 +263,20 @@ function HomeMobile({
     };
   }, [user?.id, user?.jabatan, user?.site]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id || !user?.site) {
+      setHasActiveEvaluatorMandate(false);
+      return;
+    }
+    fetchActiveEvaluatorMandatesForUser(user.id, user.site).then((mandates) => {
+      if (!cancelled) setHasActiveEvaluatorMandate(mandates.length > 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.site]);
+
   // KPI bulanan (hazard, take5, pto)
   useEffect(() => {
     const load = async () => {
@@ -273,7 +290,8 @@ function HomeMobile({
         const isEvaluator =
           roleStr.includes("evaluator") ||
           roleStr.includes("admin") ||
-          user?.jabatan === "Admin Site Project";
+          user?.jabatan === "Admin Site Project" ||
+          hasActiveEvaluatorMandate;
 
         // Jika bukan evaluator, paksa showPersonalKpi = true
         const effectiveShowPersonal = isEvaluator ? showPersonalKpi : true;
@@ -478,7 +496,7 @@ function HomeMobile({
       }
     };
     load();
-  }, [user?.role, user?.site, user?.id, user?.jabatan, user?.nrp, showPersonalKpi]);
+  }, [user?.role, user?.site, user?.id, user?.jabatan, user?.nrp, showPersonalKpi, hasActiveEvaluatorMandate]);
 
   useEffect(() => {
     return () => {
@@ -491,7 +509,8 @@ function HomeMobile({
   const canAccessMonitoring =
     user?.role === "evaluator" ||
     user?.role === "admin" ||
-    user?.jabatan === "Admin Site Project";
+    user?.jabatan === "Admin Site Project" ||
+    hasActiveEvaluatorMandate;
 
   const allMenuItems = [
     {
@@ -974,7 +993,8 @@ function HomeMobile({
                     </div>
                     {(user?.role?.toLowerCase().includes("evaluator") ||
                       user?.role?.toLowerCase().includes("admin") ||
-                      user?.jabatan === "Admin Site Project") && (
+                      user?.jabatan === "Admin Site Project" ||
+                      hasActiveEvaluatorMandate) && (
                       <div
                         onClick={() => setShowPersonalKpi(!showPersonalKpi)}
                         style={{

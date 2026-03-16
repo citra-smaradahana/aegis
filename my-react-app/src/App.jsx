@@ -11,6 +11,8 @@ import {
   registerPushNotifications,
   unregisterPushNotifications,
 } from "./utils/pushNotificationHelpers";
+import { fetchActiveEvaluatorMandatesForUser } from "./utils/evaluatorMandateHelpers";
+
 import Login from "./components/Login";
 import MonitoringPage from "./components/MonitoringPage";
 import SiteSelectionPage from "./components/SiteSelectionPage";
@@ -157,10 +159,13 @@ function App() {
     const [ftwNeedsFill, setFtwNeedsFill] = useState(false);
     const [tasklistTodoCount, setTasklistTodoCount] = useState(0);
     const [allowedMenus, setAllowedMenus] = useState(null);
+    const [hasActiveEvaluatorMandate, setHasActiveEvaluatorMandate] = useState(false);
+
     const canAccessMonitoring =
       user?.role === "evaluator" ||
       user?.role === "admin" ||
-      user?.jabatan === "Admin Site Project";
+      user?.jabatan === "Admin Site Project" ||
+      hasActiveEvaluatorMandate;
 
     const reportPtoJabatan = [
       "SHERQ Officer",
@@ -233,6 +238,21 @@ function App() {
         cancelled = true;
       };
     }, [user?.id, user?.jabatan, user?.site]);
+
+    // Fetch aktif Mandat Evaluator untuk unlock menu eksekutif (Monitoring dsb)
+    useEffect(() => {
+      let cancelled = false;
+      if (!user?.id || !user?.site) {
+        setHasActiveEvaluatorMandate(false);
+        return;
+      }
+      fetchActiveEvaluatorMandatesForUser(user.id, user.site).then((mandates) => {
+        if (!cancelled) setHasActiveEvaluatorMandate(mandates.length > 0);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.id, user?.site, activeMenu]);
 
     // Tutup panel notifikasi saat pindah menu
     useEffect(() => {
