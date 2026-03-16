@@ -302,14 +302,14 @@ function TasklistPageDesktop({ user }) {
       let qTodo = supabase
         .from("hazard_report")
         .select(
-          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done",
+          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, evaluator_nama_2, evaluator_nama_3, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done",
         )
         .not("status", "ilike", "closed")
         .order("created_at", { ascending: false });
       let qHistory = supabase
         .from("hazard_report")
         .select(
-          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done",
+          "id, deskripsi_temuan, pic, pelapor_nama, pelapor_nrp, lokasi, detail_lokasi, keterangan_lokasi, due_date, status, created_at, ketidaksesuaian, sub_ketidaksesuaian, quick_action, evidence, action_plan, evaluator_nama, evaluator_nama_2, evaluator_nama_3, alasan_penolakan_open, deskripsi_penyelesaian, evidence_perbaikan, alasan_penolakan_done",
         )
         .ilike("status", "closed")
         .order("created_at", { ascending: false });
@@ -361,6 +361,9 @@ function TasklistPageDesktop({ user }) {
         deskripsi_penyelesaian: o.deskripsi_penyelesaian || "",
         evidence_perbaikan: o.evidence_perbaikan || "",
         alasan_penolakan_done: o.alasan_penolakan_done || "",
+        evaluator_nama_2: o.evaluator_nama_2 || "",
+        evaluator_nama_3: o.evaluator_nama_3 || "",
+        activeMandateDelegators: activeMandates || [],
       });
 
       const normalizeHistory = (o) => ({
