@@ -510,7 +510,6 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           evaluator_nama: evaluatorOptions[0] || null,
           evaluator_nama_2: evaluatorOptions[1] || null,
           evaluator_nama_3: evaluatorOptions[2] || null,
-          client_nonce: getOrCreateNonce(makeFp(evaluatorOptions[0] || "")),
           take_5_id:
             selectedReport?.sumber_laporan === "Take5"
               ? selectedReport?.id
