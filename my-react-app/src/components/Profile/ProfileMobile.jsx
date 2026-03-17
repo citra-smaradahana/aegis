@@ -61,6 +61,21 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
     setShowLogoutConfirm(false);
   };
 
+  const roleStr = (user?.role || "").toLowerCase();
+  const jabatanStr = (user?.jabatan || "").toLowerCase();
+  
+  const canGiveMandate =
+    roleStr.includes("evaluator") ||
+    jabatanStr.includes("pjo") ||
+    jabatanStr.includes("plant leading hand");
+
+  // Alihkan tab otomatis jika tab Mandat terbuka namun tidak punya akses
+  useEffect(() => {
+    if (activeTab === "mandat" && !canGiveMandate) {
+      setActiveTab("profil");
+    }
+  }, [activeTab, canGiveMandate]);
+
   if (loading) {
     return (
       <div
@@ -196,23 +211,25 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
         >
           Profil
         </button>
-        <button
-          onClick={() => setActiveTab("mandat")}
-          style={{
-            flex: 1,
-            background: "none",
-            border: "none",
-            padding: "12px 0",
-            fontWeight: 600,
-            fontSize: 15,
-            color: activeTab === "mandat" ? "#ea580c" : "#6b7280",
-            borderBottom: activeTab === "mandat" ? "3px solid #ea580c" : "3px solid transparent",
-            transition: "all 0.2s",
-            cursor: "pointer",
-          }}
-        >
-          Mandat
-        </button>
+        {canGiveMandate && (
+          <button
+            onClick={() => setActiveTab("mandat")}
+            style={{
+              flex: 1,
+              background: "none",
+              border: "none",
+              padding: "12px 0",
+              fontWeight: 600,
+              fontSize: 15,
+              color: activeTab === "mandat" ? "#ea580c" : "#6b7280",
+              borderBottom: activeTab === "mandat" ? "3px solid #ea580c" : "3px solid transparent",
+              transition: "all 0.2s",
+              cursor: "pointer",
+            }}
+          >
+            Mandat
+          </button>
+        )}
       </div>
 
       {/* Profile Content */}

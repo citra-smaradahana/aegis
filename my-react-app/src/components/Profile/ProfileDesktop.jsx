@@ -87,6 +87,14 @@ function ProfileDesktop({ user, onClose, onLogout }) {
     height: "fit-content",
   };
 
+  const roleStr = (user?.role || "").toLowerCase();
+  const jabatanStr = (user?.jabatan || "").toLowerCase();
+  
+  const canGiveMandate =
+    roleStr.includes("evaluator") ||
+    jabatanStr.includes("pjo") ||
+    jabatanStr.includes("plant leading hand");
+
   return (
     <div
       style={{
@@ -148,22 +156,25 @@ function ProfileDesktop({ user, onClose, onLogout }) {
           >
             Profil
           </button>
-          <button
-            onClick={() => setActiveTab("mandat")}
-            style={{
-              background: activeTab === "mandat" ? "#3b82f6" : "transparent",
-              color: activeTab === "mandat" ? "#ffffff" : "#9ca3af",
-              border: "none",
-              padding: "10px 24px",
-              borderRadius: "8px",
-              fontWeight: 600,
-              fontSize: 16,
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            Mandat
-          </button>
+          
+          {canGiveMandate && (
+            <button
+              onClick={() => setActiveTab("mandat")}
+              style={{
+                background: activeTab === "mandat" ? "#3b82f6" : "transparent",
+                color: activeTab === "mandat" ? "#ffffff" : "#9ca3af",
+                border: "none",
+                padding: "10px 24px",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: 16,
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              Mandat
+            </button>
+          )}
         </div>
 
         {/* Kolom-kolom: Profile | Informasi Profile | Mandat Validasi | Mandat Evaluator */}
