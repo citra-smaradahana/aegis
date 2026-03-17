@@ -523,15 +523,22 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
           id_sumber_laporan: selectedReport?.id || null, // Keep for backward compatibility
         };
 
-        const hazardPromises = [
-          supabase.from("hazard_report").insert(hazardDataDraft)
-        ];
+        // Cek duplikasi sebelum insert
+        const isDup = await checkDuplicateHazard({ evaluatorNama: evaluatorOptions[0] || "" });
+        if (isDup) {
+          setSubmittedToMultipleEvaluators(false);
+          setSubmitSuccess(true);
+          setSubmitting(false);
+          return;
+        }
 
-        const results = await Promise.all(hazardPromises);
-        const errors = results.filter((result) => result.error);
+        const { error: insertError } = await supabase
+          .from("hazard_report")
+          .insert(hazardDataDraft);
 
-        if (errors.length > 0) {
-          throw new Error(`Gagal membuat ${errors.length} hazard report`);
+        if (insertError) {
+          console.error("Supabase error:", insertError);
+          throw insertError;
         }
 
         const evaluatorsToInsert = evaluatorOptions.length ? evaluatorOptions : [];
@@ -541,28 +548,7 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
         );
         evaluatorsToInsert.forEach((ev) => clearGuards(makeFp(ev)));
 
-        // Cek duplikasi sebelum insert
-        const isDup = await checkDuplicateHazard({ evaluatorNama: evaluatorOptions[0] || "" });
-        if (isDup) {
-          setSubmittedToMultipleEvaluators(false);
-          setSubmitSuccess(true);
-          return;
-        }
-
-        const { data: hazardDataResult, insertError } = await supabase
-          .from("hazard_report")
-          .insert(hazardDataDraft);
-
-        if (insertError) {
-          console.error("Supabase error:", insertError);
-          throw insertError;
-        }
-
         setSubmittedToMultipleEvaluators(true);
-        console.log("Hazard Report insert result:", {
-          hazardDataResult,
-          insertError,
-        });
 
         // setTimeout(() => setSubmittedToMultipleEvaluators(false), 3000);
         const singleEvaluator = evaluatorOptions[0] || "";
