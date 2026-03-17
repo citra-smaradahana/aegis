@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
 import { fetchSites, fetchJabatan } from "../../utils/masterDataHelpers";
+import { compressImage } from "../../utils/imageCompression";
 import "./UserForm.css";
 
 const roleOptions = [
@@ -243,15 +244,22 @@ function UserForm({ user, onSubmit, onClose, loading }) {
   const uploadPhoto = async () => {
     if (!photoFile) return null;
 
+    let fileToUpload = photoFile;
+    try {
+      fileToUpload = await compressImage(photoFile);
+    } catch (e) {
+      console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+    }
+
     try {
       setUploadingPhoto(true);
-      const fileExt = photoFile.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileExt = fileToUpload.name.split(".").pop() || "jpg";
+      const fileName = `${Date.now()}_usr_${Math.random()}.${fileExt}`;
       const filePath = `user-photos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("foto-karyawan")
-        .upload(filePath, photoFile);
+        .upload(filePath, fileToUpload);
 
       if (uploadError) {
         throw uploadError;

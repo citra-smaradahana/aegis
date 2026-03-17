@@ -3,6 +3,7 @@ import { supabase } from "../../supabaseClient";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../Dropzone/cropImageUtil";
 import { FiX, FiCheck } from "react-icons/fi";
+import { compressImage } from "../../utils/imageCompression";
 
 function TasklistFormRejectAtDone({ hazard, onSuccess, readOnly, onClose }) {
   const [desc, setDesc] = useState("");
@@ -58,11 +59,19 @@ function TasklistFormRejectAtDone({ hazard, onSuccess, readOnly, onClose }) {
   // Upload evidence ke bucket closing-hazard
   const uploadEvidence = async () => {
     if (!evidence) return null;
-    const fileExt = evidence.type.split("/")[1];
+
+    let fileToUpload = evidence;
+    try {
+      fileToUpload = await compressImage(evidence);
+    } catch (e) {
+      console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+    }
+
+    const fileExt = fileToUpload.type ? fileToUpload.type.split("/")[1] : "jpg";
     const fileName = `hazard_${hazard.id}_${Date.now()}.${fileExt}`;
     const { data, error } = await supabase.storage
       .from("closing-hazard")
-      .upload(fileName, evidence, { upsert: true });
+      .upload(fileName, fileToUpload, { upsert: true });
     if (error) throw error;
     const { data: urlData } = supabase.storage
       .from("closing-hazard")

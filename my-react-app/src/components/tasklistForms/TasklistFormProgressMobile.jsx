@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../Dropzone/cropImageUtil';
+import { compressImage } from '../../utils/imageCompression';
 
 function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embedded }) {
   const [form, setForm] = useState({
@@ -82,11 +83,19 @@ function TasklistFormProgressMobile({ hazard, onClose, onSuccess, readOnly, embe
   // Upload evidence ke bucket closing-hazard
   const uploadEvidence = async () => {
     if (!evidence) return null;
-    const fileExt = evidence.type.split('/')[1];
+    
+    let fileToUpload = evidence;
+    try {
+      fileToUpload = await compressImage(evidence);
+    } catch (e) {
+      console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+    }
+
+    const fileExt = fileToUpload.type ? fileToUpload.type.split('/')[1] : 'jpg';
     const fileName = `hazard_${hazard.id}_${Date.now()}.${fileExt}`;
     const { data, error } = await supabase.storage
       .from('closing-hazard')
-      .upload(fileName, evidence, { upsert: true });
+      .upload(fileName, fileToUpload, { upsert: true });
     if (error) throw error;
     const { data: urlData } = supabase.storage
       .from('closing-hazard')

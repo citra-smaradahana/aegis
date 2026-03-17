@@ -10,6 +10,7 @@ import { SUB_OPTIONS, matchPotensiBahayaToKetidaksesuaian } from "../../config/h
 import { fetchKetidaksesuaianSubOptions } from "../../utils/masterDataHelpers";
 import PendingReportsList from "./PendingReportsList";
 import { getNowWITAISO } from "../../utils/dateTimeHelpers";
+import { compressImage } from "../../utils/imageCompression";
 import LocationDetailSelector from "../LocationDetailSelector";
 
 const lokasiOptions = [
@@ -341,13 +342,21 @@ function HazardFormDesktop({ user }) {
 
   async function uploadEvidence() {
     if (!evidence) return null;
-    const fileExt = evidence.name.split(".").pop();
+
+    let fileToUpload = evidence;
+    try {
+      fileToUpload = await compressImage(evidence);
+    } catch (e) {
+      console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+    }
+
+    const fileExt = fileToUpload.name.split(".").pop() || "jpg";
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `hazard-evidence/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("img-test")
-      .upload(filePath, evidence);
+      .upload(filePath, fileToUpload);
 
     if (uploadError) {
       throw new Error("Error uploading evidence");

@@ -11,6 +11,7 @@ import {
 import LocationDetailSelector from "../LocationDetailSelector";
 import { fetchSites } from "../../utils/masterDataHelpers";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
+import { compressImage } from "../../utils/imageCompression";
 import Take5History from "./Take5History";
 
 const SITE_OPTIONS_FALLBACK = [
@@ -298,13 +299,20 @@ const Take5FormDesktop = ({ user, onRedirectHazard }) => {
     try {
       let buktiUrl = null;
       if (buktiPerbaikan) {
-        const fileExt = buktiPerbaikan.name.split(".").pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+        let fileToUpload = buktiPerbaikan;
+        try {
+          fileToUpload = await compressImage(buktiPerbaikan);
+        } catch (e) {
+          console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+        }
+
+        const fileExt = fileToUpload.name.split(".").pop() || "jpg";
+        const fileName = `${Date.now()}_take5_${Math.random()}.${fileExt}`;
         const filePath = `take5-bukti/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from("img-test")
-          .upload(filePath, buktiPerbaikan);
+          .upload(filePath, fileToUpload);
 
         if (uploadError) {
           throw new Error("Error uploading bukti");

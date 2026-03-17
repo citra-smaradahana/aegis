@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../supabaseClient';
+import { compressImage } from '../../utils/imageCompression';
 import './Dropzone.css';
 
 function DropzoneKaryawan() {
@@ -13,10 +14,18 @@ function DropzoneKaryawan() {
     setUploading(true);
     const uploaded = [];
     for (const file of acceptedFiles) {
-      const filePath = `${Date.now()}-${file.name}`;
+      let fileToUpload = file;
+      try {
+        fileToUpload = await compressImage(file);
+      } catch (e) {
+        console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+      }
+
+      const fileExt = fileToUpload.name.split(".").pop() || "jpg";
+      const filePath = `${Date.now()}_img_${Math.random()}.${fileExt}`;
       const { error } = await supabase.storage
         .from('foto-karyawan')
-        .upload(filePath, file);
+        .upload(filePath, fileToUpload);
       if (error) {
         setUploadError(error.message);
       } else {

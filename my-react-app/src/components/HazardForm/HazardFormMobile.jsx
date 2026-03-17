@@ -25,6 +25,7 @@ import { getNowWITAISO } from "../../utils/dateTimeHelpers";
 import MobileHeader from "../MobileHeader";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import SelectModalWithSearch from "../SelectModalWithSearch";
+import { compressImage } from "../../utils/imageCompression";
 
 function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
   const [subOptionsMap, setSubOptionsMap] = useState(null);
@@ -395,13 +396,20 @@ function HazardFormMobile({ user, onBack, onNavigate, tasklistTodoCount = 0 }) {
 
   async function uploadEvidence() {
     if (!evidence) return null;
-    const fileExt = evidence.name.split(".").pop();
+    let fileToUpload = evidence;
+    try {
+      fileToUpload = await compressImage(evidence);
+    } catch (e) {
+      console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+    }
+
+    const fileExt = fileToUpload.name.split(".").pop() || "jpg";
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `hazard-evidence/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("img-test")
-      .upload(filePath, evidence);
+      .upload(filePath, fileToUpload);
 
     if (uploadError) {
       throw new Error("Error uploading evidence");

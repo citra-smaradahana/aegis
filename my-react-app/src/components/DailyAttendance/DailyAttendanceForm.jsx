@@ -3,6 +3,7 @@ import { supabase } from "../../supabaseClient";
 import { sessionManager } from "../../utils/sessionManager";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 import { fetchUsersAttendanceForValidator } from "../../utils/fitToWorkAbsentHelpers";
+import { compressImage } from "../../utils/imageCompression";
 import DailyAttendancePrint from "./DailyAttendancePrint";
 import SearchablePersonField from "./SearchablePersonField";
 import MobileHeader from "../MobileHeader";
@@ -424,11 +425,19 @@ const DailyAttendanceForm = ({
         continue;
       }
       if (!img.file) continue;
-      const fileExt = img.file.name.split(".").pop() || "jpg";
+
+      let fileToUpload = img.file;
+      try {
+        fileToUpload = await compressImage(img.file);
+      } catch (e) {
+        console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+      }
+
+      const fileExt = fileToUpload.name.split(".").pop() || "jpg";
       const fileName = `safety-meeting/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
       const { error } = await supabase.storage
         .from("safety_meeting_bucket")
-        .upload(fileName, img.file);
+        .upload(fileName, fileToUpload);
       if (error) throw new Error("Gagal upload gambar");
       const { data } = supabase.storage
         .from("safety_meeting_bucket")

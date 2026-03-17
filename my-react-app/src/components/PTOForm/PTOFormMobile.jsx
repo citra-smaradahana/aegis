@@ -20,6 +20,8 @@ import {
 } from "../../utils/masterDataHelpers";
 import offlineStorage from "../../utils/offlineStorage";
 
+import { compressImage } from "../../utils/imageCompression";
+
 const alasanObservasiFallback = [
   "Pekerja Baru",
   "Kinerja Pekerja Kurang Baik",
@@ -416,15 +418,27 @@ function PTOFormMobile({
     try {
       let fotoUrl = null;
       if (formData.fotoTemuan) {
-        const fileName = `${Date.now()}_${formData.fotoTemuan.name}`;
+        let fileToUpload = formData.fotoTemuan;
+        try {
+          fileToUpload = await compressImage(formData.fotoTemuan);
+        } catch (e) {
+          console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+        }
+
+        const fileExt = fileToUpload.name.split(".").pop() || "jpg";
+        const fileName = `${Date.now()}_pto_${Math.random()}.${fileExt}`;
+        
         const { error: uploadError } = await supabase.storage
           .from("pto-evidence")
-          .upload(fileName, formData.fotoTemuan);
+          .upload(fileName, fileToUpload);
+          
         if (uploadError)
           throw new Error(`Gagal upload foto: ${uploadError.message}`);
+          
         const { data: urlData } = supabase.storage
           .from("pto-evidence")
           .getPublicUrl(fileName);
+          
         fotoUrl = urlData.publicUrl;
       }
 

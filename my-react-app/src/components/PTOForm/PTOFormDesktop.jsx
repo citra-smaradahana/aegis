@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../supabaseClient";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
+import { compressImage } from "../../utils/imageCompression";
 import LocationDetailSelector from "../LocationDetailSelector";
 import Cropper from "react-easy-crop";
 import PTOHistory from "./PTOHistory";
@@ -424,12 +425,21 @@ function PTOFormDesktop({ user, onBack }) {
       if (formData.fotoTemuan) {
         try {
           console.log("Uploading photo to pto-evidence bucket...");
-          const fileName = `${Date.now()}_${formData.fotoTemuan.name}`;
+          
+          let fileToUpload = formData.fotoTemuan;
+          try {
+            fileToUpload = await compressImage(formData.fotoTemuan);
+          } catch (e) {
+            console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+          }
+
+          const fileExt = fileToUpload.name.split(".").pop() || "jpg";
+          const fileName = `${Date.now()}_pto_${Math.random()}.${fileExt}`;
 
           const { data: uploadData, error: uploadError } =
             await supabase.storage
               .from("pto-evidence")
-              .upload(fileName, formData.fotoTemuan);
+              .upload(fileName, fileToUpload);
 
           if (uploadError) {
             console.error("Storage upload error:", uploadError);

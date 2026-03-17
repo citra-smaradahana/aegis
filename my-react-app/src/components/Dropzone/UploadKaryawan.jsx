@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from './cropImageUtil';
 import { fetchSites, fetchJabatan } from '../../utils/masterDataHelpers';
+import { compressImage } from '../../utils/imageCompression';
 import './Dropzone.css';
 
 function sanitizeFileName(name) {
@@ -130,12 +131,20 @@ function UploadKaryawan() {
         selectedFile.size,
         selectedFile.type
       );
+
+      let fileToUpload = selectedFile;
+      try {
+        fileToUpload = await compressImage(selectedFile);
+      } catch (e) {
+        console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+      }
+
       // Upload hasil crop (selectedFile) ke bucket foto-karyawan
-      const cleanName = sanitizeFileName(selectedFile.name);
+      const cleanName = sanitizeFileName(fileToUpload.name);
       const filePath = `${Date.now()}-${cleanName}`;
       const { error } = await supabase.storage
         .from('foto-karyawan')
-        .upload(filePath, selectedFile);
+        .upload(filePath, fileToUpload);
       if (error) {
         setUploadError(error.message);
         console.error('Upload foto error:', error.message);

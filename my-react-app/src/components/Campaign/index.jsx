@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
+import { compressImage } from "../../utils/imageCompression";
 
 const BUCKET_NAME = "campaign-images";
 
@@ -70,11 +71,18 @@ function Campaign({ user, onBack }) {
   };
 
   const uploadImage = async (file) => {
-    const ext = file.name.split(".").pop() || "jpg";
-    const fileName = `campaign-${Date.now()}.${ext}`;
+    let fileToUpload = file;
+    try {
+      fileToUpload = await compressImage(file);
+    } catch (e) {
+      console.warn("Gambar gagal dikompresi, menggunakan ukuran orisinal:", e);
+    }
+
+    const fileExt = fileToUpload.name.split(".").pop() || "jpg";
+    const fileName = `campaign-${Date.now()}.${fileExt}`;
     const { error: uploadErr } = await supabase.storage
       .from(BUCKET_NAME)
-      .upload(fileName, file, { upsert: false });
+      .upload(fileName, fileToUpload, { upsert: false });
     if (uploadErr) throw uploadErr;
     const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
     return data.publicUrl;
