@@ -7,6 +7,10 @@ function TasklistFormDoneMobile({ hazard, onClose, onSuccess, readOnly, embedded
   const [approveSelected, setApproveSelected] = useState(null); // null, 'ya', 'tidak'
   const [alasanPenolakan, setAlasanPenolakan] = useState('');
 
+  // State untuk Image Modal
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState('');
+
   const handleSubmit = async e => {
     e.preventDefault();
     if (readOnly) return;
@@ -257,6 +261,10 @@ function TasklistFormDoneMobile({ hazard, onClose, onSuccess, readOnly, embedded
                   border: '1px solid #d1d5db',
                   cursor: 'pointer',
                 }}
+                onClick={() => {
+                  setCurrentImageSrc(evidence);
+                  setIsImageModalOpen(true);
+                }}
               />
             </div>
           </div>
@@ -337,6 +345,11 @@ function TasklistFormDoneMobile({ hazard, onClose, onSuccess, readOnly, embedded
                   objectFit: 'cover',
                   borderRadius: '8px',
                   border: '1px solid #d1d5db',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  setCurrentImageSrc(hazard.evidence_perbaikan);
+                  setIsImageModalOpen(true);
                 }}
               />
             </div>
@@ -514,6 +527,60 @@ function TasklistFormDoneMobile({ hazard, onClose, onSuccess, readOnly, embedded
           {readOnly ? 'Read Only' : submitting ? 'Menyimpan...' : 'Submit'}
         </button>
       </div>
+
+      {/* Image Modal Overlay */}
+      {isImageModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'zoom-out',
+          }}
+          onClick={() => setIsImageModalOpen(false)}
+        >
+          <button
+            onClick={() => setIsImageModalOpen(false)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              fontSize: '24px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+            }}
+          >
+            ×
+          </button>
+          <img
+            src={currentImageSrc}
+            alt="Zoomed Evidence"
+            style={{
+              maxWidth: '95%',
+              maxHeight: '95%',
+              objectFit: 'contain',
+              cursor: 'default',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

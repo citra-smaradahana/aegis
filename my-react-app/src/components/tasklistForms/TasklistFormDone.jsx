@@ -12,6 +12,9 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState('');
+
   // Memindahkan early return ke bawah pemanggilan hooks
   if (!item) return null;
 
@@ -305,6 +308,10 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                     border: "1px solid #374151",
                     cursor: "pointer",
                   }}
+                  onClick={() => {
+                    setCurrentImageSrc(item.evidence);
+                    setIsImageModalOpen(true);
+                  }}
                 />
               </div>
             )}
@@ -405,22 +412,14 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                     border: "1px solid #374151",
                     cursor: "pointer",
                   }}
+                  onClick={() => {
+                    setCurrentImageSrc(item.evidence_perbaikan);
+                    setIsImageModalOpen(true);
+                  }}
                 />
               </div>
             )}
 
-{/* readOnly check removed as standard usage */
-              <div
-                style={{
-                  color: "#9ca3af",
-                  marginBottom: 16,
-                  fontStyle: "italic",
-                }}
-              >
-                Anda tidak memiliki akses untuk melakukan evaluasi pada status
-                ini.
-              </div>
-}
 
             <form
               onSubmit={handleSubmit}
@@ -519,7 +518,7 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                 <div style={{ color: "#ef4444", fontSize: 14 }}>{error}</div>
               )}
 
-/* readOnly checks removed */
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -537,11 +536,64 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                 >
                   {loading ? "Menyimpan..." : "Submit Evaluasi"}
                 </button>
-/* end readOnly checked */
+
             </form>
           </div>
         </div>
       </div>
+
+      {isImageModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'zoom-out',
+          }}
+          onClick={() => setIsImageModalOpen(false)}
+        >
+          <button
+            onClick={() => setIsImageModalOpen(false)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              fontSize: '24px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+            }}
+          >
+            ×
+          </button>
+          <img
+            src={currentImageSrc}
+            alt="Zoomed Evidence"
+            style={{
+              maxWidth: '95%',
+              maxHeight: '95%',
+              objectFit: 'contain',
+              cursor: 'default',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
