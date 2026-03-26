@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
-function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
+function TasklistFormDone({ hazard, onClose, onSuccess, readOnly }) {
+  const item = hazard;
   const [catatan, setCatatan] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -20,9 +21,7 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // The original code had `if (readOnly) return;` here, but `readOnly` is no longer in props.
-    // Assuming `item` contains the necessary info or `readOnly` is handled elsewhere.
-    // For now, I'll remove the `readOnly` check as it's not defined in the new props.
+    if (readOnly) return;
     setError("");
 
     if (!selected) {
@@ -57,7 +56,6 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
         if (error) throw error;
       }
 
-      if (onRefresh) onRefresh();
       if (onClose) onClose();
       if (onSuccess) onSuccess();
     } catch (err) {
@@ -440,7 +438,7 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                   <button
                     type="button"
                     onClick={() => setSelected("terima")}
-                    disabled={false}
+                    disabled={readOnly}
                     style={{
                       flex: 1,
                       padding: "12px 16px",
@@ -461,7 +459,7 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                   <button
                     type="button"
                     onClick={() => setSelected("tolak")}
-                    disabled={false}
+                    disabled={readOnly}
                     style={{
                       flex: 1,
                       padding: "12px 16px",
@@ -497,7 +495,7 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                   <textarea
                     value={alasan}
                     onChange={(e) => setAlasan(e.target.value)}
-                    disabled={false}
+                    disabled={readOnly}
                     placeholder="Jelaskan alasan penolakan..."
                     style={{
                       width: "100%",
@@ -519,6 +517,7 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
               )}
 
 
+              {!readOnly && (
                 <button
                   type="submit"
                   disabled={loading}
@@ -536,6 +535,7 @@ function TasklistFormDone({ item, onClose, onRefresh, onSuccess }) {
                 >
                   {loading ? "Menyimpan..." : "Submit Evaluasi"}
                 </button>
+              )}
 
             </form>
           </div>
