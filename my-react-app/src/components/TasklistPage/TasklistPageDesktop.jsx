@@ -960,10 +960,20 @@ function TasklistPageDesktop({ user }) {
                 const currentUserName = (user?.nama || user?.user || "")
                   .toLowerCase()
                   .trim();
-                const rowEvaluator = (selectedRow.evaluator_nama || "")
-                  .toLowerCase()
-                  .trim();
-                return currentUserName !== rowEvaluator;
+                const evaluators = [
+                  (selectedRow.evaluator_nama || "").toLowerCase().trim(),
+                  (selectedRow.evaluator_nama_2 || "").toLowerCase().trim(),
+                  (selectedRow.evaluator_nama_3 || "").toLowerCase().trim(),
+                ].filter(Boolean);
+                
+                const mandateDelegatorNames = (selectedRow.activeMandateDelegators || []).map((m) =>
+                  (m.delegated_by?.nama || "").toLowerCase().trim()
+                );
+
+                const isDirectEvaluator = evaluators.includes(currentUserName);
+                const isMandatedEvaluator = evaluators.some((ev) => mandateDelegatorNames.includes(ev));
+
+                return !(isDirectEvaluator || isMandatedEvaluator);
               })()
             }
             onClose={handleBackToTasklist}
