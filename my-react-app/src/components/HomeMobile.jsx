@@ -45,6 +45,7 @@ function canAccessFitToWorkValidationFallback(user) {
   const validatorJabatan = [
     "Field Leading Hand",
     "Plant Leading Hand",
+    "Maintenance Leading Hand",
     "Asst. Penanggung Jawab Operasional",
     "Penanggung Jawab Operasional",
     "SHE",
@@ -57,6 +58,7 @@ const REPORT_PTO_JABATAN = [
   "SHERQ Officer",
   "Field Leading Hand",
   "Plant Leading Hand",
+  "Maintenance Leading Hand",
   "Technical Service",
   "Asst. Penanggung Jawab Operasional",
   "Penanggung Jawab Operasional",

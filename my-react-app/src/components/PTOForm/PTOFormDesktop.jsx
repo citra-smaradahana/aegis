@@ -167,6 +167,7 @@ function PTOFormDesktop({ user, onBack }) {
           "Technical Service",
           "Field Leading Hand",
           "Plant Leading Hand",
+          "Maintenance Leading Hand",
         ])
         .neq("id", user.id);
 

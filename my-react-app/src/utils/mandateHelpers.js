@@ -8,27 +8,43 @@ export const MANDATE_TYPES = {
   PJO_TO_ASST_PJO: "PJO_TO_ASST_PJO",
 };
 
-/** Jabatan yang bisa memberi mandat & opsi penerima (dropdown) */
-export const MANDATE_CONFIG = {
-  "Plant Leading Hand": {
-    mandateType: MANDATE_TYPES.PLH_TO_FLH,
-    recipientJabatans: ["Field Leading Hand"],
-  },
-  "SHERQ Officer": {
-    mandateType: MANDATE_TYPES.SHERQ_TO_ASST_PJO_OR_PJO,
-    recipientJabatans: ["Asst. Penanggung Jawab Operasional", "Penanggung Jawab Operasional"],
-  },
-  "Penanggung Jawab Operasional": {
-    mandateType: MANDATE_TYPES.PJO_TO_ASST_PJO,
-    recipientJabatans: ["Asst. Penanggung Jawab Operasional"],
-  },
-};
+/**
+ * Dapatkan konfigurasi mandat berdasarkan jabatan yang lebih fleksibel (case-insensitive)
+ */
+export function getMandateConfig(jabatan) {
+  if (!jabatan) return null;
+  const j = String(jabatan).toLowerCase();
+
+  const isAsst = j.includes("asst") || j.includes("assistant") || j.includes("asisten");
+  const isPJO = j.includes("pjo") || j.includes("penanggung jawab") || j.includes("penanggungjawab");
+
+  if (j.includes("plant leading hand") || j.includes("maintenance leading hand")) {
+    return {
+      mandateType: MANDATE_TYPES.PLH_TO_FLH,
+      recipientQuery: "jabatan.ilike.%field leading hand%",
+    };
+  }
+  if (j.includes("sherq")) {
+    return {
+      mandateType: MANDATE_TYPES.SHERQ_TO_ASST_PJO_OR_PJO,
+      recipientQuery: "jabatan.ilike.%asst. penanggung jawab%,jabatan.ilike.%penanggung jawab%,jabatan.ilike.%pjo%",
+    };
+  }
+  if (isPJO && !isAsst) {
+    return {
+      mandateType: MANDATE_TYPES.PJO_TO_ASST_PJO,
+      recipientQuery: "jabatan.ilike.%asst. penanggung jawab%,jabatan.ilike.%asst%pjo%,jabatan.ilike.%assistant pjo%",
+    };
+  }
+
+  return null;
+}
 
 /**
  * Cek apakah user bisa memberi mandat (Plant Leading Hand, SHERQ Officer, atau PJO)
  */
 export function canGiveMandate(jabatan) {
-  return !!MANDATE_CONFIG[jabatan];
+  return !!getMandateConfig(jabatan);
 }
 
 /**
@@ -36,14 +52,14 @@ export function canGiveMandate(jabatan) {
  */
 export async function fetchMandateRecipients(user) {
   if (!user?.site) return [];
-  const config = MANDATE_CONFIG[user.jabatan];
+  const config = getMandateConfig(user.jabatan);
   if (!config) return [];
 
   const { data, error } = await supabase
     .from("users")
     .select("id, nama, jabatan, nrp")
     .eq("site", user.site)
-    .in("jabatan", config.recipientJabatans)
+    .or(config.recipientQuery)
     .neq("id", user.id)
     .order("nama", { ascending: true });
 

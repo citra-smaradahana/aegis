@@ -5,7 +5,7 @@ import {
   fetchMandatesGivenByUser,
   createMandate,
   deactivateMandate,
-  MANDATE_CONFIG,
+  getMandateConfig,
 } from "../../utils/mandateHelpers";
 import { getTodayWITA } from "../../utils/dateTimeHelpers";
 
@@ -107,7 +107,7 @@ function MandatSection({ user, isMobile = false, embedded = false }) {
   const [showPenerimaModal, setShowPenerimaModal] = useState(false);
   const [penerimaSearchQuery, setPenerimaSearchQuery] = useState("");
 
-  const config = user?.jabatan ? MANDATE_CONFIG[user.jabatan] : null;
+  const config = user?.jabatan ? getMandateConfig(user.jabatan) : null;
   const showSection = canGiveMandate(user?.jabatan);
 
   useEffect(() => {

@@ -44,7 +44,7 @@ export async function fetchValidationCountForUser(user) {
         "Level1 Review",
       ]),
     );
-  } else if (jabatan === "Plant Leading Hand") {
+  } else if (jabatan === "Plant Leading Hand" || jabatan === "Maintenance Leading Hand") {
     await addFromQuery(
       baseQuery()
         .in("jabatan", ["Mekanik", "Operator Plant"])
@@ -93,6 +93,7 @@ export async function fetchValidationCountForUser(user) {
               "Technical Service",
               "Field Leading Hand",
               "Plant Leading Hand",
+              "Maintenance Leading Hand",
             ])
             .in("workflow_status", [
               "Pending",
@@ -111,6 +112,7 @@ export async function fetchValidationCountForUser(user) {
           "Technical Service",
           "Field Leading Hand",
           "Plant Leading Hand",
+          "Maintenance Leading Hand",
         ])
         .in("workflow_status", ["Pending", "Level1_Review", "Level1 Review"]),
     );

@@ -90,10 +90,9 @@ function ProfileDesktop({ user, onClose, onLogout }) {
   const roleStr = (user?.role || "").toLowerCase();
   const jabatanStr = (user?.jabatan || "").toLowerCase();
   
-  const canGiveMandate =
-    roleStr.includes("evaluator") ||
-    jabatanStr.includes("pjo") ||
-    jabatanStr.includes("plant leading hand");
+  const hasValidasiMandate = canGiveMandate(user?.jabatan);
+  const hasEvaluatorMandate = canGiveEvaluatorMandate(user);
+  const showMandateTab = hasValidasiMandate || hasEvaluatorMandate;
 
   return (
     <div
@@ -157,7 +156,7 @@ function ProfileDesktop({ user, onClose, onLogout }) {
             Profil
           </button>
           
-          {canGiveMandate && (
+          {showMandateTab && (
             <button
               onClick={() => setActiveTab("mandat")}
               style={{
@@ -352,7 +351,7 @@ function ProfileDesktop({ user, onClose, onLogout }) {
             <h3 style={{ margin: "0 0 24px 0", color: "#e5e7eb", fontSize: 18 }}>
               Mandat Validasi
             </h3>
-            {canGiveMandate(user?.jabatan) ? (
+            {hasValidasiMandate ? (
               <MandatSection user={user} isMobile={false} embedded={true} />
             ) : (
               <p style={{ color: "#9ca3af", fontSize: 14 }}>
@@ -362,7 +361,7 @@ function ProfileDesktop({ user, onClose, onLogout }) {
           </div>
 
           {/* Kolom Tambahan: Mandat Evaluator */}
-          {canGiveEvaluatorMandate(user) && (
+          {hasEvaluatorMandate && (
             <div style={{ ...columnCardStyle, minHeight: 200 }}>
               <h3 style={{ margin: "0 0 24px 0", color: "#e5e7eb", fontSize: 18 }}>
                 Mandat Evaluator

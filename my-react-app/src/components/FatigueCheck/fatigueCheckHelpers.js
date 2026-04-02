@@ -3,7 +3,7 @@
  */
 import { fetchUsersAttendanceForValidator } from "../../utils/fitToWorkAbsentHelpers";
 
-const LEADING_HAND_JABATAN = ["Field Leading Hand", "Plant Leading Hand"];
+const LEADING_HAND_JABATAN = ["Field Leading Hand", "Plant Leading Hand", "Maintenance Leading Hand"];
 
 /**
  * Fetch daftar user yang bisa dicek oleh Leading Hand (subordinate).

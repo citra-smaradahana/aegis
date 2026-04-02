@@ -2,7 +2,7 @@ import { supabase } from "../supabaseClient";
 import { getTodayWITA } from "./dateTimeHelpers";
 
 /**
- * Cek apakah user bisa memberi mandat evaluator (hanya untuk PJO, Evaluator, Plant Leading Hand)
+ * Cek apakah user bisa memberi mandat evaluator (hanya untuk Evaluator)
  */
 export function canGiveEvaluatorMandate(user) {
   if (!user) return false;
@@ -11,8 +11,7 @@ export function canGiveEvaluatorMandate(user) {
   
   return (
     roleStr.includes("evaluator") ||
-    jabatanStr.includes("pjo") ||
-    jabatanStr.includes("plant leading hand")
+    jabatanStr.includes("evaluator")
   );
 }
 
@@ -26,7 +25,7 @@ export async function fetchEvaluatorMandateRecipients(user) {
     .from("users")
     .select("id, nama, jabatan, nrp, role")
     .eq("site", user.site)
-    .or("role.ilike.%evaluator%,jabatan.ilike.%evaluator%,jabatan.ilike.%pjo%,jabatan.ilike.%plant leading hand%")
+    .or("role.ilike.%evaluator%,jabatan.ilike.%evaluator%")
     .neq("id", user.id)
     .order("nama", { ascending: true });
 

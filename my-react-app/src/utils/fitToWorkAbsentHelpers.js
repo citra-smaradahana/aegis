@@ -33,7 +33,7 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
     return null; // null = semua jabatan
   }
 
-  if (j === "Plant Leading Hand") {
+  if (j === "Plant Leading Hand" || j === "Maintenance Leading Hand") {
     // Termasuk sesama Leading Hand agar bisa menandai off
     return [
       "Mekanik",
@@ -41,6 +41,7 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
       "Operator WOPP",
       "Field Leading Hand",
       "Plant Leading Hand",
+      "Maintenance Leading Hand",
     ];
   }
 
@@ -55,6 +56,7 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
       "Crew Blasting",
       "Field Leading Hand",
       "Plant Leading Hand",
+      "Maintenance Leading Hand",
     ];
     // Mandat PLH->FLH: tambah bawahan PLH (Mekanik, Operator Plant, Operator WOPP)
     const plhMandate = (mandates || []).find(
@@ -108,6 +110,7 @@ export async function fetchUsersNotYetFilledFTW(user, additionalJabatans = []) {
   const validatorJabatans = [
     "Field Leading Hand",
     "Plant Leading Hand",
+    "Maintenance Leading Hand",
     "Penanggung Jawab Operasional",
     "Asst. Penanggung Jawab Operasional",
     "SHERQ Officer",
@@ -219,6 +222,7 @@ export async function fetchUsersAttendanceForValidator(
   const validatorJabatans = [
     "Field Leading Hand",
     "Plant Leading Hand",
+    "Maintenance Leading Hand",
     "Penanggung Jawab Operasional",
     "Asst. Penanggung Jawab Operasional",
     "SHERQ Officer",
@@ -352,7 +356,8 @@ export async function markUserOff(userId, validatorUser) {
   const validatorJabatan = (validatorUser?.jabatan || "").trim();
   if (
     validatorJabatan === "Field Leading Hand" ||
-    validatorJabatan === "Plant Leading Hand"
+    validatorJabatan === "Plant Leading Hand" ||
+    validatorJabatan === "Maintenance Leading Hand"
   ) {
     const { data: targetUser, error: targetUserError } = await supabase
       .from("users")
@@ -467,6 +472,7 @@ const CAN_MARK_USER_OFF_JABATANS = [
   "Administrator",
   "Field Leading Hand",
   "Plant Leading Hand",
+  "Maintenance Leading Hand",
 ];
 
 export function canMarkUserOff(jabatan) {

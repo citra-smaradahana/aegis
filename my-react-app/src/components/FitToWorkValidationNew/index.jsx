@@ -160,9 +160,10 @@ function FitToWorkValidationNew({
       let additionalJabatans = [];
       if (
         userJabatan === "Field Leading Hand" ||
-        userJabatan === "Plant Leading Hand"
+        userJabatan === "Plant Leading Hand" ||
+        userJabatan === "Maintenance Leading Hand"
       ) {
-        additionalJabatans = ["Field Leading Hand", "Plant Leading Hand"];
+        additionalJabatans = ["Field Leading Hand", "Plant Leading Hand", "Maintenance Leading Hand"];
       }
 
       const data = await fetchUsersNotYetFilledFTW(user, additionalJabatans);
@@ -192,9 +193,10 @@ function FitToWorkValidationNew({
       let additionalJabatans = [];
       if (
         userJabatan === "Field Leading Hand" ||
-        userJabatan === "Plant Leading Hand"
+        userJabatan === "Plant Leading Hand" ||
+        userJabatan === "Maintenance Leading Hand"
       ) {
-        additionalJabatans = ["Field Leading Hand", "Plant Leading Hand"];
+        additionalJabatans = ["Field Leading Hand", "Plant Leading Hand", "Maintenance Leading Hand"];
       }
 
       const data = await fetchUsersAttendanceForValidator(

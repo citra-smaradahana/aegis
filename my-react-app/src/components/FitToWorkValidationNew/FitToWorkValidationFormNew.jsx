@@ -96,6 +96,7 @@ function FitToWorkValidationFormNew({
             "Technical Service",
             "Field Leading Hand",
             "Plant Leading Hand",
+            "Maintenance Leading Hand",
           ];
           const pjoWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
           if (
@@ -142,8 +143,8 @@ function FitToWorkValidationFormNew({
     if (mandateCanEditL1) return true;
 
     // Check if user can validate this person based on jabatan hierarchy
-    if (userJabatan === "Plant Leading Hand") {
-      // Plant Leading Hand hanya bisa validasi Mekanik dan Operator Plant
+    if (userJabatan === "Plant Leading Hand" || userJabatan === "Maintenance Leading Hand") {
+      // Plant Leading Hand dan Maintenance Leading Hand hanya bisa validasi Mekanik dan Operator Plant
       return ["Mekanik", "Operator Plant"].includes(validation.jabatan);
     } else if (userJabatan === "Field Leading Hand") {
       // Field Leading Hand hanya bisa validasi Operator MMU, Crew, Quality Control, dan Blaster
@@ -203,6 +204,7 @@ function FitToWorkValidationFormNew({
         "Technical Service",
         "Field Leading Hand",
         "Plant Leading Hand",
+        "Maintenance Leading Hand",
       ];
       const validWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
 

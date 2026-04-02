@@ -171,6 +171,7 @@ function App() {
       "SHERQ Officer",
       "Field Leading Hand",
       "Plant Leading Hand",
+      "Maintenance Leading Hand",
       "Technical Service",
       "Asst. Penanggung Jawab Operasional",
       "Penanggung Jawab Operasional",
@@ -178,6 +179,7 @@ function App() {
     const validatorJabatan = [
       "Field Leading Hand",
       "Plant Leading Hand",
+      "Maintenance Leading Hand",
       "Asst. Penanggung Jawab Operasional",
       "Penanggung Jawab Operasional",
       "SHE",

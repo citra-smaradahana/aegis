@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 import MobileBottomNavigation from "../MobileBottomNavigation";
 import { canGiveEvaluatorMandate } from "../../utils/evaluatorMandateHelpers";
+import { canGiveMandate } from "../../utils/mandateHelpers";
 import MandatSection from "./MandatSection";
 import MandatEvaluatorSection from "./MandatEvaluatorSection";
 
@@ -64,17 +65,16 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
   const roleStr = (user?.role || "").toLowerCase();
   const jabatanStr = (user?.jabatan || "").toLowerCase();
   
-  const canGiveMandate =
-    roleStr.includes("evaluator") ||
-    jabatanStr.includes("pjo") ||
-    jabatanStr.includes("plant leading hand");
+  const hasValidasiMandate = canGiveMandate(user?.jabatan);
+  const hasEvaluatorMandate = canGiveEvaluatorMandate(user);
+  const showMandateTab = hasValidasiMandate || hasEvaluatorMandate;
 
   // Alihkan tab otomatis jika tab Mandat terbuka namun tidak punya akses
   useEffect(() => {
-    if (activeTab === "mandat" && !canGiveMandate) {
+    if (activeTab === "mandat" && !showMandateTab) {
       setActiveTab("profil");
     }
-  }, [activeTab, canGiveMandate]);
+  }, [activeTab, showMandateTab]);
 
   if (loading) {
     return (
@@ -211,7 +211,7 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
         >
           Profil
         </button>
-        {canGiveMandate && (
+        {showMandateTab && (
           <button
             onClick={() => setActiveTab("mandat")}
             style={{
@@ -416,12 +416,18 @@ function ProfileMobile({ user, onClose, onBack, onLogout, onNavigate, tasklistTo
         {activeTab === "mandat" && (
           <>
         {/* Mandat Validasi Section */}
-        <div style={{ marginBottom: 24 }}>
-          <MandatSection user={user} isMobile={true} />
-        </div>
+        {hasValidasiMandate ? (
+          <div style={{ marginBottom: 24 }}>
+            <MandatSection user={user} isMobile={true} />
+          </div>
+        ) : (
+          <p style={{ color: "#9ca3af", fontSize: 14 }}>
+            Anda tidak memiliki wewenang untuk memberi mandat.
+          </p>
+        )}
 
         {/* Mandat Evaluator Section */}
-        {canGiveEvaluatorMandate(user) && (
+        {hasEvaluatorMandate && (
           <div style={{ marginBottom: 24 }}>
             <MandatEvaluatorSection user={user} isMobile={true} />
           </div>
