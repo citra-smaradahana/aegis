@@ -36,52 +36,54 @@ function getPreviewText(text, maxLength = 90) {
 // Fallback: jabatan validator (jika tidak ada config di DB)
 function canAccessFitToWorkValidationFallback(user) {
   if (!user) return false;
+  const userJabatan = (user?.jabatan || "").toLowerCase().trim();
   if (
-    user?.jabatan === "Administrator" ||
-    user?.jabatan === "Admin Site Project"
+    userJabatan === "administrator" ||
+    userJabatan === "admin site project"
   )
     return true;
-  const jabatan = (user?.jabatan || "").trim();
   const validatorJabatan = [
-    "Field Leading Hand",
-    "Plant Leading Hand",
-    "Maintenance Leading Hand",
-    "Asst. Penanggung Jawab Operasional",
-    "Penanggung Jawab Operasional",
-    "SHE",
-    "SHERQ Officer",
+    "field leading hand",
+    "plant leading hand",
+    "maintenance leading hand",
+    "asst. penanggung jawab operasional",
+    "penanggung jawab operasional",
+    "she",
+    "sherq officer",
   ];
-  return validatorJabatan.includes(jabatan);
+  return validatorJabatan.includes(userJabatan);
 }
 
 const REPORT_PTO_JABATAN = [
-  "SHERQ Officer",
-  "Field Leading Hand",
-  "Plant Leading Hand",
-  "Maintenance Leading Hand",
-  "Technical Service",
-  "Asst. Penanggung Jawab Operasional",
-  "Penanggung Jawab Operasional",
+  "sherq officer",
+  "field leading hand",
+  "plant leading hand",
+  "maintenance leading hand",
+  "technical service",
+  "asst. penanggung jawab operasional",
+  "penanggung jawab operasional",
 ];
 
 function canAccessReportFallback(user) {
   if (!user) return false;
+  const userJabatan = (user?.jabatan || "").toLowerCase().trim();
   if (
-    user?.jabatan === "Administrator" ||
-    user?.jabatan === "Admin Site Project"
+    userJabatan === "administrator" ||
+    userJabatan === "admin site project"
   )
     return true;
-  return REPORT_PTO_JABATAN.includes((user?.jabatan || "").trim());
+  return REPORT_PTO_JABATAN.includes(userJabatan);
 }
 
 function canAccessPTOFallback(user) {
   if (!user) return false;
+  const userJabatan = (user?.jabatan || "").toLowerCase().trim();
   if (
-    user?.jabatan === "Administrator" ||
-    user?.jabatan === "Admin Site Project"
+    userJabatan === "administrator" ||
+    userJabatan === "admin site project"
   )
     return true;
-  return REPORT_PTO_JABATAN.includes((user?.jabatan || "").trim());
+  return REPORT_PTO_JABATAN.includes(userJabatan);
 }
 
 function HomeMobile({
@@ -292,7 +294,7 @@ function HomeMobile({
         const isEvaluator =
           roleStr.includes("evaluator") ||
           roleStr.includes("admin") ||
-          user?.jabatan === "Admin Site Project" ||
+          (user?.jabatan || "").toLowerCase().trim() === "admin site project" ||
           hasActiveEvaluatorMandate;
 
         // Jika bukan evaluator, paksa showPersonalKpi = true
@@ -511,7 +513,7 @@ function HomeMobile({
   const canAccessMonitoring =
     user?.role === "evaluator" ||
     user?.role === "admin" ||
-    user?.jabatan === "Admin Site Project" ||
+    (user?.jabatan || "").toLowerCase().trim() === "admin site project" ||
     hasActiveEvaluatorMandate;
 
   const allMenuItems = [

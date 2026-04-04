@@ -30,15 +30,15 @@ const DEFAULT_SUPERVISOR_MENUS = [
 ];
 
 const DEFAULT_SUPERVISOR_JABATAN = [
-  "Administrator",
-  "Admin Site Project",
-  "SHERQ Officer",
-  "Field Leading Hand",
-  "Plant Leading Hand",
-  "Maintenance Leading Hand",
-  "Technical Service",
-  "Asst. Penanggung Jawab Operasional",
-  "Penanggung Jawab Operasional",
+  "administrator",
+  "admin site project",
+  "sherq officer",
+  "field leading hand",
+  "plant leading hand",
+  "maintenance leading hand",
+  "technical service",
+  "asst. penanggung jawab operasional",
+  "penanggung jawab operasional",
 ];
 
 const cache = {};
@@ -71,11 +71,11 @@ export async function fetchAllowedMenusForUser(user) {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const jabatanName = (user.jabatan || "").trim();
+  const jabatanName = (user.jabatan || "").toLowerCase().trim();
   const siteName = (user.site || "").trim();
 
   // Administrator & Admin Site Project selalu melihat semua menu (termasuk fatigue-check)
-  if (jabatanName === "Administrator" || jabatanName === "Admin Site Project") {
+  if (jabatanName === "administrator" || jabatanName === "admin site project") {
     const allKeys = MENU_KEYS.map((m) => m.key);
     setCached(cacheKey, allKeys);
     return allKeys;
@@ -90,7 +90,7 @@ export async function fetchAllowedMenusForUser(user) {
       const { data: jabatanRow } = await supabase
         .from("master_jabatan")
         .select("id")
-        .eq("name", jabatanName)
+        .ilike("name", jabatanName)
         .maybeSingle();
 
       if (jabatanRow?.id) {
@@ -133,8 +133,8 @@ export async function fetchAllowedMenusForUser(user) {
       userOverrides.length > 0 ? userOverrides : [...new Set([...jabatanMenus, ...userOverrides])];
 
     if (combined.length === 0) {
-      combined =
-        DEFAULT_SUPERVISOR_JABATAN.includes(jabatanName) ? DEFAULT_SUPERVISOR_MENUS : DEFAULT_REGULAR_MENUS;
+      const isSupervisor = DEFAULT_SUPERVISOR_JABATAN.includes(jabatanName);
+      combined = isSupervisor ? DEFAULT_SUPERVISOR_MENUS : DEFAULT_REGULAR_MENUS;
     }
 
     let result = combined;
@@ -150,7 +150,10 @@ export async function fetchAllowedMenusForUser(user) {
     return final;
   } catch (e) {
     console.warn("fetchAllowedMenusForUser error:", e);
-    return DEFAULT_SUPERVISOR_JABATAN.includes(jabatanName) ? DEFAULT_SUPERVISOR_MENUS : DEFAULT_REGULAR_MENUS;
+    const jabatanName = (user?.jabatan || "").toLowerCase().trim();
+    return DEFAULT_SUPERVISOR_JABATAN.includes(jabatanName)
+      ? DEFAULT_SUPERVISOR_MENUS
+      : DEFAULT_REGULAR_MENUS;
   }
 }
 

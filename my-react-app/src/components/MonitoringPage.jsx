@@ -154,23 +154,25 @@ function MonitoringPage({ user }) {
 
   // Jabatan Hierarchy for Sorting
   const JABATAN_RANK = [
-    "Penanggung Jawab Operasional",
-    "Asst. Penanggung Jawab Operasional",
-    "SHERQ Officer",
-    "Technical Service",
-    "Field Leading Hand",
-    "Plant Leading Hand",
-    "Admin Site Project",
-    "Operator MMU",
-    "Operator Plant",
-    "Operator WOPP",
-    "Mekanik",
-    "Quality Controller",
-    "Crew",
+    "penanggung jawab operasional",
+    "asst. penanggung jawab operasional",
+    "sherq officer",
+    "technical service",
+    "field leading hand",
+    "plant leading hand",
+    "maintenance leading hand",
+    "admin site project",
+    "operator mmu",
+    "operator plant",
+    "operator wopp",
+    "mekanik",
+    "quality controller",
+    "crew",
   ];
 
   const getJabatanRank = (j) => {
-    const idx = JABATAN_RANK.indexOf(j);
+    const val = (j || "").toLowerCase().trim();
+    const idx = JABATAN_RANK.indexOf(val);
     return idx === -1 ? 999 : idx;
   };
 
@@ -880,7 +882,7 @@ function MonitoringPage({ user }) {
   const fetchTake5Stats = async () => {
     setLoading(true);
     try {
-      let query = supabase.from("take_5").select("*");
+      let query = supabase.from("take_5").select("*, users(email, jabatan)");
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
@@ -2495,13 +2497,20 @@ function MonitoringPage({ user }) {
     // Data Lengkap - Custom Format sesuai permintaan user
     if (take5Stats.listData && take5Stats.listData.length > 0) {
       const customData = take5Stats.listData.map((item) => ({
-        "Timestamp": item.created_at
+        "Id": "",
+        "Start time": item.created_at
           ? new Date(item.created_at).toLocaleString("id-ID")
           : "",
+        "Completion time": item.created_at
+          ? new Date(item.created_at).toLocaleString("id-ID")
+          : "",
+        "Email": item.users?.email || "",
+        "Name": item.pelapor_nama || "",
         "Nama (Name)": item.pelapor_nama || "",
         "NRP": item.nrp || "",
         "Lokasi (Location)": item.site || "",
-        "Tanggal/Waktu (Date/Time)": item.tanggal || "",
+        "Jabatan": item.users?.jabatan || "",
+        "Tanggal/Waktu (Date / Time)": item.tanggal || "",
         "Detail Lokasi (Detail Location)": item.detail_lokasi || "",
         "Judul Pekerjaan (Job Title)": item.judul_pekerjaan || "",
         "Apakah saya sehat secara fisik untuk melakukan pekerjaan ini? (Am I physically fit to perform this task)":
@@ -2522,7 +2531,7 @@ function MonitoringPage({ user }) {
           })(),
         "Apakah saya memiliki peralatan yang benar untuk melakukan pekerjaan ini? (Am I equipped with correct tools to do this task?)":
           item.q4 === false || String(item.q4) === "false" || item.q4 === "Tidak" ? "Tidak" : "Ya",
-        "Apakah saya memiliki APD yang benar untuk melakukan pekerjaan ini? (Am I equipped with correct PPE for this task)":
+        "Apakah saya memiliki APD yang benar untuk melakukan pekerjaan ini? (Am I equipped with correct PPE for this task?)":
           item.q5 === false || String(item.q5) === "false" || item.q5 === "Tidak" ? "Tidak" : "Ya",
         "Apakah pekerjaan aman untuk dilakukan? (Is it safe to perform this task?)":
           item.aman === "aman"
@@ -2537,11 +2546,16 @@ function MonitoringPage({ user }) {
       const rawSheet = XLSX.utils.json_to_sheet(customData);
 
       const wscols = [
-        { wch: 22 }, // Timestamp
+        { wch: 10 }, // Id
+        { wch: 22 }, // Start time
+        { wch: 22 }, // Completion time
+        { wch: 30 }, // Email
+        { wch: 25 }, // Name
         { wch: 25 }, // Nama (Name)
         { wch: 15 }, // NRP
         { wch: 20 }, // Lokasi (Location)
-        { wch: 28 }, // Tanggal/Waktu (Date/Time)
+        { wch: 20 }, // Jabatan
+        { wch: 28 }, // Tanggal/Waktu (Date / Time)
         { wch: 25 }, // Detail Lokasi (Detail Location)
         { wch: 30 }, // Judul Pekerjaan (Job Title)
         { wch: 15 }, // q1

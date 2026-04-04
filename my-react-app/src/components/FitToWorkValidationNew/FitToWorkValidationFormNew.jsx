@@ -59,13 +59,17 @@ function FitToWorkValidationFormNew({
       const mandates = await fetchActiveMandatesForUser(user.id, user.site);
       let ml1 = false;
       let ml2 = false;
+      const userJabatan = (user.jabatan || "").toLowerCase().trim();
+      const valJabatan = (validation.jabatan || "").toLowerCase().trim();
+      const valWorkflow = (validation.workflow_status || "").trim();
+
       for (const m of mandates) {
         if (
           m.mandate_type === "PLH_TO_FLH" &&
-          user.jabatan === "Field Leading Hand"
+          userJabatan === "field leading hand"
         ) {
           if (
-            validation.workflow_status === "Pending" &&
+            valWorkflow === "Pending" &&
             ["Mekanik", "Operator Plant"].includes(validation.jabatan)
           ) {
             ml1 = true;
@@ -75,12 +79,12 @@ function FitToWorkValidationFormNew({
         // Mandat SHERQ memberi otorisasi level 2 pada scope SHERQ.
         if (m.mandate_type === "SHERQ_TO_ASST_PJO_OR_PJO") {
           if (
-            (user.jabatan === "Asst. Penanggung Jawab Operasional" ||
-              user.jabatan === "Penanggung Jawab Operasional") &&
-            (validation.workflow_status === "Level1_Review" ||
-              validation.workflow_status === "Level1 Review" ||
-              validation.jabatan === "Administrator" ||
-              validation.jabatan === "Admin Site Project")
+            (userJabatan === "asst. penanggung jawab operasional" ||
+              userJabatan === "penanggung jawab operasional") &&
+            (valWorkflow === "Level1_Review" ||
+              valWorkflow === "Level1 Review" ||
+              valJabatan === "administrator" ||
+              valJabatan === "admin site project")
           ) {
             ml2 = true;
             break;
@@ -88,20 +92,20 @@ function FitToWorkValidationFormNew({
         }
         if (
           m.mandate_type === "PJO_TO_ASST_PJO" &&
-          user.jabatan === "Asst. Penanggung Jawab Operasional"
+          userJabatan === "asst. penanggung jawab operasional"
         ) {
           const pjoJabatan = [
-            "Asst. Penanggung Jawab Operasional",
-            "SHERQ Officer",
-            "Technical Service",
-            "Field Leading Hand",
-            "Plant Leading Hand",
-            "Maintenance Leading Hand",
+            "asst. penanggung jawab operasional",
+            "sherq officer",
+            "technical service",
+            "field leading hand",
+            "plant leading hand",
+            "maintenance leading hand",
           ];
           const pjoWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
           if (
-            pjoJabatan.includes(validation.jabatan) &&
-            pjoWorkflow.includes(validation.workflow_status)
+            pjoJabatan.includes(valJabatan) &&
+            pjoWorkflow.includes(valWorkflow)
           ) {
             ml2 = true;
             break;
@@ -130,7 +134,8 @@ function FitToWorkValidationFormNew({
   const canEditLevel1 = () => {
     if (!user || !validation) return false;
 
-    const userJabatan = user.jabatan;
+    const userJabatan = (user.jabatan || "").toLowerCase().trim();
+    const valJabatan = (validation.jabatan || "").toLowerCase().trim();
     const userSite = user.site;
 
     // Site validation
@@ -143,10 +148,10 @@ function FitToWorkValidationFormNew({
     if (mandateCanEditL1) return true;
 
     // Check if user can validate this person based on jabatan hierarchy
-    if (userJabatan === "Plant Leading Hand" || userJabatan === "Maintenance Leading Hand") {
+    if (userJabatan === "plant leading hand" || userJabatan === "maintenance leading hand") {
       // Plant Leading Hand dan Maintenance Leading Hand hanya bisa validasi Mekanik dan Operator Plant
       return ["Mekanik", "Operator Plant"].includes(validation.jabatan);
-    } else if (userJabatan === "Field Leading Hand") {
+    } else if (userJabatan === "field leading hand") {
       // Field Leading Hand hanya bisa validasi Operator MMU, Crew, Quality Control, dan Blaster
       const jabatanYangBisaDivalidasiFLH = [
         "Operator MMU",
@@ -158,7 +163,7 @@ function FitToWorkValidationFormNew({
         "Crew Blasting",
       ];
       return jabatanYangBisaDivalidasiFLH.includes(validation.jabatan);
-    } else if (userJabatan === "Asst. Penanggung Jawab Operasional") {
+    } else if (userJabatan === "asst. penanggung jawab operasional") {
       return ["Blaster"].includes(validation.jabatan);
     }
 
@@ -168,73 +173,52 @@ function FitToWorkValidationFormNew({
   const canEditLevel2 = () => {
     if (!user || !validation) return false;
 
-    const userJabatan = user.jabatan;
+    const userJabatan = (user.jabatan || "").toLowerCase().trim();
+    const valJabatan = (validation.jabatan || "").toLowerCase().trim();
     const userSite = user.site;
 
     // Mandat: Asst.PJO/PJO bisa validasi Level2 (scope SHERQ/PJO) jika menerima mandat aktif.
     if (mandateCanEditL2) return true;
 
-    console.log("=== canEditLevel2 DEBUG ===");
-    console.log("User jabatan:", userJabatan);
-    console.log("User site:", userSite);
-    console.log("Validation jabatan:", validation.jabatan);
-    console.log("Validation site:", validation.site);
-    console.log("Validation workflow_status:", validation.workflow_status);
-
     // Site validation
     if (userSite !== validation.site) {
-      console.log("Site validation failed");
       return false;
     }
 
     // Check if user can validate this person based on jabatan hierarchy
-    if (userJabatan === "SHE") {
+    if (userJabatan === "she") {
       // SHE can validate anyone who has completed Level 1 or is Administrator/Admin Site Project
       const canValidate =
         validation.workflow_status === "Level1_Review" ||
-        validation.jabatan === "Administrator" ||
-        validation.jabatan === "Admin Site Project";
-      console.log("SHE validation check:", canValidate);
+        valJabatan === "administrator" ||
+        valJabatan === "admin site project";
       return canValidate;
-    } else if (userJabatan === "Penanggung Jawab Operasional") {
+    } else if (userJabatan === "penanggung jawab operasional") {
       // PJO can validate Asst. PJO, SHERQ Officer, Technical Service, Field/Plant Leading Hand (Not Fit To Work)
       const validJabatan = [
-        "Asst. Penanggung Jawab Operasional",
-        "SHERQ Officer",
-        "Technical Service",
-        "Field Leading Hand",
-        "Plant Leading Hand",
-        "Maintenance Leading Hand",
+        "asst. penanggung jawab operasional",
+        "sherq officer",
+        "technical service",
+        "field leading hand",
+        "plant leading hand",
+        "maintenance leading hand",
       ];
       const validWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
 
       const canValidate =
-        validJabatan.includes(validation.jabatan) &&
+        validJabatan.includes(valJabatan) &&
         validWorkflow.includes(validation.workflow_status);
 
-      console.log("PJO validation check:");
-      console.log(
-        "- Valid jabatan:",
-        validJabatan.includes(validation.jabatan),
-      );
-      console.log(
-        "- Valid workflow:",
-        validWorkflow.includes(validation.workflow_status),
-      );
-      console.log("- Final result:", canValidate);
-
       return canValidate;
-    } else if (userJabatan === "SHERQ Officer") {
+    } else if (userJabatan === "sherq officer") {
       // SHERQ Officer can validate anyone who has completed Level 1 or is Administrator/Admin Site Project
       const canValidate =
         validation.workflow_status === "Level1_Review" ||
-        validation.jabatan === "Administrator" ||
-        validation.jabatan === "Admin Site Project";
-      console.log("SHERQ Officer validation check:", canValidate);
+        valJabatan === "administrator" ||
+        valJabatan === "admin site project";
       return canValidate;
     }
 
-    console.log("No matching jabatan found");
     return false;
   };
 

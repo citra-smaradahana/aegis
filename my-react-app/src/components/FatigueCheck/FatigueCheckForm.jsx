@@ -317,11 +317,12 @@ const FatigueCheckForm = ({ user: userProp, onBack, onNavigate, tasklistTodoCoun
       </div>
     );
 
-  const canAccess = ["Field Leading Hand", "Plant Leading Hand"].includes(sessionUser?.jabatan || "");
+  const userJabatan = (sessionUser?.jabatan || "").toLowerCase().trim();
+  const canAccess = ["field leading hand", "plant leading hand", "maintenance leading hand"].includes(userJabatan);
   if (!canAccess) {
     return (
       <div className="p-8 text-center">
-        <p className="text-amber-600 mb-4">Hanya Field Leading Hand atau Plant Leading Hand yang dapat mengisi Fatigue Check.</p>
+        <p className="text-amber-600 mb-4">Hanya Field Leading Hand, Plant Leading Hand, atau Maintenance Leading Hand yang dapat mengisi Fatigue Check.</p>
         <button onClick={onBack} style={btnOutline}>← Kembali</button>
       </div>
     );

@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 
 // Ganti versi ini sesuai dengan versi di package.json saat build
-const CURRENT_VERSION = '1.0.0'; 
+const CURRENT_VERSION = '3.6.3'; 
 
 const VersionCheck = () => {
   const [showModal, setShowModal] = useState(false);

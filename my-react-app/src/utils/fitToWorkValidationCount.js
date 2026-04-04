@@ -20,7 +20,7 @@ export async function fetchValidationCountForUser(user) {
     return cached.count;
   }
 
-  const jabatan = (user?.jabatan || "").trim();
+  const jabatan = (user?.jabatan || "").toLowerCase().trim();
   const userSite = user.site;
   const ids = new Set();
 
@@ -36,7 +36,7 @@ export async function fetchValidationCountForUser(user) {
       .eq("site", userSite)
       .eq("status_fatigue", "Not Fit To Work");
 
-  if (jabatan === "Administrator" || jabatan === "Admin Site Project") {
+  if (jabatan === "administrator" || jabatan === "admin site project") {
     await addFromQuery(
       baseQuery().in("workflow_status", [
         "Pending",
@@ -44,13 +44,13 @@ export async function fetchValidationCountForUser(user) {
         "Level1 Review",
       ]),
     );
-  } else if (jabatan === "Plant Leading Hand" || jabatan === "Maintenance Leading Hand") {
+  } else if (jabatan === "plant leading hand" || jabatan === "maintenance leading hand") {
     await addFromQuery(
       baseQuery()
         .in("jabatan", ["Mekanik", "Operator Plant"])
         .eq("workflow_status", "Pending"),
     );
-  } else if (jabatan === "Field Leading Hand") {
+  } else if (jabatan === "field leading hand") {
     await addFromQuery(
       baseQuery()
         .in("jabatan", [
@@ -74,7 +74,7 @@ export async function fetchValidationCountForUser(user) {
           .eq("workflow_status", "Pending"),
       );
     }
-  } else if (jabatan === "Asst. Penanggung Jawab Operasional") {
+  } else if (jabatan === "asst. penanggung jawab operasional") {
     await addFromQuery(
       baseQuery().in("jabatan", ["Blaster"]).eq("workflow_status", "Pending"),
     );
@@ -88,12 +88,12 @@ export async function fetchValidationCountForUser(user) {
         await addFromQuery(
           baseQuery()
             .in("jabatan", [
-              "Asst. Penanggung Jawab Operasional",
-              "SHERQ Officer",
-              "Technical Service",
-              "Field Leading Hand",
-              "Plant Leading Hand",
-              "Maintenance Leading Hand",
+              "asst. penanggung jawab operasional",
+              "sherq officer",
+              "technical service",
+              "field leading hand",
+              "plant leading hand",
+              "maintenance leading hand",
             ])
             .in("workflow_status", [
               "Pending",
@@ -103,16 +103,16 @@ export async function fetchValidationCountForUser(user) {
         );
       }
     }
-  } else if (jabatan === "Penanggung Jawab Operasional") {
+  } else if (jabatan === "penanggung jawab operasional") {
     await addFromQuery(
       baseQuery()
         .in("jabatan", [
-          "Asst. Penanggung Jawab Operasional",
-          "SHERQ Officer",
-          "Technical Service",
-          "Field Leading Hand",
-          "Plant Leading Hand",
-          "Maintenance Leading Hand",
+          "asst. penanggung jawab operasional",
+          "sherq officer",
+          "technical service",
+          "field leading hand",
+          "plant leading hand",
+          "maintenance leading hand",
         ])
         .in("workflow_status", ["Pending", "Level1_Review", "Level1 Review"]),
     );
@@ -125,7 +125,7 @@ export async function fetchValidationCountForUser(user) {
         baseQuery().in("workflow_status", ["Level1_Review", "Level1 Review"]),
       );
     }
-  } else if (jabatan === "SHE") {
+  } else if (jabatan === "she") {
     await addFromQuery(
       baseQuery().in("workflow_status", [
         "Pending",
@@ -133,7 +133,7 @@ export async function fetchValidationCountForUser(user) {
         "Level1 Review",
       ]),
     );
-  } else if (jabatan === "SHERQ Officer") {
+  } else if (jabatan === "sherq officer") {
     await addFromQuery(
       baseQuery().in("workflow_status", ["Level1_Review", "Level1 Review"]),
     );

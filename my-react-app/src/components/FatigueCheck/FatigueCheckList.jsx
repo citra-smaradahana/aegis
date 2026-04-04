@@ -106,8 +106,8 @@ const FatigueCheckListDesktop = ({ user: userProp, onNavigate }) => {
   };
 
   const canCreate =
-    ["Field Leading Hand", "Plant Leading Hand", "Penanggung Jawab Operasional", "Asst. Penanggung Jawab Operasional", "SHERQ Officer"].includes(
-      (sessionUser?.jabatan || "").trim()
+    ["field leading hand", "plant leading hand", "maintenance leading hand", "penanggung jawab operasional", "asst. penanggung jawab operasional", "sherq officer"].includes(
+      (sessionUser?.jabatan || "").toLowerCase().trim()
     );
 
   return (
@@ -299,8 +299,8 @@ const FatigueCheckListMobile = ({ user: userProp, onNavigate, tasklistTodoCount 
   };
 
   const canCreate =
-    ["Field Leading Hand", "Plant Leading Hand", "Penanggung Jawab Operasional", "Asst. Penanggung Jawab Operasional", "SHERQ Officer"].includes(
-      (sessionUser?.jabatan || "").trim()
+    ["field leading hand", "plant leading hand", "maintenance leading hand", "penanggung jawab operasional", "asst. penanggung jawab operasional", "sherq officer"].includes(
+      (sessionUser?.jabatan || "").toLowerCase().trim()
     );
 
   const handleBack = () => {

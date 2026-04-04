@@ -214,6 +214,7 @@ const FitToWorkFormDesktop = ({ user }) => {
         "technical service",
         "field leading hand",
         "plant leading hand",
+        "maintenance leading hand",
       ];
 
       const requiresValidation =

@@ -15,8 +15,8 @@ CROSS JOIN (VALUES
 ) AS m(key, ord)
 WHERE j.name IN (
   'Administrator', 'Admin Site Project', 'SHERQ Officer', 'Field Leading Hand',
-  'Plant Leading Hand', 'Technical Service', 'Asst. Penanggung Jawab Operasional',
-  'Penanggung Jawab Operasional', 'SHE'
+  'Plant Leading Hand', 'Maintenance Leading Hand', 'Technical Service',
+  'Asst. Penanggung Jawab Operasional', 'Penanggung Jawab Operasional', 'SHE'
 )
 ON CONFLICT (jabatan_id, menu_key) DO NOTHING;
 
@@ -30,7 +30,7 @@ CROSS JOIN (VALUES
 ) AS m(key, ord)
 WHERE j.name NOT IN (
   'Administrator', 'Admin Site Project', 'SHERQ Officer', 'Field Leading Hand',
-  'Plant Leading Hand', 'Technical Service', 'Asst. Penanggung Jawab Operasional',
-  'Penanggung Jawab Operasional', 'SHE'
+  'Plant Leading Hand', 'Maintenance Leading Hand', 'Technical Service',
+  'Asst. Penanggung Jawab Operasional', 'Penanggung Jawab Operasional', 'SHE'
 )
 ON CONFLICT (jabatan_id, menu_key) DO NOTHING;

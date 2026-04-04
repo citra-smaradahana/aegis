@@ -428,6 +428,7 @@ const JABATAN_DEFAULT = [
   "Technical Service",
   "Field Leading Hand",
   "Plant Leading Hand",
+  "Maintenance Leading Hand",
   "Operator MMU",
   "Operator Plant",
   "Operator WOPP",

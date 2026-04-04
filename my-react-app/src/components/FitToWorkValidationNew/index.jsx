@@ -60,12 +60,13 @@ function FitToWorkValidationNew({
       console.log("fetchValidations - filterStatus:", filterStatus);
 
       // Dapatkan jabatan bawahan yang boleh dilihat validator (FLH tidak lihat Mekanik/Operator Plant kecuali ada mandat PLH)
+      const userJabatanLow = (user.jabatan || "").toLowerCase().trim();
       let mandates = [];
-      if (userJabatan === "Field Leading Hand") {
+      if (userJabatanLow === "field leading hand") {
         mandates = await fetchActiveMandatesForUser(user.id, userSite);
       }
       const subordinateJabatans = getSubordinateJabatansForValidator(
-        userJabatan,
+        userJabatanLow,
         mandates,
       );
 
@@ -156,12 +157,12 @@ function FitToWorkValidationNew({
     try {
       // Modifikasi: Untuk Leading Hand, tambahkan "Field Leading Hand" & "Plant Leading Hand"
       // agar bisa melihat sesama Leading Hand di tab Outstanding
-      const userJabatan = (user.jabatan || "").trim();
+      const userJabatanLow = (user.jabatan || "").toLowerCase().trim();
       let additionalJabatans = [];
       if (
-        userJabatan === "Field Leading Hand" ||
-        userJabatan === "Plant Leading Hand" ||
-        userJabatan === "Maintenance Leading Hand"
+        userJabatanLow === "field leading hand" ||
+        userJabatanLow === "plant leading hand" ||
+        userJabatanLow === "maintenance leading hand"
       ) {
         additionalJabatans = ["Field Leading Hand", "Plant Leading Hand", "Maintenance Leading Hand"];
       }
@@ -189,12 +190,12 @@ function FitToWorkValidationNew({
     try {
       // Modifikasi: Untuk Leading Hand, tambahkan "Field Leading Hand" & "Plant Leading Hand"
       // agar bisa melihat sesama Leading Hand di tab Attendance
-      const userJabatan = (user.jabatan || "").trim();
+      const userJabatanLow = (user.jabatan || "").toLowerCase().trim();
       let additionalJabatans = [];
       if (
-        userJabatan === "Field Leading Hand" ||
-        userJabatan === "Plant Leading Hand" ||
-        userJabatan === "Maintenance Leading Hand"
+        userJabatanLow === "field leading hand" ||
+        userJabatanLow === "plant leading hand" ||
+        userJabatanLow === "maintenance leading hand"
       ) {
         additionalJabatans = ["Field Leading Hand", "Plant Leading Hand", "Maintenance Leading Hand"];
       }

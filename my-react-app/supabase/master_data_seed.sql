@@ -51,9 +51,9 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO master_jabatan (name, sort_order) VALUES
   ('Penanggung Jawab Operasional', 1), ('Asst. Penanggung Jawab Operasional', 2), ('SHERQ Officer', 3),
   ('SHERQ Supervisor', 4), ('SHERQ System & Compliance Officer', 5), ('Technical Service', 6),
-  ('Field Leading Hand', 7), ('Plant Leading Hand', 8), ('Operator MMU', 9), ('Operator Plant', 10),
-  ('Operator WOPP', 11), ('Mekanik', 12), ('Crew', 13), ('Administrator', 14), ('Admin Site Project', 15),
-  ('Blaster', 16), ('Quality Controller', 17), ('Training & Development Specialist', 18)
+  ('Field Leading Hand', 7), ('Plant Leading Hand', 8), ('Maintenance Leading Hand', 9), ('Operator MMU', 10),
+  ('Operator Plant', 11), ('Operator WOPP', 12), ('Mekanik', 13), ('Crew', 14), ('Administrator', 15),
+  ('Admin Site Project', 16), ('Blaster', 17), ('Quality Controller', 18), ('Training & Development Specialist', 19)
 ON CONFLICT (name) DO NOTHING;
 
 -- Alasan Observasi

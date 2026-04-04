@@ -202,6 +202,7 @@ const DailyAttendanceForm = ({
         const attendanceData = await fetchUsersAttendanceForValidator(u, [
           "Field Leading Hand",
           "Plant Leading Hand",
+          "Maintenance Leading Hand",
         ]);
         if (attendanceData && Array.isArray(attendanceData)) {
           const presentUsers = attendanceData.filter(
@@ -224,15 +225,15 @@ const DailyAttendanceForm = ({
     try {
       // Jabatan PJO dan Asst PJO (termasuk variasi ejaan)
       const jabatanPJO = [
-        "Penanggung Jawab Operasional",
-        "Asst. Penanggung Jawab Operasional",
-        "Assisten Penanggung Jawab Operasional",
+        "penanggung jawab operasional",
+        "asst. penanggung jawab operasional",
+        "assisten penanggung jawab operasional",
       ];
       const { data, error } = await supabase
         .from("users")
         .select("id, nama, jabatan")
         .eq("site", site)
-        .in("jabatan", jabatanPJO)
+        .ilike("jabatan", "%penanggung jawab operasional%")
         .order("jabatan");
       if (error) {
         console.warn("Gagal fetch approver list:", error);

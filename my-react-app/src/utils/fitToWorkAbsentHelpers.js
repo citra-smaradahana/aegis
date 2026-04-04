@@ -19,21 +19,21 @@ const CACHE_TTL = 30 * 1000; // 30 detik
  * PJO, Asst PJO, SHERQ lihat semua.
  */
 function getSubordinateJabatansForValidator(jabatan, mandates) {
-  const j = (jabatan || "").trim().replace(/\s+/g, " ");
+  const j = (jabatan || "").toLowerCase().trim().replace(/\s+/g, " ");
 
   // PJO, Asst PJO, SHERQ, Administrator, Admin Site Project → lihat semua (return null = no filter)
   if (
-    j === "Penanggung Jawab Operasional" ||
-    j === "Asst. Penanggung Jawab Operasional" ||
-    j === "SHERQ Officer" ||
-    j === "SHE" ||
-    j === "Administrator" ||
-    j === "Admin Site Project"
+    j === "penanggung jawab operasional" ||
+    j === "asst. penanggung jawab operasional" ||
+    j === "sherq officer" ||
+    j === "she" ||
+    j === "administrator" ||
+    j === "admin site project"
   ) {
     return null; // null = semua jabatan
   }
 
-  if (j === "Plant Leading Hand" || j === "Maintenance Leading Hand") {
+  if (j === "plant leading hand" || j === "maintenance leading hand") {
     // Termasuk sesama Leading Hand agar bisa menandai off
     return [
       "Mekanik",
@@ -102,21 +102,21 @@ export async function fetchUsersNotYetFilledFTW(user, additionalJabatans = []) {
   console.log("fetchUsersNotYetFilledFTW: ftwStatusMap[userSite]", ftwStatusMap[userSite]);
   if (ftwStatusMap[userSite] === false) return [];
 
-  const jabatan = (user?.jabatan || "").trim();
+  const jabatan = (user?.jabatan || "").toLowerCase().trim();
   const today = getTodayWITA();
   console.log(`fetchUsersNotYetFilledFTW: User Jabatan = "${jabatan}", Today = ${today}`);
 
   // Cek jabatan validator
   const validatorJabatans = [
-    "Field Leading Hand",
-    "Plant Leading Hand",
-    "Maintenance Leading Hand",
-    "Penanggung Jawab Operasional",
-    "Asst. Penanggung Jawab Operasional",
-    "SHERQ Officer",
-    "SHE",
-    "Administrator",
-    "Admin Site Project",
+    "field leading hand",
+    "plant leading hand",
+    "maintenance leading hand",
+    "penanggung jawab operasional",
+    "asst. penanggung jawab operasional",
+    "sherq officer",
+    "she",
+    "administrator",
+    "admin site project",
   ];
 
   if (validatorJabatans.includes(jabatan)) {
@@ -217,18 +217,18 @@ export async function fetchUsersAttendanceForValidator(
   if (!user?.site) return [];
 
   const userSite = user.site;
-  const jabatan = (user?.jabatan || "").trim();
+  const jabatan = (user?.jabatan || "").toLowerCase().trim();
 
   const validatorJabatans = [
-    "Field Leading Hand",
-    "Plant Leading Hand",
-    "Maintenance Leading Hand",
-    "Penanggung Jawab Operasional",
-    "Asst. Penanggung Jawab Operasional",
-    "SHERQ Officer",
-    "SHE",
-    "Administrator",
-    "Admin Site Project",
+    "field leading hand",
+    "plant leading hand",
+    "maintenance leading hand",
+    "penanggung jawab operasional",
+    "asst. penanggung jawab operasional",
+    "sherq officer",
+    "she",
+    "administrator",
+    "admin site project",
   ];
   if (!validatorJabatans.includes(jabatan)) return [];
 
@@ -353,11 +353,11 @@ export async function markUserOff(userId, validatorUser) {
   }
 
   // Leading Hand hanya boleh menandai off user dalam scope tanggung jawab jabatan.
-  const validatorJabatan = (validatorUser?.jabatan || "").trim();
+  const validatorJabatan = (validatorUser?.jabatan || "").toLowerCase().trim();
   if (
-    validatorJabatan === "Field Leading Hand" ||
-    validatorJabatan === "Plant Leading Hand" ||
-    validatorJabatan === "Maintenance Leading Hand"
+    validatorJabatan === "field leading hand" ||
+    validatorJabatan === "plant leading hand" ||
+    validatorJabatan === "maintenance leading hand"
   ) {
     const { data: targetUser, error: targetUserError } = await supabase
       .from("users")
@@ -448,15 +448,15 @@ export async function unmarkUserOff(userId) {
  * Admin Site Project tidak termasuk - read only untuk validasi FTW.
  */
 const CAN_REVISE_OFF_JABATANS = [
-  "Penanggung Jawab Operasional",
-  "Asst. Penanggung Jawab Operasional",
-  "SHERQ Officer",
-  "SHE",
-  "Administrator",
+  "penanggung jawab operasional",
+  "asst. penanggung jawab operasional",
+  "sherq officer",
+  "she",
+  "administrator",
 ];
 
 export function canReviseOffStatus(jabatan) {
-  return CAN_REVISE_OFF_JABATANS.includes((jabatan || "").trim());
+  return CAN_REVISE_OFF_JABATANS.includes((jabatan || "").toLowerCase().trim());
 }
 
 /**
@@ -465,18 +465,18 @@ export function canReviseOffStatus(jabatan) {
  * Untuk LH, pembatasan user per jabatan dilakukan di markUserOff().
  */
 const CAN_MARK_USER_OFF_JABATANS = [
-  "Penanggung Jawab Operasional",
-  "Asst. Penanggung Jawab Operasional",
-  "SHERQ Officer",
-  "SHE",
-  "Administrator",
-  "Field Leading Hand",
-  "Plant Leading Hand",
-  "Maintenance Leading Hand",
+  "penanggung jawab operasional",
+  "asst. penanggung jawab operasional",
+  "sherq officer",
+  "she",
+  "administrator",
+  "field leading hand",
+  "plant leading hand",
+  "maintenance leading hand",
 ];
 
 export function canMarkUserOff(jabatan) {
-  return CAN_MARK_USER_OFF_JABATANS.includes((jabatan || "").trim());
+  return CAN_MARK_USER_OFF_JABATANS.includes((jabatan || "").toLowerCase().trim());
 }
 
 /**

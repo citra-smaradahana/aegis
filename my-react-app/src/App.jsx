@@ -164,67 +164,71 @@ function App() {
     const canAccessMonitoring =
       user?.role === "evaluator" ||
       user?.role === "admin" ||
-      user?.jabatan === "Admin Site Project" ||
+      (user?.jabatan || "").toLowerCase().trim() === "admin site project" ||
       hasActiveEvaluatorMandate;
 
     const reportPtoJabatan = [
-      "SHERQ Officer",
-      "Field Leading Hand",
-      "Plant Leading Hand",
-      "Maintenance Leading Hand",
-      "Technical Service",
-      "Asst. Penanggung Jawab Operasional",
-      "Penanggung Jawab Operasional",
+      "sherq officer",
+      "field leading hand",
+      "plant leading hand",
+      "maintenance leading hand",
+      "technical service",
+      "asst. penanggung jawab operasional",
+      "penanggung jawab operasional",
     ];
     const validatorJabatan = [
-      "Field Leading Hand",
-      "Plant Leading Hand",
-      "Maintenance Leading Hand",
-      "Asst. Penanggung Jawab Operasional",
-      "Penanggung Jawab Operasional",
-      "SHE",
-      "SHERQ Officer",
+      "field leading hand",
+      "plant leading hand",
+      "maintenance leading hand",
+      "asst. penanggung jawab operasional",
+      "penanggung jawab operasional",
+      "she",
+      "sherq officer",
     ];
 
     const canAccessFitToWorkValidation = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("fit-to-work-validation");
+      const userJabatan = (user?.jabatan || "").toLowerCase().trim();
       if (
-        user?.jabatan === "Administrator" ||
-        user?.jabatan === "Admin Site Project"
+        userJabatan === "administrator" ||
+        userJabatan === "admin site project"
       )
         return true;
-      return validatorJabatan.includes((user?.jabatan || "").trim());
+      return validatorJabatan.includes(userJabatan);
     };
     const canAccessReport = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("daily-attendance");
+      const userJabatan = (user?.jabatan || "").toLowerCase().trim();
       if (
-        user?.jabatan === "Administrator" ||
-        user?.jabatan === "Admin Site Project"
+        userJabatan === "administrator" ||
+        userJabatan === "admin site project"
       )
         return true;
-      return reportPtoJabatan.includes((user?.jabatan || "").trim());
+      return reportPtoJabatan.includes(userJabatan);
     };
     const canAccessPTO = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("pto");
+      const userJabatan = (user?.jabatan || "").toLowerCase().trim();
       if (
-        user?.jabatan === "Administrator" ||
-        user?.jabatan === "Admin Site Project"
+        userJabatan === "administrator" ||
+        userJabatan === "admin site project"
       )
         return true;
-      return reportPtoJabatan.includes((user?.jabatan || "").trim());
+      return reportPtoJabatan.includes(userJabatan);
     };
     const canAccessFatigueCheck = () => {
       if (!user) return false;
       if (allowedMenus) return allowedMenus.includes("fatigue-check");
+      const userJabatan = (user?.jabatan || "").toLowerCase().trim();
       if (
-        user?.jabatan === "Administrator" ||
-        user?.jabatan === "Admin Site Project"
+        userJabatan === "administrator" ||
+        userJabatan === "admin site project"
       )
         return true;
-      return reportPtoJabatan.includes((user?.jabatan || "").trim());
+      return reportPtoJabatan.includes(userJabatan);
     };
 
     useEffect(() => {
