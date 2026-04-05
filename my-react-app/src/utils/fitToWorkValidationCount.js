@@ -88,12 +88,12 @@ export async function fetchValidationCountForUser(user) {
         await addFromQuery(
           baseQuery()
             .in("jabatan", [
-              "asst. penanggung jawab operasional",
-              "sherq officer",
-              "technical service",
-              "field leading hand",
-              "plant leading hand",
-              "maintenance leading hand",
+              "Asst. Penanggung Jawab Operasional",
+              "SHERQ Officer",
+              "Technical Service",
+              "Field Leading Hand",
+              "Plant Leading Hand",
+              "Maintenance Leading Hand",
             ])
             .in("workflow_status", [
               "Pending",
@@ -107,12 +107,12 @@ export async function fetchValidationCountForUser(user) {
     await addFromQuery(
       baseQuery()
         .in("jabatan", [
-          "asst. penanggung jawab operasional",
-          "sherq officer",
-          "technical service",
-          "field leading hand",
-          "plant leading hand",
-          "maintenance leading hand",
+          "Asst. Penanggung Jawab Operasional",
+          "SHERQ Officer",
+          "Technical Service",
+          "Field Leading Hand",
+          "Plant Leading Hand",
+          "Maintenance Leading Hand",
         ])
         .in("workflow_status", ["Pending", "Level1_Review", "Level1 Review"]),
     );
