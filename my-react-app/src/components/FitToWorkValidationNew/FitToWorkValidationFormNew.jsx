@@ -83,7 +83,6 @@ function FitToWorkValidationFormNew({
               userJabatan === "penanggung jawab operasional") &&
             (valWorkflow === "Level1_Review" ||
               valWorkflow === "Level1 Review" ||
-              valJabatan === "administrator" ||
               valJabatan === "admin site project")
           ) {
             ml2 = true;
@@ -101,6 +100,7 @@ function FitToWorkValidationFormNew({
             "field leading hand",
             "plant leading hand",
             "maintenance leading hand",
+            "admin site project",
           ];
           const pjoWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
           if (
@@ -187,14 +187,10 @@ function FitToWorkValidationFormNew({
 
     // Check if user can validate this person based on jabatan hierarchy
     if (userJabatan === "she") {
-      // SHE can validate anyone who has completed Level 1 or is Administrator/Admin Site Project
-      const canValidate =
-        validation.workflow_status === "Level1_Review" ||
-        valJabatan === "administrator" ||
-        valJabatan === "admin site project";
-      return canValidate;
+      // SHE hanya bisa validasi yang sudah melewati Level 1
+      return validation.workflow_status === "Level1_Review";
     } else if (userJabatan === "penanggung jawab operasional") {
-      // PJO can validate Asst. PJO, SHERQ Officer, Technical Service, Field/Plant Leading Hand (Not Fit To Work)
+      // PJO bisa validasi Asst. PJO, SHERQ, Technical Service, Leading Hand, dan Admin Site Project
       const validJabatan = [
         "asst. penanggung jawab operasional",
         "sherq officer",
@@ -202,6 +198,7 @@ function FitToWorkValidationFormNew({
         "field leading hand",
         "plant leading hand",
         "maintenance leading hand",
+        "admin site project",
       ];
       const validWorkflow = ["Pending", "Level1_Review", "Level1 Review"];
 
@@ -211,12 +208,8 @@ function FitToWorkValidationFormNew({
 
       return canValidate;
     } else if (userJabatan === "sherq officer") {
-      // SHERQ Officer can validate anyone who has completed Level 1 or is Administrator/Admin Site Project
-      const canValidate =
-        validation.workflow_status === "Level1_Review" ||
-        valJabatan === "administrator" ||
-        valJabatan === "admin site project";
-      return canValidate;
+      // SHERQ Officer hanya bisa validasi yang sudah melewati Level 1
+      return validation.workflow_status === "Level1_Review";
     }
 
     return false;
@@ -1167,7 +1160,9 @@ function FitToWorkValidationFormNew({
         <div
           style={{ color: "#9ca3af", fontSize: "14px", fontStyle: "italic" }}
         >
-          Belum divalidasi — menunggu validator yang berwenang.
+          {(validation.jabatan || "").toLowerCase().trim() === "admin site project"
+            ? "Jabatan ini tidak memerlukan validasi tahap 1. Validasi dilakukan langsung oleh PJO atau Asst. PJO."
+            : "Belum divalidasi — menunggu validator yang berwenang."}
         </div>
       )}
     </div>
