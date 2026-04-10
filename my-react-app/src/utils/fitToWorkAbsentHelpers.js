@@ -45,7 +45,7 @@ function getSubordinateJabatansForValidator(jabatan, mandates) {
     ];
   }
 
-  if (j === "Field Leading Hand") {
+  if (j === "field leading hand") {
     const base = [
       "Operator MMU",
       "Crew",
@@ -233,7 +233,7 @@ export async function fetchUsersAttendanceForValidator(
   if (!validatorJabatans.includes(jabatan)) return [];
 
   let mandates = [];
-  if (jabatan === "Field Leading Hand") {
+  if (jabatan === "field leading hand") {
     mandates = await fetchActiveMandatesForUser(user.id, userSite);
   }
 
@@ -373,7 +373,7 @@ export async function markUserOff(userId, validatorUser) {
     }
 
     let mandates = [];
-    if (validatorJabatan === "Field Leading Hand") {
+    if (validatorJabatan === "field leading hand") {
       mandates = await fetchActiveMandatesForUser(
         validatorUser.id,
         validatorUser.site,
