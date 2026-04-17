@@ -34,6 +34,14 @@ import FatigueCheckList from "./components/FatigueCheck";
 import FatigueCheckForm from "./components/FatigueCheck/FatigueCheckForm";
 import Take5StatusUpdater from "./components/TasklistPage/Take5StatusUpdater";
 import PTOForm from "./components/PTOForm";
+import InspeksiPage from "./components/Inspeksi";
+import Inspeksi5R from "./components/Inspeksi/Inspeksi5R";
+import InspeksiPowerTools from "./components/Inspeksi/InspeksiPowerTools";
+import InspeksiLiftingGear from "./components/Inspeksi/InspeksiLiftingGear";
+import InspeksiParkirProsedur from "./components/Inspeksi/InspeksiParkirProsedur";
+import InspeksiKendaraan from "./components/Inspeksi/InspeksiKendaraan";
+import Audit5R from "./components/Inspeksi/Audit5R";
+import InspeksiPlaceholder from "./components/Inspeksi/InspeksiPlaceholder";
 import VersionCheck from "./components/VersionCheck";
 import DebugNrp from "./components/DebugNrp"; // Temporary Debug Component
 import aegisLogo from "./assets/aegis.png";
@@ -528,6 +536,64 @@ function App() {
               tasklistTodoCount={tasklistTodoCount}
             />
           );
+        case "inspeksi":
+          return (
+            <InspeksiPage
+              user={user}
+              onBack={handleBackToMain}
+              onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
+            />
+          );
+        case "inspeksi-5r":
+          return (
+            <Inspeksi5R
+              user={user}
+              onBack={() => handleMenuChange("inspeksi")}
+              onNavigate={handleMenuChange}
+              tasklistTodoCount={tasklistTodoCount}
+            />
+          );
+        case "audit-5r":
+          return (
+            <InspeksiPlaceholder
+              user={user}
+              onBack={() => handleMenuChange("inspeksi")}
+              title="Audit 5R"
+            />
+          );
+        case "inspeksi-power-tools":
+          return (
+            <InspeksiPlaceholder
+              user={user}
+              onBack={() => handleMenuChange("inspeksi")}
+              title="Inspeksi Power Tools"
+            />
+          );
+        case "inspeksi-lifting-gear":
+          return (
+            <InspeksiPlaceholder
+              user={user}
+              onBack={() => handleMenuChange("inspeksi")}
+              title="Inspeksi Lifting Gear"
+            />
+          );
+        case "inspeksi-parkir-prosedur":
+          return (
+            <InspeksiPlaceholder
+              user={user}
+              onBack={() => handleMenuChange("inspeksi")}
+              title="Inspeksi Parkir Prosedur"
+            />
+          );
+        case "inspeksi-kendaraan":
+          return (
+            <InspeksiPlaceholder
+              user={user}
+              onBack={() => handleMenuChange("inspeksi")}
+              title="Inspeksi Kendaraan"
+            />
+          );
         case "pto":
           if (!canAccessPTO()) {
             return (
@@ -972,6 +1038,7 @@ function App() {
                   { key: "hazard", label: "Hazard Report" },
                   { key: "tasklist", label: "Tasklist" },
                   ...(canAccessPTO() ? [{ key: "pto", label: "PTO" }] : []),
+                  { key: "inspeksi", label: "Inspeksi" },
                 ].map((item) => (
                   <button
                     key={item.key}

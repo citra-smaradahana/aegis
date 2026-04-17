@@ -1,0 +1,235 @@
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1.2cm;
+  }
+  .page-break {
+    display: block;
+    page-break-after: always;
+  }
+}
+
+.i5r-print-wrapper {
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  color: #000;
+  width: 100%;
+  margin: 0 auto;
+  background: white;
+}
+
+.print-page {
+  min-height: 27.2cm;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── HEADER & META ─────────────────────────────────────────────────── */
+.i5r-print-header {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #000;
+  margin-bottom: -1.5px;
+}
+
+.i5r-print-header td {
+  border: 1.5px solid #000;
+  padding: 6px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.i5r-p-logo {
+  width: 110px;
+}
+
+.i5r-p-logo img {
+  width: 100px;
+  height: auto;
+  object-fit: contain;
+}
+
+.i5r-p-title {
+  background: #1e3a8a;
+  color: #fff;
+}
+
+.i5r-p-title .title-id {
+  font-size: 12pt;
+  font-weight: bold;
+}
+
+.i5r-p-title .title-en {
+  font-size: 9pt;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.i5r-p-dept {
+  width: 70px;
+  font-weight: bold;
+  font-size: 13pt;
+}
+
+.i5r-print-meta {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #000;
+  margin-bottom: 3px;
+}
+
+.i5r-print-meta td {
+  border: 1.5px solid #000;
+  padding: 4px 6px;
+  font-size: 8pt;
+  width: 33.33%;
+  vertical-align: middle;
+}
+
+.center-text {
+  text-align: center !important;
+}
+
+/* ─── IDENTITY ─────────────────────────────────────────────────────── */
+.i5r-print-identity {
+  margin-bottom: 3px;
+}
+
+.identity-row {
+  display: flex;
+  margin-bottom: 2px;
+}
+
+.identity-item {
+  flex: 1;
+  font-size: 8.5pt;
+}
+
+.identity-item .label {
+  font-weight: bold;
+  display: inline-block;
+  width: 110px;
+}
+
+/* ─── TABLE ────────────────────────────────────────────────────────── */
+.i5r-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #000;
+  margin-bottom: 10px;
+  table-layout: fixed;
+}
+
+.i5r-print-table th {
+  background: #f1f5f9;
+  border: 1.5px solid #000;
+  padding: 4px 6px;
+  font-size: 8.5pt;
+  text-align: center;
+}
+
+/* Set fixed widths for columns */
+.i5r-print-table th:nth-child(1), 
+.i5r-print-table td:nth-child(1) { width: 40px; }
+.i5r-print-table th:nth-child(3), 
+.i5r-print-table td:nth-child(3) { width: 90px; }
+
+.i5r-print-table th .en-sub {
+  font-size: 7pt;
+  font-style: italic;
+  font-weight: normal;
+}
+
+.i5r-print-table td {
+  border: 1px solid #000;
+  padding: 2px 6px 4px 6px;
+  font-size: 8pt;
+  vertical-align: middle;
+  word-wrap: break-word;
+  line-height: 1.15;
+}
+
+.cell-center {
+  text-align: center;
+  vertical-align: middle;
+  padding: 2px 4px 4px 4px;
+}
+
+.cell-desc {
+  vertical-align: middle;
+  padding: 2px 6px 4px 6px;
+}
+
+.kategori-row td {
+  background: #e2e8f0;
+  font-weight: bold;
+  font-size: 8pt;
+  padding: 5px 6px;
+  line-height: 1.25;
+}
+
+.item-txt {
+  font-size: 8pt;
+  line-height: 1.15;
+}
+
+.item-en {
+  font-size: 7pt;
+  font-style: italic;
+  color: #1e3a8a;
+  margin-top: 1px;
+  line-height: 1.1;
+}
+
+/* ─── SCORE BOXES ──────────────────────────────────────────────────── */
+.score-box {
+  width: 70px;
+  height: 18px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 8pt;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+}
+
+.score-box.ok { background-color: #059669; }
+.score-box.nok { background-color: #dc2626; }
+.score-box.na { background-color: #64748b; }
+
+/* ─── COMMENTS ─────────────────────────────────────────────────────── */
+.i5r-print-comments {
+  font-size: 11pt;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.comments-box {
+  border: 1px solid #000;
+  min-height: 80px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.dotted-line {
+  color: #94a3b8;
+}
+
+/* ─── FOOTER ───────────────────────────────────────────────────────── */
+.page-footer-mini {
+  margin-top: auto;
+  font-size: 8pt;
+  color: #ef4444;
+  font-weight: bold;
+  text-align: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.i5r-print-summary {
+  font-size: 11pt;
+  text-align: right;
+  padding: 10px;
+}

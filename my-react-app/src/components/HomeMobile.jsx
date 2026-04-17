@@ -574,20 +574,12 @@ function HomeMobile({
       placeholder: false,
     },
     {
-      key: "slot-7",
-      label: "Segera",
-      fullLabel: "Segera",
-      icon: "➕",
-      color: "#9ca3af",
-      placeholder: true,
-    },
-    {
-      key: "slot-8",
-      label: "Segera",
-      fullLabel: "Segera",
-      icon: "➕",
-      color: "#9ca3af",
-      placeholder: true,
+      key: "inspeksi",
+      label: "Inspeksi",
+      fullLabel: "Inspeksi",
+      icon: "🔍",
+      color: "#0284c7",
+      placeholder: false,
     },
   ];
 
@@ -611,12 +603,13 @@ function HomeMobile({
           (item) =>
             !item.placeholder &&
             (allowedMenus.includes(item.key) ||
+              item.key === "inspeksi" ||
               (item.key === "monitoring" && canAccessMonitoring)),
         )
       : allMenuItems.filter((item) => {
           if (item.key === "monitoring") return canAccessMonitoring;
           if (isRegularUser)
-            return ["fit-to-work", "take-5", "hazard"].includes(item.key);
+            return ["fit-to-work", "take-5", "hazard", "inspeksi"].includes(item.key);
           if (item.key === "daily-attendance" && !hasReportAccess) return false;
           if (item.key === "fatigue-check" && !hasFatigueCheckAccess)
             return false;

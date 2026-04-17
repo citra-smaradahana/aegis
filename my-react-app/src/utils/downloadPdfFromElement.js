@@ -35,6 +35,8 @@ export async function downloadPdfFromElement(elementRef, filename = "laporan", o
     const pageNodes = element.querySelectorAll(".fc-print-page, .print-page");
 
     if (pageNodes && pageNodes.length > 0) {
+      let isFirstPdfPage = true;
+
       for (let i = 0; i < pageNodes.length; i++) {
         const pageEl = pageNodes[i];
 
@@ -52,17 +54,32 @@ export async function downloadPdfFromElement(elementRef, filename = "laporan", o
 
         const imgData = canvas.toDataURL("image/png");
 
-        // Skala gambar supaya SELURUH halaman muat di 1 halaman A4
-        const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-        const imgWidth = canvas.width * ratio;
-        const imgHeight = canvas.height * ratio;
-        const x = (pdfWidth - imgWidth) / 2;
-        const y = 0; /* top-aligned, bukan center */
+        // Scale to FIT WIDTH of A4, then paginate vertically if taller
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        if (i > 0) {
-          pdf.addPage("a4", isLandscape ? "landscape" : "portrait");
+        if (imgHeight <= pdfHeight) {
+          // Content fits in one PDF page
+          if (!isFirstPdfPage) {
+            pdf.addPage("a4", isLandscape ? "landscape" : "portrait");
+          }
+          pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+          isFirstPdfPage = false;
+        } else {
+          // Content is taller than one A4 page — slice vertically
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          while (heightLeft > 0) {
+            if (!isFirstPdfPage) {
+              pdf.addPage("a4", isLandscape ? "landscape" : "portrait");
+            }
+            pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+            position -= pdfHeight;
+            isFirstPdfPage = false;
+          }
         }
-        pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
       }
     } else {
       // Fallback: 1 halaman saja (capture seluruh element)
