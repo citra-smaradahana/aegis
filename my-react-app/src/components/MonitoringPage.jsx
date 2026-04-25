@@ -376,7 +376,7 @@ function MonitoringPage({ user }) {
   const fetchFitToWorkStats = async () => {
     setLoading(true);
     try {
-      let query = supabase.from("fit_to_work").select("*");
+      let query = supabase.from("fit_to_work").select("*, users(nrp, jabatan)");
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
@@ -390,7 +390,7 @@ function MonitoringPage({ user }) {
         query,
         supabase
           .from("users")
-          .select("id, site, created_at")
+          .select("id, site, created_at, nrp, jabatan")
           .not("site", "is", null),
         supabase
           .from("fit_to_work_absent")
@@ -411,8 +411,12 @@ function MonitoringPage({ user }) {
       const absentList = absentRes.data || [];
 
       const userIdToSite = {};
+      const userIdToNrp = {};
+      const userIdToJabatan = {};
       users.forEach((u) => {
         userIdToSite[u.id] = u.site;
+        userIdToNrp[u.id] = u.nrp;
+        userIdToJabatan[u.id] = u.jabatan;
       });
 
       let absentByDateSite = {};
@@ -424,7 +428,13 @@ function MonitoringPage({ user }) {
           (absentByDateSite[a.tanggal][s] || 0) + 1;
       });
 
-      const stats = calculateFitToWorkStats(fitToWorkData || [], {
+      const enrichedFitToWorkData = (fitToWorkData || []).map(item => ({
+        ...item,
+        nrp: userIdToNrp[item.user_id] || item.nrp,
+        jabatan: userIdToJabatan[item.user_id] || item.jabatan
+      }));
+
+      const stats = calculateFitToWorkStats(enrichedFitToWorkData, {
         users,
         absentByDateSite,
         ftwStatusMap,
@@ -433,7 +443,7 @@ function MonitoringPage({ user }) {
       setFitToWorkStats(stats);
 
       const individualData = calculateIndividualStats(
-        fitToWorkData || [],
+        enrichedFitToWorkData,
         "fit_to_work",
       );
       setIndividualStats((prev) => ({ ...prev, fitToWork: individualData }));
@@ -882,7 +892,7 @@ function MonitoringPage({ user }) {
   const fetchTake5Stats = async () => {
     setLoading(true);
     try {
-      let query = supabase.from("take_5").select("*, users(email, jabatan)");
+      let query = supabase.from("take_5").select("*, users(email, jabatan, nrp)");
       if (dateFrom) query = query.gte("tanggal", dateFrom);
       if (dateTo) query = query.lte("tanggal", dateTo);
       if (site) query = query.eq("site", site);
@@ -972,7 +982,7 @@ function MonitoringPage({ user }) {
       console.log("=== END TASKLIST DEBUG ===");
 
       // Fetch dari tabel hazard_report (bukan hazard)
-      let hazardQuery = supabase.from("hazard_report").select("*");
+      let hazardQuery = supabase.from("hazard_report").select("*, users(nrp, jabatan)");
       if (dateFrom)
         hazardQuery = hazardQuery.gte(
           "created_at",
@@ -1142,9 +1152,9 @@ function MonitoringPage({ user }) {
 
         return {
           ...item,
-          nrp_pelapor: item.nrp_pelapor || (userData ? userData.nrp : "") || "",
+          nrp_pelapor: (userData ? userData.nrp : "") || item.nrp_pelapor || "",
           jabatan_pelapor:
-            item.jabatan_pelapor || (userData ? userData.jabatan : "") || "",
+            (userData ? userData.jabatan : "") || item.jabatan_pelapor || "",
         };
       });
 
@@ -1637,9 +1647,15 @@ function MonitoringPage({ user }) {
       dailyStats,
       statusChanges,
       recentReports: summaryData.slice(0, 10),
-      listData: [...filteredData].sort(
-        (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
-      ), // Data terbaru dulu (by jam input)
+      listData: [...filteredData]
+        .map((item) => ({
+          ...item,
+          nrp: item.users?.nrp || item.nrp,
+          jabatan: item.users?.jabatan || item.jabatan,
+        }))
+        .sort(
+          (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+        ), // Data terbaru dulu (by jam input)
     };
   };
 
@@ -1816,11 +1832,17 @@ function MonitoringPage({ user }) {
       .slice(0, 10);
 
     // Semua data (untuk download/analisa lengkap)
-    const listData = [...filteredData].sort(
-      (a, b) =>
-        new Date(b.created_at || "1970-01-01") -
-        new Date(a.created_at || "1970-01-01")
-    );
+    const listData = [...filteredData]
+      .map((item) => ({
+        ...item,
+        nrp: item.users?.nrp || item.nrp,
+        jabatan: item.users?.jabatan || item.jabatan,
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.created_at || "1970-01-01") -
+          new Date(a.created_at || "1970-01-01"),
+      );
 
     return {
       totalReports,
@@ -2055,17 +2077,17 @@ function MonitoringPage({ user }) {
 
     console.log("calculateHazardStats - Daily stats:", dailyStats);
 
-    // Recent reports (last 10)
-    const recentReports = filteredData
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 10);
-
     // Semua data (untuk download/analisa lengkap)
-    const listData = [...filteredData].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at),
-    );
+    const listData = [...filteredData]
+      .map((item) => ({
+        ...item,
+        pelapor_nrp: item.users?.nrp || item.pelapor_nrp,
+        pelapor_jabatan: item.users?.jabatan || item.pelapor_jabatan,
+      }))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    console.log("calculateHazardStats - Recent reports:", recentReports);
+    // Recent reports (last 10)
+    const recentReports = listData.slice(0, 10);
 
     const result = {
       totalReports,
@@ -2507,7 +2529,7 @@ function MonitoringPage({ user }) {
         "Email": item.users?.email || "",
         "Name": item.pelapor_nama || "",
         "Nama (Name)": item.pelapor_nama || "",
-        "NRP": item.nrp || "",
+        "NRP": item.users?.nrp || item.nrp || "",
         "Lokasi (Location)": item.site || "",
         "Jabatan": item.users?.jabatan || "",
         "Tanggal/Waktu (Date / Time)": item.tanggal || "",
@@ -4426,7 +4448,7 @@ function MonitoringPage({ user }) {
                                 {row.nama || "-"}
                               </td>
                               <td style={{ padding: "12px", color: "#1a1a1a" }}>
-                                {row.nrp || "-"}
+                                {row.users?.nrp || row.nrp || "-"}
                               </td>
                               <td style={{ padding: "12px", color: "#1a1a1a" }}>
                                 {row.jabatan || "-"}
@@ -4764,7 +4786,7 @@ function MonitoringPage({ user }) {
                                   : "-"}
                               </td>
                               <td style={{ padding: "12px", color: "#374151" }}>{row.pelapor_nama || row.nama || "-"}</td>
-                              <td style={{ padding: "12px", color: "#374151" }}>{row.nrp || "-"}</td>
+                              <td style={{ padding: "12px", color: "#374151" }}>{row.users?.nrp || row.nrp || "-"}</td>
                               <td style={{ padding: "12px", color: "#374151" }}>{row.site || row.lokasi || "-"}</td>
                               <td style={{ padding: "12px", color: "#374151" }}>{row.judul_pekerjaan || row.tugas || row.pekerjaan || row.area_observasi || "-"}</td>
                               <td style={{ padding: "12px", textAlign: "center" }}>
