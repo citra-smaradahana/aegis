@@ -982,7 +982,7 @@ function MonitoringPage({ user }) {
       console.log("=== END TASKLIST DEBUG ===");
 
       // Fetch dari tabel hazard_report (bukan hazard)
-      let hazardQuery = supabase.from("hazard_report").select("*, users(nrp, jabatan)");
+      let hazardQuery = supabase.from("hazard_report").select("*");
       if (dateFrom)
         hazardQuery = hazardQuery.gte(
           "created_at",
@@ -994,11 +994,27 @@ function MonitoringPage({ user }) {
       if (nama) hazardQuery = hazardQuery.eq("pelapor_nama", nama);
       hazardQuery = hazardQuery.order("created_at", { ascending: true });
 
-      const { data: hazardData, error: hazardError } = await hazardQuery;
+      const [hazardRes, usersRes] = await Promise.all([
+        hazardQuery,
+        supabase
+          .from("users")
+          .select("id, nrp, jabatan")
+      ]);
+
+      const hazardData = hazardRes.data;
+      const hazardError = hazardRes.error;
+      const users = usersRes.data || [];
 
       if (hazardError) {
         console.error("Error fetching hazard data:", hazardError);
       }
+
+      const userIdToNrp = {};
+      const userIdToJabatan = {};
+      users.forEach((u) => {
+        userIdToNrp[u.id] = u.nrp;
+        userIdToJabatan[u.id] = u.jabatan;
+      });
 
       console.log("=== HAZARD TABLE DEBUG ===");
       console.log("Hazard query result:", {
@@ -1028,6 +1044,8 @@ function MonitoringPage({ user }) {
         lokasi: item.lokasi, // hazard_report sudah punya field lokasi
         created_at: item.created_at, // hazard_report sudah punya field created_at
         due_date: item.due_date,
+        pelapor_nrp: userIdToNrp[item.user_id] || item.pelapor_nrp,
+        pelapor_jabatan: userIdToJabatan[item.user_id] || item.pelapor_jabatan,
       }));
 
       // Gabungkan data dari kedua tabel
